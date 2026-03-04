@@ -6,6 +6,7 @@ Rename your existing project files before copying simplex_mind files over:
 
 ```
 CLAUDE.md   → CLAUDE_OG.md
+AGENTS.md   → AGENTS_OG.md
 README.md   → README_OG.md
 SETUP.md    → SETUP_OG.md
 ```

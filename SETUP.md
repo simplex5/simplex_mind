@@ -1,11 +1,11 @@
-# SETUP.md — Claude Code Agent Instructions
+# SETUP.md — Claude Code or Codex Agent Instructions
 
-Paste the sections below into your project's `CLAUDE.md` to enable the full simplex_mind agent workflow. Alternatively, reference this file from your CLAUDE.md.
+Paste the sections below into your project's `CLAUDE.md` or 'AGENTS.md' to enable the full simplex_mind agent workflow. Alternatively, reference this file from your CLAUDE.md or AGENTS.md.
 
 ---
 DO NOT PROCEED WITH INITIALIZING THE PROJECT WITHOUT DOING STEP 0 FIRST
-READ THE EXISTING CLAUDE.md FILE BEFORE WELCOMING THE USER SO YOU KNOW THEIR PROJECT
-DURING STEP 0 GUIDE THEM, BASED ON YOUR ANALYSIS OF THE EXISTING CLAUDE.md, ON HOW TO CHANGE THEIR CLAUDE.md
+READ THE EXISTING CLAUDE.md or AGENTS.md FILE BEFORE WELCOMING THE USER SO YOU KNOW THEIR PROJECT
+DURING STEP 0 GUIDE THEM, BASED ON YOUR ANALYSIS OF THE EXISTING CLAUDE.md or AGENTS.md, ON HOW TO CHANGE THEIR CLAUDE.md or AGENTS.md
 
 ## Your Behavior
 
@@ -28,17 +28,16 @@ If `database/config.json` is missing or `onboarding_complete` is not `true`, run
 **Step 0 — Welcome**
 Print a brief welcome message explaining what simplex_mind provides: persistent memory, ticket tracking, structured git commits, and a response summary protocol.
 
-How should I integrate the simplex_mind agent protocol with your existing CLAUDE.md?
-If the user selects integration discussion or append, ORGANIZE THE NEWLY GENERATED CLAUDE.md FILE IN THE REQUIRED HIERARCHY ORDER OF DECISIONS. DO NOT JUST APPEND THE SIMPLEX_MIND PROTOCOLS TO THE BOTTOM OF THEIR CLAUDE.md. MAKE INTELLIGENT DECISIONS ON THE ORDER SO THAT THE SIMPLEX_MIND SYSTEM STILL WORKS AND THEIR EXISTING PROJECT STILL WORKS. MAKE SURE THAT THE USER IS AWARE OF YOU DOING THIS AND EXPLICITLY TELL THEM.
+How should I integrate the simplex_mind agent protocol with your existing CLAUDE.md or AGENTS.md? ##DON'T SAY BOTH OPTIONS FOR THE MD FILES RECOGNIZE THE ENVIRONMENT
+If the user selects integration discussion or append, ORGANIZE THE NEWLY GENERATED CLAUDE.md or AGENTS.md FILE IN THE REQUIRED HIERARCHY ORDER OF DECISIONS. DO NOT JUST APPEND THE SIMPLEX_MIND PROTOCOLS TO THE BOTTOM OF THEIR CLAUDE.md or AGENTS.md. MAKE INTELLIGENT DECISIONS ON THE ORDER SO THAT THE SIMPLEX_MIND SYSTEM STILL WORKS AND THEIR EXISTING PROJECT STILL WORKS. MAKE SURE THAT THE USER IS AWARE OF YOU DOING THIS AND EXPLICITLY TELL THEM.
 
   1. Integration discussion
-     I'll walk through your CLAUDE_OG.md and we'll figure out together how to proceed.
+     I'll walk through your CLAUDE_OG.md/AGENTS.md and we'll figure out together how to proceed.
   2. Append
      Add the agent protocol sections (memory, tickets, git, guardrails) to the end of the
-     existing CLAUDE.md, keeping the MediaMTX docs intact.
+     existing CLAUDE.md or AGENTS.md, keeping the your docs intact.
   3. Replace
-     Replace CLAUDE.md with the full simplex_mind template. The original MediaMTX content
-     is safe in CLAUDE_OG.md.
+     Replace CLAUDE.md or AGENTS.md with the full simplex_mind template. The original project content is safe in CLAUDE_OG.md AGENTS_OG.md.
   4. Blank user input (custom typable)
 
 
@@ -126,18 +125,18 @@ If `database/config.json` exists with `"onboarding_complete": true`:
 
 ### Integration Scenario
 
-If simplex_mind files exist (e.g., `src/utils/agent_skills/`) but there is no `database/config.json`, AND the project already has its own content in `CLAUDE.md`:
+If simplex_mind files exist (e.g., `src/utils/agent_skills/`) but there is no `database/config.json`, AND the project already has its own content in `CLAUDE.md` or `AGENTS.md` :
 
 Ask the user how to integrate:
-- (a) Append the agent protocol sections to existing CLAUDE.md
-- (b) Replace CLAUDE.md with the simplex_mind template
-- (c) Keep them separate (user manages CLAUDE.md manually)
+- (a) Append the agent protocol sections to existing CLAUDE.md or AGENTS.md
+- (b) Replace CLAUDE.md or AGENTS.md with the simplex_mind template
+- (c) Keep them separate (user manages CLAUDE.md or AGENTS.md manually)
 
 Then proceed with the new project onboarding flow from Step 1.
 
 ---
 
-## Agent Protocol (paste into CLAUDE.md)
+## Agent Protocol (paste into CLAUDE.md or AGENTS.md)
 
 ```markdown
 ## Agent Protocol
@@ -154,7 +153,7 @@ All scripts run with `python src/utils/agent_skills/...`.
 
 ---
 
-## Response Summary (paste into CLAUDE.md)
+## Response Summary (paste into CLAUDE.md or AGENTS.md)
 
 ```markdown
 ## Response Summary
@@ -167,7 +166,7 @@ After **every** response that makes changes, append a brief summary block:
 **DB:** wrote memory / updated ticket db / no db write — <reason>
 **Notes:** <anything else the user should know — warnings, deferred items, regressions caught, etc. Omit if nothing.>
 **Commands:** `feature:` `bug:` `task:` `improvement:` `docs:` `question:`
-Prefix your next message with the above. `feature:`, `improvement:`, `bug:`, and `question:` are self-explanatory. `task:` is work that doesn't fit those. `docs:` is for updating CLAUDE.md, manifests, etc.
+Prefix your next message with the above. `feature:`, `improvement:`, `bug:`, and `question:` are self-explanatory. `task:` is work that doesn't fit those. `docs:` is for updating CLAUDE.md or AGENTS.md, manifests, etc.
 
 Rules:
 - Always include **Git** and **Ticket** lines, even when the answer is "nothing done".
@@ -181,7 +180,7 @@ Rules:
 
 ---
 
-## Guardrails (paste into CLAUDE.md)
+## Guardrails (paste into CLAUDE.md or AGENTS.md)
 
 ```markdown
 ## Guardrails — Learned Behaviors
@@ -203,7 +202,7 @@ Rules:
 
 ---
 
-## Git Branching Workflow (paste into CLAUDE.md)
+## Git Branching Workflow (paste into CLAUDE.md or AGENTS.md)
 
 ```markdown
 ## Git Maintenance
@@ -224,7 +223,7 @@ Rules:
 
 ---
 
-## Input Prefixes (paste into CLAUDE.md)
+## Input Prefixes (paste into CLAUDE.md or AGENTS.md)
 
 ```markdown
 ## Input Prefixes
@@ -235,6 +234,6 @@ Rules:
 | `bug:` | bug | Something is broken |
 | `task:` | task | Work that doesn't fit above |
 | `improvement:` | improvement | Enhancing something that works |
-| `docs:` | documentation | Updating docs, CLAUDE.md, manifests |
+| `docs:` | documentation | Updating docs, CLAUDE.md or AGENTS.md, manifests |
 | `question:` | — (none) | Just asking — no work tracked |
 ```

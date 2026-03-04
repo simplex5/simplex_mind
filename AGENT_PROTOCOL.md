@@ -1,6 +1,6 @@
 # Agent Protocol — Ticketing, Memory & Git
 
-Drop this file (and the scripts below) into any project to give Claude persistent memory,
+Drop this file (and the scripts below) into any project to give Claude or Codex persistent memory,
 issue tracking, and structured git commit behaviour.
 
 ---
@@ -59,7 +59,7 @@ python src/utils/agent_skills/git_commit.py init
 
 ---
 
-## 4. Protocol — Rules Claude must follow
+## 4. Protocol — Rules Claude or Codex must follow
 
 ### 4.1 Ticket Protocol
 
@@ -186,7 +186,7 @@ Prefix messages to lock in the ticket type and skip inference:
 | `bug:` | bug | Something is broken |
 | `task:` | task | Work that doesn't fit above |
 | `improvement:` | improvement | Enhancing something that works |
-| `docs:` | documentation | Updating docs, CLAUDE.md, manifests |
+| `docs:` | documentation | Updating docs, CLAUDE.md or AGENTS.md, manifests |
 | `question:` | — (none) | Just asking — no work tracked |
 
 When a prefix is present: ticket is created at the start, prefix stripped before processing.

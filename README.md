@@ -21,7 +21,7 @@ Both files can coexist in the same project.
 - **Ticket tracker** — JIRA-like issue tracking (configurable PREFIX-NNN IDs via `database/config.json`) with CLI tools for create/read/update/list
 - **Git wrapper** — Structured git operations scoped to framework files
 - **Token tracker** — Optional metrics logging for multi-agent orchestration (requires external statusline.sh)
-- **Agent protocol** — CLAUDE.md instructions for response summaries, guardrails, input prefixes, and branching workflow
+- **Agent protocol** — CLAUDE.md or AGENTS.md for instructions for response summaries, guardrails, input prefixes, and branching workflow
 
 ## Installation
 
@@ -44,7 +44,7 @@ This creates `database/`, `logs/`, `.tmp/`, and seed files (idempotent — safe 
 python src/utils/agent_skills/init.py --prefix CORN
 ```
 
-4. Configure your `CLAUDE.md`. The onboarding flow (defined in `SETUP.md`) walks you through this on first session. Alternatively, paste the sections from `SETUP.md` manually.
+4. Configure your `CLAUDE.md` or `AGENTS.md`. The onboarding flow (defined in `SETUP.md`) walks you through this on first session. Alternatively, paste the sections from `SETUP.md` manually.
 
 5. Create the initial git commit:
 
@@ -165,5 +165,5 @@ python src/utils/agent_skills/git_commit.py commit -m "Add feature X"
 
 # Commit specific paths only
 python src/utils/agent_skills/git_commit.py commit -m "Update README" \
-    --paths README.md CLAUDE.md
+    --paths README.md CLAUDE.md AGENTS.md
 ```
