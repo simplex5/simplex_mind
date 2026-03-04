@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 simplex_mind — Project Initializer
-Run once after installing: python src/utils/claude_code_skills/init.py
+Run once after installing: python src/utils/agent_skills/init.py
 Creates project-specific runtime directories — never overwrites existing files.
 """
 
@@ -93,7 +93,7 @@ def main():
 
 ## Git Integration
 
-- Tool: src/utils/claude_code_skills/git_commit.py — subcommands: init, status, commit, diff
+- Tool: src/utils/agent_skills/git_commit.py — subcommands: init, status, commit, diff
 
 ## Current Configuration
 
@@ -120,7 +120,7 @@ def main():
 
     print("\nRuntime initialized.\n")
     print("Next steps:")
-    print("  1. python src/utils/claude_code_skills/git_commit.py init")
+    print("  1. python src/utils/agent_skills/git_commit.py init")
     print("  2. Configure your CLAUDE.md (see SETUP.md for the onboarding flow)")
 
 

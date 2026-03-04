@@ -65,12 +65,12 @@ If the project directory contains existing source code (beyond simplex_mind file
 **Step 5 — Run init**
 Run the initializer with the collected values:
 ```bash
-python src/utils/claude_code_skills/init.py \
+python src/utils/agent_skills/init.py \
     --prefix <PREFIX> \
     --project-name "<name>" \
     --project-description "<description>" \
     --tech-stack "<stack>"
-python src/utils/claude_code_skills/git_commit.py init
+python src/utils/agent_skills/git_commit.py init
 ```
 
 **Step 6 — Write goals/vision.md**
@@ -113,20 +113,20 @@ Skipped sections get a ticket (e.g., `"Explore: define acceptance criteria for M
 **Step 10 — Commit onboarding artifacts**
 Stage and commit all files created during onboarding:
 ```bash
-python src/utils/claude_code_skills/git_commit.py commit -m "onboarding: initialize project with simplex_mind"
+python src/utils/agent_skills/git_commit.py commit -m "onboarding: initialize project with simplex_mind"
 ```
 
 ### Existing Project (returning session)
 
 If `database/config.json` exists with `"onboarding_complete": true`:
-1. Load memory: `python src/utils/claude_code_skills/memory/memory_read.py --format markdown`
-2. List open tickets: `python src/utils/claude_code_skills/tickets/ticket_list.py --status open`
+1. Load memory: `python src/utils/agent_skills/memory/memory_read.py --format markdown`
+2. List open tickets: `python src/utils/agent_skills/tickets/ticket_list.py --status open`
 3. Report count + any critical/high items
 4. Proceed to normal conversation
 
 ### Integration Scenario
 
-If simplex_mind files exist (e.g., `src/utils/claude_code_skills/`) but there is no `database/config.json`, AND the project already has its own content in `CLAUDE.md`:
+If simplex_mind files exist (e.g., `src/utils/agent_skills/`) but there is no `database/config.json`, AND the project already has its own content in `CLAUDE.md`:
 
 Ask the user how to integrate:
 - (a) Append the agent protocol sections to existing CLAUDE.md
@@ -142,14 +142,14 @@ Then proceed with the new project onboarding flow from Step 1.
 ```markdown
 ## Agent Protocol
 
-See [`AGENT_PROTOCOL.md`](AGENT_PROTOCOL.md) for the full specification. Key tools in `src/utils/claude_code_skills/`:
+See [`AGENT_PROTOCOL.md`](AGENT_PROTOCOL.md) for the full specification. Key tools in `src/utils/agent_skills/`:
 
 - **Memory**: `memory/memory_write.py`, `memory/memory_read.py`, `memory/hybrid_search.py` — SQLite-backed persistent memory with daily logs in `database/memory/`
 - **Tickets**: `tickets/ticket_create.py`, `tickets/ticket_list.py`, `tickets/ticket_read.py`, `tickets/ticket_update.py` — JIRA-like issue tracking stored in `database/tickets.db`
 - **Git**: `git_commit.py` — structured git commits with subcommands: `init`, `status`, `commit`, `diff`
 - **Init**: `init.py` — bootstraps `database/` directory, SQLite schemas, and `MEMORY.md`
 
-All scripts run with `python src/utils/claude_code_skills/...`.
+All scripts run with `python src/utils/agent_skills/...`.
 ```
 
 ---

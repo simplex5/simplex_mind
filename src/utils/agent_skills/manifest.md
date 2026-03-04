@@ -1,4 +1,4 @@
-# claude_code_skills/ — Skills Manifest
+# agent_skills/ — Skills Manifest
 
 All tools and reference files Claude invokes directly.
 

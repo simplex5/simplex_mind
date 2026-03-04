@@ -8,14 +8,14 @@ Architecture:
 - Embeddings stored as BLOBs for semantic search
 
 Usage:
-    python src/utils/claude_code_skills/memory/memory_db.py --action add --type fact --content "Important fact"
-    python src/utils/claude_code_skills/memory/memory_db.py --action add --type preference --content "Dark mode enabled" --source user
-    python src/utils/claude_code_skills/memory/memory_db.py --action search --query "preferences"
-    python src/utils/claude_code_skills/memory/memory_db.py --action list [--type fact|preference|event|insight]
-    python src/utils/claude_code_skills/memory/memory_db.py --action get --id 5
-    python src/utils/claude_code_skills/memory/memory_db.py --action delete --id 5
-    python src/utils/claude_code_skills/memory/memory_db.py --action stats
-    python src/utils/claude_code_skills/memory/memory_db.py --action recent --hours 24
+    python src/utils/agent_skills/memory/memory_db.py --action add --type fact --content "Important fact"
+    python src/utils/agent_skills/memory/memory_db.py --action add --type preference --content "Dark mode enabled" --source user
+    python src/utils/agent_skills/memory/memory_db.py --action search --query "preferences"
+    python src/utils/agent_skills/memory/memory_db.py --action list [--type fact|preference|event|insight]
+    python src/utils/agent_skills/memory/memory_db.py --action get --id 5
+    python src/utils/agent_skills/memory/memory_db.py --action delete --id 5
+    python src/utils/agent_skills/memory/memory_db.py --action stats
+    python src/utils/agent_skills/memory/memory_db.py --action recent --hours 24
 
 Dependencies:
     - sqlite3 (stdlib)

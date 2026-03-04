@@ -8,12 +8,12 @@ This tool handles the "write" side of persistent memory:
 - Sync between markdown files and database
 
 Usage:
-    python src/utils/claude_code_skills/memory/memory_write.py --content "Important fact"
-    python src/utils/claude_code_skills/memory/memory_write.py --content "Had meeting about X" --type event
-    python src/utils/claude_code_skills/memory/memory_write.py --content "Learned that Y" --type insight --importance 8
-    python src/utils/claude_code_skills/memory/memory_write.py --log-only --content "Quick note"  # Only to daily log
-    python src/utils/claude_code_skills/memory/memory_write.py --db-only --content "Structured fact"  # Only to SQLite
-    python src/utils/claude_code_skills/memory/memory_write.py --update-memory "New preference line"  # Append to MEMORY.md
+    python src/utils/agent_skills/memory/memory_write.py --content "Important fact"
+    python src/utils/agent_skills/memory/memory_write.py --content "Had meeting about X" --type event
+    python src/utils/agent_skills/memory/memory_write.py --content "Learned that Y" --type insight --importance 8
+    python src/utils/agent_skills/memory/memory_write.py --log-only --content "Quick note"  # Only to daily log
+    python src/utils/agent_skills/memory/memory_write.py --db-only --content "Structured fact"  # Only to SQLite
+    python src/utils/agent_skills/memory/memory_write.py --update-memory "New preference line"  # Append to MEMORY.md
 
 Dependencies:
     - pathlib (stdlib)

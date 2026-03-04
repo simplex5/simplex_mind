@@ -6,11 +6,11 @@ Uses OpenAI's text-embedding-3-small model (1536 dimensions, ~$0.02/1M tokens)
 Stores embeddings as BLOBs in SQLite for use with sqlite-vec or manual cosine similarity.
 
 Usage:
-    python src/utils/claude_code_skills/memory/embed_memory.py --all              # Embed all entries without embeddings
-    python src/utils/claude_code_skills/memory/embed_memory.py --id 5             # Embed a specific entry
-    python src/utils/claude_code_skills/memory/embed_memory.py --content "text"   # Get embedding for arbitrary text
-    python src/utils/claude_code_skills/memory/embed_memory.py --stats            # Show embedding statistics
-    python src/utils/claude_code_skills/memory/embed_memory.py --reindex          # Re-embed all entries
+    python src/utils/agent_skills/memory/embed_memory.py --all              # Embed all entries without embeddings
+    python src/utils/agent_skills/memory/embed_memory.py --id 5             # Embed a specific entry
+    python src/utils/agent_skills/memory/embed_memory.py --content "text"   # Get embedding for arbitrary text
+    python src/utils/agent_skills/memory/embed_memory.py --stats            # Show embedding statistics
+    python src/utils/agent_skills/memory/embed_memory.py --reindex          # Re-embed all entries
 
 Dependencies:
     - openai

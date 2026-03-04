@@ -8,11 +8,11 @@ Hybrid search approach:
 - Combined scoring: 0.7 * bm25 + 0.3 * cosine (configurable)
 
 Usage:
-    python src/utils/claude_code_skills/memory/hybrid_search.py --query "important topic"
-    python src/utils/claude_code_skills/memory/hybrid_search.py --query "what tools" --limit 10
-    python src/utils/claude_code_skills/memory/hybrid_search.py --query "meeting" --bm25-weight 0.5
-    python src/utils/claude_code_skills/memory/hybrid_search.py --query "learned" --semantic-only
-    python src/utils/claude_code_skills/memory/hybrid_search.py --query "API key" --keyword-only
+    python src/utils/agent_skills/memory/hybrid_search.py --query "important topic"
+    python src/utils/agent_skills/memory/hybrid_search.py --query "what tools" --limit 10
+    python src/utils/agent_skills/memory/hybrid_search.py --query "meeting" --bm25-weight 0.5
+    python src/utils/agent_skills/memory/hybrid_search.py --query "learned" --semantic-only
+    python src/utils/agent_skills/memory/hybrid_search.py --query "API key" --keyword-only
 
 Dependencies:
     - openai (for embeddings)

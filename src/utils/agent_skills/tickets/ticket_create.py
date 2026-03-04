@@ -3,7 +3,7 @@ Tool: ticket_create.py
 Purpose: CLI to create a new ticket in database/tickets.db
 
 Usage:
-    python src/utils/claude_code_skills/tickets/ticket_create.py \
+    python src/utils/agent_skills/tickets/ticket_create.py \
         --type bug \
         --title "Canvas flickers on resize" \
         --project myproject \

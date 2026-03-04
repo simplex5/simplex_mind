@@ -2,7 +2,18 @@
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 
-A reusable Claude Code agent toolkit that gives any project persistent memory, JIRA-like ticket tracking, structured git commits, and a response summary protocol.
+A model-agnostic AI agent toolkit that gives any project persistent memory, JIRA-like ticket tracking, structured git commits, and a response summary protocol.
+
+## Compatible AI Tools
+
+simplex_mind works with any AI coding assistant. Each tool reads a different instruction file, but both reference the same protocol (`AGENT_PROTOCOL.md`) and the same tooling (`src/utils/agent_skills/`):
+
+| Tool | Instruction file |
+|------|-----------------|
+| Claude Code | `CLAUDE.md` |
+| OpenAI Codex, Cursor, Windsurf, GitHub Copilot Workspace | `AGENTS.md` |
+
+Both files can coexist in the same project.
 
 ## What's included
 
@@ -23,14 +34,14 @@ cp -r ~/projects/simplex_mind/src/ /path/to/your/project/src/
 2. Run the initializer:
 
 ```bash
-python src/utils/claude_code_skills/init.py
+python src/utils/agent_skills/init.py
 ```
 
 This creates `database/`, `logs/`, `.tmp/`, and seed files (idempotent — safe to re-run).
 
 3. Set your ticket prefix. The onboarding flow handles this automatically, or pass it to init.py:
 ```bash
-python src/utils/claude_code_skills/init.py --prefix CORN
+python src/utils/agent_skills/init.py --prefix CORN
 ```
 
 4. Configure your `CLAUDE.md`. The onboarding flow (defined in `SETUP.md`) walks you through this on first session. Alternatively, paste the sections from `SETUP.md` manually.
@@ -38,7 +49,7 @@ python src/utils/claude_code_skills/init.py --prefix CORN
 5. Create the initial git commit:
 
 ```bash
-python src/utils/claude_code_skills/git_commit.py init
+python src/utils/agent_skills/git_commit.py init
 ```
 
 ## Configuration
@@ -77,7 +88,7 @@ Pass fields at init time or edit the file directly after creation.
 ## Directory structure
 
 ```
-src/utils/claude_code_skills/
+src/utils/agent_skills/
 ├── __init__.py
 ├── manifest.md              # Tool inventory
 ├── init.py                  # Project bootstrapper
@@ -103,43 +114,43 @@ src/utils/claude_code_skills/
 
 ## Notes
 
-- DB path resolution uses `Path(__file__).parent` chains to find the project root. This works as long as `src/utils/claude_code_skills/` is preserved as a directory structure.
+- DB path resolution uses `Path(__file__).parent` chains to find the project root. This works as long as `src/utils/agent_skills/` is preserved as a directory structure.
 - `track_tokens.py` depends on an external `statusline.sh` script for the `--claude-delta` mode. This is optional and can be ignored if you don't need token tracking.
 - The `memory_post_run.py` script is designed for orchestrator pipelines. It's optional for projects that don't use automated run loops.
 
 ## Usage
 
-All scripts run from the project root via `python src/utils/claude_code_skills/...`.
+All scripts run from the project root via `python src/utils/agent_skills/...`.
 
 ### Memory
 
 ```bash
 # Write a fact to daily log + SQLite
-python src/utils/claude_code_skills/memory/memory_write.py \
+python src/utils/agent_skills/memory/memory_write.py \
     --content "User prefers semantic search" --type preference --importance 7
 
 # Load memory at session start (MEMORY.md + last 2 days of logs)
-python src/utils/claude_code_skills/memory/memory_read.py
+python src/utils/agent_skills/memory/memory_read.py
 
 # Search memory (keyword + optional vector)
-python src/utils/claude_code_skills/memory/hybrid_search.py --query "semantic search"
+python src/utils/agent_skills/memory/hybrid_search.py --query "semantic search"
 ```
 
 ### Tickets
 
 ```bash
 # Create a bug ticket
-python src/utils/claude_code_skills/tickets/ticket_create.py \
+python src/utils/agent_skills/tickets/ticket_create.py \
     --type bug --title "Canvas flickers on resize" --priority high
 
 # List open tickets
-python src/utils/claude_code_skills/tickets/ticket_list.py
+python src/utils/agent_skills/tickets/ticket_list.py
 
 # Read a ticket
-python src/utils/claude_code_skills/tickets/ticket_read.py --id MTX-001
+python src/utils/agent_skills/tickets/ticket_read.py --id MTX-001
 
 # Update a ticket
-python src/utils/claude_code_skills/tickets/ticket_update.py \
+python src/utils/agent_skills/tickets/ticket_update.py \
     --id MTX-001 --status done --note "Fixed in commit abc123"
 ```
 
@@ -147,12 +158,12 @@ python src/utils/claude_code_skills/tickets/ticket_update.py \
 
 ```bash
 # Initialize repo and create first commit
-python src/utils/claude_code_skills/git_commit.py init
+python src/utils/agent_skills/git_commit.py init
 
 # Commit all framework files
-python src/utils/claude_code_skills/git_commit.py commit -m "Add feature X"
+python src/utils/agent_skills/git_commit.py commit -m "Add feature X"
 
 # Commit specific paths only
-python src/utils/claude_code_skills/git_commit.py commit -m "Update README" \
+python src/utils/agent_skills/git_commit.py commit -m "Update README" \
     --paths README.md CLAUDE.md
 ```
