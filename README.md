@@ -1,5 +1,7 @@
 # simplex_mind
 
+![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
+
 A reusable Claude Code agent toolkit that gives any project persistent memory, JIRA-like ticket tracking, structured git commits, and a response summary protocol.
 
 ## What's included
@@ -38,6 +40,32 @@ python src/utils/claude_code_skills/init.py --prefix CORN
 ```bash
 python src/utils/claude_code_skills/git_commit.py init
 ```
+
+## Configuration
+
+`init.py` creates `database/config.json` on first run. All fields are optional except `ticket_prefix`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ticket_prefix` | string | Prefix for ticket IDs (e.g. `MTX` → `MTX-001`) |
+| `project_name` | string | Human-readable project name |
+| `project_description` | string | Short description |
+| `tech_stack` | string | Comma-separated tech stack |
+| `onboarding_complete` | boolean | Set to `true` after initial onboarding |
+
+Example:
+
+```json
+{
+  "ticket_prefix": "MTX",
+  "project_name": "my-project",
+  "project_description": "A short description",
+  "tech_stack": "Python, SQLite",
+  "onboarding_complete": true
+}
+```
+
+Pass fields at init time or edit the file directly after creation.
 
 ## Prerequisites
 
@@ -78,3 +106,53 @@ src/utils/claude_code_skills/
 - DB path resolution uses `Path(__file__).parent` chains to find the project root. This works as long as `src/utils/claude_code_skills/` is preserved as a directory structure.
 - `track_tokens.py` depends on an external `statusline.sh` script for the `--claude-delta` mode. This is optional and can be ignored if you don't need token tracking.
 - The `memory_post_run.py` script is designed for orchestrator pipelines. It's optional for projects that don't use automated run loops.
+
+## Usage
+
+All scripts run from the project root via `python src/utils/claude_code_skills/...`.
+
+### Memory
+
+```bash
+# Write a fact to daily log + SQLite
+python src/utils/claude_code_skills/memory/memory_write.py \
+    --content "User prefers semantic search" --type preference --importance 7
+
+# Load memory at session start (MEMORY.md + last 2 days of logs)
+python src/utils/claude_code_skills/memory/memory_read.py
+
+# Search memory (keyword + optional vector)
+python src/utils/claude_code_skills/memory/hybrid_search.py --query "semantic search"
+```
+
+### Tickets
+
+```bash
+# Create a bug ticket
+python src/utils/claude_code_skills/tickets/ticket_create.py \
+    --type bug --title "Canvas flickers on resize" --priority high
+
+# List open tickets
+python src/utils/claude_code_skills/tickets/ticket_list.py
+
+# Read a ticket
+python src/utils/claude_code_skills/tickets/ticket_read.py --id MTX-001
+
+# Update a ticket
+python src/utils/claude_code_skills/tickets/ticket_update.py \
+    --id MTX-001 --status done --note "Fixed in commit abc123"
+```
+
+### Git
+
+```bash
+# Initialize repo and create first commit
+python src/utils/claude_code_skills/git_commit.py init
+
+# Commit all framework files
+python src/utils/claude_code_skills/git_commit.py commit -m "Add feature X"
+
+# Commit specific paths only
+python src/utils/claude_code_skills/git_commit.py commit -m "Update README" \
+    --paths README.md CLAUDE.md
+```
