@@ -121,7 +121,7 @@ def main():
     print("\nRuntime initialized.\n")
     print("Next steps:")
     print("  1. python src/utils/agent_skills/git_commit.py init")
-    print("  2. Configure your CLAUDE.md (see SETUP.md for the onboarding flow)")
+    print("  2. Configure your CLAUDE.md or AGENTS.md (see SETUP.md for the onboarding flow)")
 
 
 def _init_databases():

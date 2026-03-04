@@ -34,6 +34,8 @@ FRAMEWORK_DIRS = [
 FRAMEWORK_FILES = [
     "CLAUDE.md",
     "CLAUDE.md.ref",
+    "AGENTS.md",
+    "AGENTS.md.ref",
     "requirements.txt",
     "requirements.base.txt",
     ".gitignore",
