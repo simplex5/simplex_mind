@@ -3,7 +3,7 @@ Tool: ticket_read.py
 Purpose: CLI to read a single ticket in full detail
 
 Usage:
-    python src/utils/claude_code_skills/tickets/ticket_read.py --id PROJECT-001
+    python src/utils/agent_skills/tickets/ticket_read.py --id PROJECT-001
 
 Output:
     Formatted ticket detail block + JSON

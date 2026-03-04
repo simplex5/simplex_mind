@@ -11,7 +11,7 @@ issue tracking, and structured git commit behaviour.
 - Git repository initialised
 - Copy the following scripts into your project:
   ```
-  src/utils/claude_code_skills/
+  src/utils/agent_skills/
     init.py
     git_commit.py
     memory/
@@ -42,7 +42,7 @@ pip install python-dotenv
 ## 3. One-time init
 
 ```bash
-python src/utils/claude_code_skills/init.py
+python src/utils/agent_skills/init.py
 ```
 
 Creates:
@@ -54,7 +54,7 @@ Creates:
 
 Then create the first commit:
 ```bash
-python src/utils/claude_code_skills/git_commit.py init
+python src/utils/agent_skills/git_commit.py init
 ```
 
 ---
@@ -69,7 +69,7 @@ No exceptions. Pure questions (using the `question:` prefix) are the only exempt
 **Commands:**
 ```bash
 # Create
-python src/utils/claude_code_skills/tickets/ticket_create.py \
+python src/utils/agent_skills/tickets/ticket_create.py \
     --type <bug|feature|task|improvement|documentation> \
     --title "Short summary" \
     --project <name> \
@@ -77,14 +77,14 @@ python src/utils/claude_code_skills/tickets/ticket_create.py \
     --description "Full details"
 
 # Read / list
-python src/utils/claude_code_skills/tickets/ticket_read.py --id PROJECT-001
-python src/utils/claude_code_skills/tickets/ticket_list.py --status open
-python src/utils/claude_code_skills/tickets/ticket_list.py --all
+python src/utils/agent_skills/tickets/ticket_read.py --id PROJECT-001
+python src/utils/agent_skills/tickets/ticket_list.py --status open
+python src/utils/agent_skills/tickets/ticket_list.py --all
 
 # Update
-python src/utils/claude_code_skills/tickets/ticket_update.py \
+python src/utils/agent_skills/tickets/ticket_update.py \
     --id PROJECT-001 --status <open|in_progress|blocked|done|wont_fix>
-python src/utils/claude_code_skills/tickets/ticket_update.py \
+python src/utils/agent_skills/tickets/ticket_update.py \
     --id PROJECT-001 --priority high --note "Context note"
 ```
 
@@ -108,12 +108,12 @@ python src/utils/claude_code_skills/tickets/ticket_update.py \
 
 **Load at session start:**
 ```bash
-python src/utils/claude_code_skills/memory/memory_read.py --format markdown
+python src/utils/agent_skills/memory/memory_read.py --format markdown
 ```
 
 **Write a memory entry:**
 ```bash
-python src/utils/claude_code_skills/memory/memory_write.py \
+python src/utils/agent_skills/memory/memory_write.py \
     --content "..." \
     --type <fact|preference|event|insight|task|relationship> \
     --importance <1-10>
@@ -121,7 +121,7 @@ python src/utils/claude_code_skills/memory/memory_write.py \
 
 **Search memory:**
 ```bash
-python src/utils/claude_code_skills/memory/hybrid_search.py --query "..."
+python src/utils/agent_skills/memory/hybrid_search.py --query "..."
 ```
 
 **Direct MEMORY.md edits** (for curated, human-readable notes):
@@ -136,10 +136,10 @@ python src/utils/claude_code_skills/memory/hybrid_search.py --query "..."
 
 **Commands:**
 ```bash
-python src/utils/claude_code_skills/git_commit.py status   # see what's changed
-python src/utils/claude_code_skills/git_commit.py diff     # review before committing
-python src/utils/claude_code_skills/git_commit.py commit -m "message"
-python src/utils/claude_code_skills/git_commit.py commit -m "message" --paths path/to/file.py
+python src/utils/agent_skills/git_commit.py status   # see what's changed
+python src/utils/agent_skills/git_commit.py diff     # review before committing
+python src/utils/agent_skills/git_commit.py commit -m "message"
+python src/utils/agent_skills/git_commit.py commit -m "message" --paths path/to/file.py
 ```
 
 By default `commit` stages all framework source directories and root config files.

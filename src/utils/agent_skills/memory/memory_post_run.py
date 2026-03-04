@@ -6,7 +6,7 @@ Purpose: Post-run memory writer — reads a metrics JSON and writes structured
 Called at the end of each successful run by an orchestrator or CI pipeline.
 
 Usage:
-    python src/utils/claude_code_skills/memory/memory_post_run.py \
+    python src/utils/agent_skills/memory/memory_post_run.py \
       --metrics-file output/metrics/2026-02-25_03-11.json \
       --anomaly-threshold 4
 
@@ -35,7 +35,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 # ── Memory / ticket imports ───────────────────────────────────────────────────
 try:
-    from src.utils.claude_code_skills.memory.memory_db import (
+    from src.utils.agent_skills.memory.memory_db import (
         add_entry,
         search_entries,
         update_entry,
@@ -45,7 +45,7 @@ except ImportError:
     from memory_db import add_entry, search_entries, update_entry
 
 try:
-    from src.utils.claude_code_skills.tickets.ticket_db import (
+    from src.utils.agent_skills.tickets.ticket_db import (
         create_ticket,
         list_tickets,
         update_ticket,

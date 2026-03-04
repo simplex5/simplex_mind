@@ -3,9 +3,9 @@ Tool: ticket_update.py
 Purpose: CLI to update a ticket's status, priority, notes, title, or description
 
 Usage:
-    python src/utils/claude_code_skills/tickets/ticket_update.py --id PROJECT-001 --status done
-    python src/utils/claude_code_skills/tickets/ticket_update.py --id PROJECT-002 --priority high --note "Confirmed on v2"
-    python src/utils/claude_code_skills/tickets/ticket_update.py --id PROJECT-003 --title "New title"
+    python src/utils/agent_skills/tickets/ticket_update.py --id PROJECT-001 --status done
+    python src/utils/agent_skills/tickets/ticket_update.py --id PROJECT-002 --priority high --note "Confirmed on v2"
+    python src/utils/agent_skills/tickets/ticket_update.py --id PROJECT-003 --title "New title"
 
 Output:
     OK PROJECT-001 updated

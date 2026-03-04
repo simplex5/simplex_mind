@@ -3,11 +3,11 @@ Tool: ticket_list.py
 Purpose: CLI to list and filter tickets from database/tickets.db
 
 Usage:
-    python src/utils/claude_code_skills/tickets/ticket_list.py               # open tickets (default)
-    python src/utils/claude_code_skills/tickets/ticket_list.py --all         # all statuses
-    python src/utils/claude_code_skills/tickets/ticket_list.py --status done
-    python src/utils/claude_code_skills/tickets/ticket_list.py --project myproject --priority high
-    python src/utils/claude_code_skills/tickets/ticket_list.py --type bug --limit 20
+    python src/utils/agent_skills/tickets/ticket_list.py               # open tickets (default)
+    python src/utils/agent_skills/tickets/ticket_list.py --all         # all statuses
+    python src/utils/agent_skills/tickets/ticket_list.py --status done
+    python src/utils/agent_skills/tickets/ticket_list.py --project myproject --priority high
+    python src/utils/agent_skills/tickets/ticket_list.py --type bug --limit 20
 
 Output:
     Formatted table to stdout + JSON block

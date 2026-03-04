@@ -9,13 +9,13 @@ Loading pattern:
 - Optionally load recent entries from SQLite
 
 Usage:
-    python src/utils/claude_code_skills/memory/memory_read.py                    # Load all memory context
-    python src/utils/claude_code_skills/memory/memory_read.py --memory-only      # Just MEMORY.md
-    python src/utils/claude_code_skills/memory/memory_read.py --logs-only        # Just daily logs
-    python src/utils/claude_code_skills/memory/memory_read.py --days 3           # Include 3 days of logs
-    python src/utils/claude_code_skills/memory/memory_read.py --include-db       # Also include SQLite entries
-    python src/utils/claude_code_skills/memory/memory_read.py --format markdown  # Output as markdown
-    python src/utils/claude_code_skills/memory/memory_read.py --format json      # Output as JSON
+    python src/utils/agent_skills/memory/memory_read.py                    # Load all memory context
+    python src/utils/agent_skills/memory/memory_read.py --memory-only      # Just MEMORY.md
+    python src/utils/agent_skills/memory/memory_read.py --logs-only        # Just daily logs
+    python src/utils/agent_skills/memory/memory_read.py --days 3           # Include 3 days of logs
+    python src/utils/agent_skills/memory/memory_read.py --include-db       # Also include SQLite entries
+    python src/utils/agent_skills/memory/memory_read.py --format markdown  # Output as markdown
+    python src/utils/agent_skills/memory/memory_read.py --format json      # Output as JSON
 
 Dependencies:
     - pathlib (stdlib)

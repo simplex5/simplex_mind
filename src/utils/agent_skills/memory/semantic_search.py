@@ -8,10 +8,10 @@ Semantic memory search:
 - Return ranked results with similarity scores
 
 Usage:
-    python src/utils/claude_code_skills/memory/semantic_search.py --query "important topic"
-    python src/utils/claude_code_skills/memory/semantic_search.py --query "what tools do I use" --limit 10
-    python src/utils/claude_code_skills/memory/semantic_search.py --query "meeting notes" --type event
-    python src/utils/claude_code_skills/memory/semantic_search.py --query "learned behavior" --threshold 0.7
+    python src/utils/agent_skills/memory/semantic_search.py --query "important topic"
+    python src/utils/agent_skills/memory/semantic_search.py --query "what tools do I use" --limit 10
+    python src/utils/agent_skills/memory/semantic_search.py --query "meeting notes" --type event
+    python src/utils/agent_skills/memory/semantic_search.py --query "learned behavior" --threshold 0.7
 
 Dependencies:
     - openai (for query embedding)

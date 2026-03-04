@@ -13,7 +13,7 @@ Modes:
     entry's token counts. Reports exact integers from the inference engine.
 
 Usage (claude-delta):
-    python src/utils/claude_code_skills/track_tokens.py \
+    python src/utils/agent_skills/track_tokens.py \
         --claude-delta \
         --agent Claude \
         --seq 0 \
@@ -21,7 +21,7 @@ Usage (claude-delta):
         --file metrics/2026-01-01_12-00.json
 
 Usage (lmstudio-log):
-    python src/utils/claude_code_skills/track_tokens.py \
+    python src/utils/agent_skills/track_tokens.py \
         --lmstudio-log \
         --agent "LM Studio" \
         --seq 1 \
@@ -29,7 +29,7 @@ Usage (lmstudio-log):
         --file metrics/2026-01-01_12-00.json
 
 Usage (direct):
-    python src/utils/claude_code_skills/track_tokens.py \
+    python src/utils/agent_skills/track_tokens.py \
         --direct \
         --tokens-prompt 150 \
         --tokens-response 420 \
