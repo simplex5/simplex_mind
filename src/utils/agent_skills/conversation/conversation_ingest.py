@@ -44,7 +44,7 @@ def _path_to_claude_slug(project_path: Path) -> Path:
           -> ~/.claude/projects/-home-simplex-projects-cornucopia2
     """
     resolved = project_path.expanduser().resolve()
-    slug = str(resolved).replace("/", "-").lstrip("-")
+    slug = str(resolved).replace("/", "-").replace("_", "-").lstrip("-")
     return Path.home() / ".claude" / "projects" / f"-{slug}"
 
 
