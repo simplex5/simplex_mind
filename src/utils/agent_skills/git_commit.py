@@ -9,11 +9,11 @@ Subcommands:
   diff      git diff --stat summary
 
 Usage:
-    python src/utils/claude_code_skills/git_commit.py init
-    python src/utils/claude_code_skills/git_commit.py status
-    python src/utils/claude_code_skills/git_commit.py commit -m "add new tool"
-    python src/utils/claude_code_skills/git_commit.py commit -m "fix parser" --paths src/utils/parser.py
-    python src/utils/claude_code_skills/git_commit.py diff
+    python src/utils/agent_skills/git_commit.py init
+    python src/utils/agent_skills/git_commit.py status
+    python src/utils/agent_skills/git_commit.py commit -m "add new tool"
+    python src/utils/agent_skills/git_commit.py commit -m "fix parser" --paths src/utils/parser.py
+    python src/utils/agent_skills/git_commit.py diff
 """
 
 import argparse

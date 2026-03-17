@@ -6,7 +6,7 @@ Three SQLite databases power the GOTCHA framework's persistence layer.
 
 ## 1. `database/memory/memory.db`
 
-Managed by `src/utils/claude_code_skills/memory/memory_db.py`.
+Managed by `src/utils/agent_skills/memory/memory_db.py`.
 
 ### Tables
 
@@ -53,7 +53,7 @@ Managed by `src/utils/claude_code_skills/memory/memory_db.py`.
 
 ## 2. `database/memory/activity.db`
 
-Created by `src/utils/claude_code_skills/init.py`. Minimal audit trail.
+Created by `src/utils/agent_skills/init.py`. Minimal audit trail.
 
 ### Tables
 
@@ -84,7 +84,7 @@ Created by `src/utils/claude_code_skills/init.py`. Minimal audit trail.
 
 ## 3. `database/tickets.db`
 
-Managed by `src/utils/claude_code_skills/tickets/ticket_db.py`.
+Managed by `src/utils/agent_skills/tickets/ticket_db.py`.
 
 ### Tables
 
