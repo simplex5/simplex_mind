@@ -4,11 +4,18 @@
 
 Do not assume the user is right. Think critically about every request. Keep descriptions short.
 
+For all questions you ask the user, immediately elaborate on the choices in layman's terms
+so they understand clearly what you're suggesting.
+
 ---
 
 ## Session Start Protocol
 
 At the start of every new session:
+
+**0. Onboarding check:**
+   Check for `database/config.json`. If it is missing or `onboarding_complete` is not `true`,
+   follow the onboarding flow in `SETUP.md` instead of the steps below.
 
 1. **Run session digest:**
    ```bash
@@ -40,6 +47,23 @@ projects:
 - Only one project should have `active: true` at a time.
 - To switch projects: set the current project to `active: false`, set the new one to `active: true`.
 - To add a project: add an entry with `path`, `ref_file`, and `active: false`.
+
+---
+
+## Working Directory
+
+simplex_mind is the launch directory, but most work happens in the active project.
+
+- **Tickets, memory, conversation:** Always use simplex_mind's tools (centralized in this repo)
+- **Git operations on project code:** Use native git commands in the project directory:
+  ```bash
+  cd ~/projects/cornucopia2  # or whatever projects.yaml says
+  git checkout -b feature/CORN-NNN-slug
+  git add <files>
+  git commit -m "message"
+  ```
+- **Git operations on simplex_mind itself:** Use `git_commit.py` (rare — only when editing brain tools)
+- **File edits:** Use absolute paths to the project directory (from projects.yaml)
 
 ---
 
@@ -223,12 +247,15 @@ Rules:
 - Every branch name must reference a ticket ID.
 - Before making any file edits, create a ticket and check out a feature/fix branch.
 
-**Commands:**
+**Commands (simplex_mind repo only):**
 ```bash
 python3 src/utils/agent_skills/git_commit.py status
 python3 src/utils/agent_skills/git_commit.py diff
 python3 src/utils/agent_skills/git_commit.py commit -m "message"
 ```
+
+These commands operate on **simplex_mind's own repo**. For project repos (e.g., cornucopia2),
+use native git commands in the project directory — see [Working Directory](#working-directory).
 
 **Commit automatically after:**
 - Running `init.py` for the first time
