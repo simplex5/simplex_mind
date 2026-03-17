@@ -1,7 +1,7 @@
-# Agent Protocol — Ticketing, Memory & Git
+# Agent Protocol — Ticketing, Memory, Conversation History & Git
 
-Drop this file (and the scripts below) into any project to give Claude or Codex persistent memory,
-issue tracking, and structured git commit behaviour.
+The simplex_mind brain repo provides persistent memory, issue tracking, conversation history,
+and structured git commit behaviour across all projects.
 
 ---
 
@@ -9,23 +9,8 @@ issue tracking, and structured git commit behaviour.
 
 - Python 3.10+
 - Git repository initialised
-- Copy the following scripts into your project:
-  ```
-  src/utils/agent_skills/
-    init.py
-    git_commit.py
-    memory/
-      memory_db.py
-      memory_read.py
-      memory_write.py
-      hybrid_search.py
-    tickets/
-      ticket_db.py
-      ticket_create.py
-      ticket_read.py
-      ticket_update.py
-      ticket_list.py
-  ```
+- simplex_mind cloned as a sibling repo (e.g. `~/projects/simplex_mind/`)
+- Tools live in `src/utils/agent_skills/` (memory, tickets, conversation, git)
 
 ---
 
@@ -204,6 +189,82 @@ When a prefix is present: ticket is created at the start, prefix stripped before
 
 **Ticket priorities:** `low` · `medium` · `high` · `critical`
 
-**Memory types:** `fact` · `preference` · `event` · `insight` · `task` · `relationship`
+**Memory types:** `fact` · `preference` · `event` · `insight` · `task` · `relationship` · `decision`
 
 **Memory importance:** 1–10 (default 5). Higher = surfaced more prominently in search.
+
+---
+
+### 4.5 Conversation History Protocol
+
+Conversation transcripts are ingested automatically from Claude Code JSONL files every 5 minutes via cron.
+
+**Search past conversations:**
+```bash
+python3 src/utils/agent_skills/conversation/conversation_read.py \
+    --action search --query "..."
+```
+
+**List recent sessions:**
+```bash
+python3 src/utils/agent_skills/conversation/conversation_read.py \
+    --action list-sessions --limit 10
+```
+
+**View full transcript:**
+```bash
+python3 src/utils/agent_skills/conversation/conversation_read.py \
+    --action get-session --session-id <UUID>
+```
+
+**Manual ingest (if cron is not set up):**
+```bash
+python3 src/utils/agent_skills/conversation/conversation_ingest.py
+```
+
+---
+
+### 4.6 Session Digest
+
+Run at the start of every session for focused context (< 200 lines):
+
+```bash
+python3 src/utils/agent_skills/memory/session_digest.py
+```
+
+Outputs: open ticket count + critical/high items, recent decisions, active systems summary, last 5 git commits.
+
+---
+
+### 4.7 Decision Logging
+
+When a significant architectural or process decision is made, log it:
+
+```bash
+python3 src/utils/agent_skills/memory/memory_write.py \
+    --content "Decided to use FTS5 for conversation search" \
+    --type decision --importance 7 --ticket CORN-087
+```
+
+Decisions appear in the session digest and in MEMORY.md (via memory_sync.py).
+
+---
+
+### 4.8 Memory Sync
+
+Regenerate MEMORY.md from the database:
+
+```bash
+python3 src/utils/agent_skills/memory/memory_sync.py          # regenerate
+python3 src/utils/agent_skills/memory/memory_sync.py --dry-run # preview
+```
+
+Preserves the `## Pinned` section. All other sections are rebuilt from memory.db.
+
+---
+
+### 4.9 Systems Inventory
+
+Maintain `database/memory/systems.md` — a registry of significant features and systems.
+Update when creating, removing, or significantly changing a system.
+Read by session_digest.py for the "Active Systems" summary.

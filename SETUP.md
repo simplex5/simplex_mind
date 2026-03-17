@@ -1,8 +1,9 @@
-# SETUP.md — Claude Code or Codex Agent Instructions
+# SETUP.md — simplex_mind Onboarding
 
-Paste the sections below into your project's `CLAUDE.md` or 'AGENTS.md' to enable the full simplex_mind agent workflow. Alternatively, reference this file from your CLAUDE.md or AGENTS.md.
+simplex_mind is the **brain repo** that sits alongside your project repos. It provides persistent memory, ticket tracking, conversation history, and a response summary protocol.
 
 ---
+
 DO NOT PROCEED WITH INITIALIZING THE PROJECT WITHOUT DOING STEP 0 FIRST
 READ THE EXISTING CLAUDE.md or AGENTS.md FILE BEFORE WELCOMING THE USER SO YOU KNOW THEIR PROJECT
 DURING STEP 0 GUIDE THEM, BASED ON YOUR ANALYSIS OF THE EXISTING CLAUDE.md or AGENTS.md, ON HOW TO CHANGE THEIR CLAUDE.md or AGENTS.md
@@ -11,7 +12,7 @@ DURING STEP 0 GUIDE THEM, BASED ON YOUR ANALYSIS OF THE EXISTING CLAUDE.md or AG
 
 Do not assume the user is right. Think critically about every request. Keep descriptions short.
 
-Before acting on any non-trivial request, restate your understanding of it in plain, everyday language — as if explaining to a friend who isn't a developer. Wait for confirmation before proceeding. This applies to feature requests, bug reports, architecture decisions, and refactors. Skip for simple questions or trivial one-liners.
+Before acting on any non-trivial request, restate your understanding in plain language. Wait for confirmation before proceeding.
 
 ---
 
@@ -19,28 +20,28 @@ Before acting on any non-trivial request, restate your understanding of it in pl
 
 ### Detection
 
-At the start of every new session, check for `database/config.json`. If it contains `"onboarding_complete": true`, skip onboarding and proceed to normal session startup (load memory, list open tickets).
+At the start of every new session, check for `database/config.json`. If it contains `"onboarding_complete": true`, skip onboarding and proceed to normal session startup:
+
+1. Run session digest: `python3 src/utils/agent_skills/memory/session_digest.py`
+2. Read `projects.yaml` to find the active project
+3. Read the active project's `CLAUDE.md.ref` (at `<path>/<ref_file>`)
+4. Report open ticket count + critical/high items
+5. Proceed to normal conversation
 
 If `database/config.json` is missing or `onboarding_complete` is not `true`, run the onboarding flow below.
 
 ### New Project Flow
 
-**Step 0 — Welcome**
-Print a brief welcome message explaining what simplex_mind provides: persistent memory, ticket tracking, structured git commits, and a response summary protocol.
+**Step 0 — Welcome & Project Path**
+Print a brief welcome. Ask for:
+- Path to the project repo (e.g., `~/projects/my-project`)
+- Create a `projects.yaml` entry for it
 
-How should I integrate the simplex_mind agent protocol with your existing CLAUDE.md or AGENTS.md? ##DON'T SAY BOTH OPTIONS FOR THE MD FILES RECOGNIZE THE ENVIRONMENT
-If the user selects integration discussion or append, ORGANIZE THE NEWLY GENERATED CLAUDE.md or AGENTS.md FILE IN THE REQUIRED HIERARCHY ORDER OF DECISIONS. DO NOT JUST APPEND THE SIMPLEX_MIND PROTOCOLS TO THE BOTTOM OF THEIR CLAUDE.md or AGENTS.md. MAKE INTELLIGENT DECISIONS ON THE ORDER SO THAT THE SIMPLEX_MIND SYSTEM STILL WORKS AND THEIR EXISTING PROJECT STILL WORKS. MAKE SURE THAT THE USER IS AWARE OF YOU DOING THIS AND EXPLICITLY TELL THEM.
-
-  1. Integration discussion
-     I'll walk through your CLAUDE_OG.md/AGENTS.md and we'll figure out together how to proceed.
-  2. Append
-     Add the agent protocol sections (memory, tickets, git, guardrails) to the end of the
-     existing CLAUDE.md or AGENTS.md, keeping the your docs intact.
-  3. Replace
-     Replace CLAUDE.md or AGENTS.md with the full simplex_mind template. The original project content is safe in CLAUDE_OG.md AGENTS_OG.md.
-  4. Blank user input (custom typable)
-
-
+How should I integrate the simplex_mind agent protocol with your existing CLAUDE.md or AGENTS.md?
+  1. Integration discussion — walk through together
+  2. Append — add agent protocol sections to existing file
+  3. Replace — use simplex_mind template (original saved as backup)
+  4. Custom
 
 **Step 1 — Project basics**
 Ask the user for:
@@ -49,90 +50,65 @@ Ask the user for:
 - Tech stack (languages, frameworks, key libraries)
 
 **Step 2 — Ticket prefix**
-Ask the user for a ticket prefix: 3–5 uppercase letters (e.g., `CORN`, `FLUX`, `EGG`).
-Validate: must be 3–5 characters, uppercase letters only. Re-prompt if invalid.
+Ask for a ticket prefix: 3–5 uppercase letters (e.g., `CORN`, `FLUX`, `EGG`).
+Validate: must be 3–5 characters, uppercase letters only.
 
 **Step 3 — Project goals**
-Ask the user for their top 1–3 project goals (one sentence each).
+Ask for top 1–3 project goals (one sentence each).
 
 **Step 4 — Existing code check**
-If the project directory contains existing source code (beyond simplex_mind files), ask:
+If the project directory has existing source code:
 - (a) Auto-summarize the codebase into MEMORY.md
 - (b) Learn as we go — skip for now
 - (c) User will brief you manually
 
 **Step 5 — Run init**
-Run the initializer with the collected values:
 ```bash
-python src/utils/agent_skills/init.py \
+python3 src/utils/agent_skills/init.py \
     --prefix <PREFIX> \
     --project-name "<name>" \
     --project-description "<description>" \
     --tech-stack "<stack>"
-python src/utils/agent_skills/git_commit.py init
+python3 src/utils/agent_skills/git_commit.py init
 ```
 
 **Step 6 — Write goals/vision.md**
-Create `goals/vision.md` containing:
-- Project name
-- Description
-- Goals (from Step 3)
-- Tech stack
+Create `goals/vision.md` in the project repo containing project name, description, goals, tech stack.
 
 **Step 7 — Seed MEMORY.md**
-Update `database/memory/MEMORY.md` with project info:
-- Project name and description
-- Tech stack
-- Ticket prefix
-- Key directory structure (if auto-summarized in Step 4)
+Update `database/memory/MEMORY.md` with project info.
 
 **Step 8 — Mark onboarding complete**
-Write `"onboarding_complete": true` to `database/config.json` (merge with existing keys).
+Write `"onboarding_complete": true` to `database/config.json`.
 
-**Step 9 — Offer PRD creation**
-Ask if the user wants to create a Product Requirements Doc (`goals/PRD.md`).
-
-If yes, walk through sections one at a time. For each section, ask if the user wants to:
-- Discuss and write it now
-- Skip it and create a ticket to explore later
-
-Sections:
-1. Target Users
-2. Core Features
-3. User Stories
-4. MVP Scope
-5. Technical Architecture
-6. Acceptance Criteria
-7. Milestones
-8. Constraints / Non-Goals
-9. Risks
-
-Skipped sections get a ticket (e.g., `"Explore: define acceptance criteria for MVP"`).
-
-**Step 10 — Commit onboarding artifacts**
-Stage and commit all files created during onboarding:
+**Step 9 — Set up cron** (conversation history auto-ingestion)
 ```bash
-python src/utils/agent_skills/git_commit.py commit -m "onboarding: initialize project with simplex_mind"
+crontab -e
+# Add:
+*/5 * * * * ~/projects/simplex_mind/venv/bin/python \
+  ~/projects/simplex_mind/src/utils/agent_skills/conversation/conversation_ingest.py \
+  >> ~/projects/simplex_mind/logs/conversation_ingest.log 2>&1
 ```
 
-### Existing Project (returning session)
+**Step 10 — Create project CLAUDE.md.ref**
+Create `CLAUDE.md.ref` in the project root with project-specific instructions. Register it in `projects.yaml`.
 
-If `database/config.json` exists with `"onboarding_complete": true`:
-1. Load memory: `python src/utils/agent_skills/memory/memory_read.py --format markdown`
-2. List open tickets: `python src/utils/agent_skills/tickets/ticket_list.py --status open`
-3. Report count + any critical/high items
-4. Proceed to normal conversation
+**Step 11 — Commit onboarding artifacts**
+```bash
+python3 src/utils/agent_skills/git_commit.py commit -m "onboarding: initialize project with simplex_mind"
+```
 
-### Integration Scenario
+---
 
-If simplex_mind files exist (e.g., `src/utils/agent_skills/`) but there is no `database/config.json`, AND the project already has its own content in `CLAUDE.md` or `AGENTS.md` :
+## Python Virtual Environment
 
-Ask the user how to integrate:
-- (a) Append the agent protocol sections to existing CLAUDE.md or AGENTS.md
-- (b) Replace CLAUDE.md or AGENTS.md with the simplex_mind template
-- (c) Keep them separate (user manages CLAUDE.md or AGENTS.md manually)
-
-Then proceed with the new project onboarding flow from Step 1.
+```bash
+cd ~/projects/simplex_mind
+python3 -m venv venv
+source venv/bin/activate
+pip install python-dotenv
+# Optional: pip install openai numpy rank_bm25
+```
 
 ---
 
@@ -143,12 +119,11 @@ Then proceed with the new project onboarding flow from Step 1.
 
 See [`AGENT_PROTOCOL.md`](AGENT_PROTOCOL.md) for the full specification. Key tools in `src/utils/agent_skills/`:
 
-- **Memory**: `memory/memory_write.py`, `memory/memory_read.py`, `memory/hybrid_search.py` — SQLite-backed persistent memory with daily logs in `database/memory/`
-- **Tickets**: `tickets/ticket_create.py`, `tickets/ticket_list.py`, `tickets/ticket_read.py`, `tickets/ticket_update.py` — JIRA-like issue tracking stored in `database/tickets.db`
-- **Git**: `git_commit.py` — structured git commits with subcommands: `init`, `status`, `commit`, `diff`
+- **Memory**: `memory/memory_write.py`, `memory/memory_read.py`, `memory/hybrid_search.py`, `memory/memory_sync.py`, `memory/session_digest.py`
+- **Tickets**: `tickets/ticket_create.py`, `tickets/ticket_list.py`, `tickets/ticket_read.py`, `tickets/ticket_update.py`
+- **Conversation**: `conversation/conversation_ingest.py`, `conversation/conversation_read.py`
+- **Git**: `git_commit.py` — `init`, `status`, `commit`, `diff`
 - **Init**: `init.py` — bootstraps `database/` directory, SQLite schemas, and `MEMORY.md`
-
-All scripts run with `python src/utils/agent_skills/...`.
 ```
 
 ---
@@ -158,24 +133,14 @@ All scripts run with `python src/utils/agent_skills/...`.
 ```markdown
 ## Response Summary
 
-After **every** response that makes changes, append a brief summary block:
+After **every** response that makes changes, append:
 
 ---
 **Git:** committed `<message>` / no commit — <reason>
 **Ticket:** created <ID> / updated <ID> / no ticket — <reason>
 **DB:** wrote memory / updated ticket db / no db write — <reason>
-**Notes:** <anything else the user should know — warnings, deferred items, regressions caught, etc. Omit if nothing.>
+**Notes:** <warnings, deferred items — omit if nothing>
 **Commands:** `feature:` `bug:` `task:` `improvement:` `docs:` `question:`
-Prefix your next message with the above. `feature:`, `improvement:`, `bug:`, and `question:` are self-explanatory. `task:` is work that doesn't fit those. `docs:` is for updating CLAUDE.md or AGENTS.md, manifests, etc.
-
-Rules:
-- Always include **Git** and **Ticket** lines, even when the answer is "nothing done".
-- Valid "no commit" reasons: files outside git scope, benchmark run, no source changes.
-- Valid "no ticket" reasons: pure conversation, already tracked, trivial one-liner.
-- Always include **DB** line; valid "no db write" reasons: read-only task, pure conversation, no memory/ticket ops performed.
-- **Notes** is optional — only include it if there is something actionable or surprising.
-- Always include **Commands:** line as a persistent cheatsheet for input prefixes.
-- Keep each line to one sentence. This is a status line, not a paragraph.
 ```
 
 ---
@@ -185,17 +150,12 @@ Rules:
 ```markdown
 ## Guardrails — Learned Behaviors
 
-- Always check `src/utils/manifest.md` before writing a new script
-- Verification steps in plans must not require running scripts. Confirm changes
-  by inspecting file contents and diffs only.
-- When improving any file derived from a shared template or pattern, identify all sibling files of the same type.
-  Confirm with the user before updating each sibling — apply only generalizable insights,
-  not project-specific details.
-- Before updating any project documentation file that is not the immediate subject
-  of the current task, ask the user whether the update is wanted.
-- Before any large refactor or rewrite, confirm the project's high-level goals
-  and user-facing behaviors with the user. Implementation must preserve every
-  observable behavior unless explicitly told otherwise.
+- Always check `src/utils/agent_skills/manifest.md` before writing a new script
+- Always branch from the current working branch, not from develop, unless already on develop
+- Create a ticket and feature branch before any file edits
+- Verification steps in plans must not require running scripts
+- Before updating any documentation file not the immediate subject of the task, ask the user
+- Update `database/memory/systems.md` when creating, removing, or significantly changing a system
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
 ```
@@ -209,16 +169,14 @@ Rules:
 
 ### Branching Workflow
 
-- **`main`** — Stable, production-quality code only. Never commit directly.
-- **`develop`** — Integration branch. All feature/fix branches merge here first.
-- **`release/<version>`** — Cut from `develop` when ready for release. Only bugfixes allowed on release branches. Merges into both `main` and `develop` when complete.
-- **Feature/fix branches** — Branch from `develop`. Named `feature/<ticket-id>-<slug>` or `fix/<ticket-id>-<slug>`. One branch per ticket.
+- **`main`** / **`master`** — Stable. Never commit directly.
+- **`develop`** — Integration branch. Feature/fix branches merge here first.
+- **Feature/fix branches** — Branch from current working branch. Named `feature/<ticket-id>-<slug>` or `fix/<ticket-id>-<slug>`.
 
-**Branching rules:**
-- Never commit directly to `main` or `develop` — always use a branch + merge.
-- Every branch name must reference a ticket ID (e.g., `feature/CORN-042-spinner-rework`).
-- Before merging to `develop`: code must pass lint, tests (when applicable), and a self-review diff check.
-- Tag `main` after each release merge with `v<major>.<minor>.<patch>`.
+**Rules:**
+- Never commit directly to main or develop
+- Every branch name must reference a ticket ID
+- Before merging to develop: pass lint and self-review diff check
 ```
 
 ---
@@ -228,12 +186,12 @@ Rules:
 ```markdown
 ## Input Prefixes
 
-| Prefix | Ticket type | Use when… |
-|--------|-------------|-----------|
+| Prefix | Ticket type | Use when... |
+|--------|-------------|-------------|
 | `feature:` | feature | Adding new capability |
 | `bug:` | bug | Something is broken |
 | `task:` | task | Work that doesn't fit above |
 | `improvement:` | improvement | Enhancing something that works |
-| `docs:` | documentation | Updating docs, CLAUDE.md or AGENTS.md, manifests |
+| `docs:` | documentation | Updating docs, manifests |
 | `question:` | — (none) | Just asking — no work tracked |
 ```

@@ -33,6 +33,12 @@ ENV/
 Thumbs.db
 
 # Project runtime dirs (created by init.py)
-database/
+database/*
+!database/memory/
+!database/ARCHITECTURE.md
+!database/config.json
+database/memory/*
+!database/memory/MEMORY.md
+!database/memory/systems.md
 logs/
 .tmp/

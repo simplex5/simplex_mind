@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 # Paths
 MEMORY_DIR = (Path(__file__).parent.parent.parent.parent.parent / "database" / "memory").resolve()
 MEMORY_FILE = MEMORY_DIR / "MEMORY.md"
+SYSTEMS_FILE = MEMORY_DIR / "systems.md"
 LOGS_DIR = MEMORY_DIR / "logs"
 
 # Import memory_db functions
@@ -97,6 +98,30 @@ def read_memory_file() -> Dict[str, Any]:
         "content": content,
         "sections": sections,
         "last_modified": datetime.fromtimestamp(MEMORY_FILE.stat().st_mtime).isoformat()
+    }
+
+
+def read_systems_file() -> Dict[str, Any]:
+    """
+    Read the systems inventory file (systems.md).
+
+    Returns:
+        dict with content and metadata
+    """
+    if not SYSTEMS_FILE.exists():
+        return {
+            "success": False,
+            "error": f"systems.md not found at {SYSTEMS_FILE}",
+            "content": None
+        }
+
+    content = SYSTEMS_FILE.read_text(encoding='utf-8')
+
+    return {
+        "success": True,
+        "path": str(SYSTEMS_FILE),
+        "content": content,
+        "last_modified": datetime.fromtimestamp(SYSTEMS_FILE.stat().st_mtime).isoformat()
     }
 
 
@@ -204,6 +229,7 @@ def load_all_memory(
     include_memory: bool = True,
     include_logs: bool = True,
     include_db: bool = False,
+    include_systems: bool = True,
     log_days: int = 2,
     db_hours: int = 24,
     min_importance: int = 5
@@ -215,6 +241,7 @@ def load_all_memory(
         include_memory: Include MEMORY.md
         include_logs: Include daily logs
         include_db: Include SQLite entries
+        include_systems: Include systems.md inventory
         log_days: Number of days of logs
         db_hours: Hours of DB entries
         min_importance: Min importance for DB entries
@@ -226,6 +253,7 @@ def load_all_memory(
         "success": True,
         "loaded_at": datetime.now().isoformat(),
         "memory_file": None,
+        "systems_file": None,
         "daily_logs": [],
         "db_entries": [],
         "summary": {}
@@ -237,6 +265,13 @@ def load_all_memory(
         result["memory_file"] = memory
         if memory.get('success'):
             result["summary"]["memory_sections"] = list(memory.get('sections', {}).keys())
+
+    # Load systems.md
+    if include_systems:
+        systems = read_systems_file()
+        result["systems_file"] = systems
+        if systems.get('success'):
+            result["summary"]["systems_loaded"] = True
 
     # Load daily logs
     if include_logs:
@@ -270,6 +305,12 @@ def format_as_markdown(memory_context: Dict[str, Any]) -> str:
     if memory_context.get('memory_file', {}).get('success'):
         parts.append("# Persistent Memory\n")
         parts.append(memory_context['memory_file']['content'])
+        parts.append("\n---\n")
+
+    # Systems inventory
+    if memory_context.get('systems_file', {}).get('success'):
+        parts.append("# System Inventory\n")
+        parts.append(memory_context['systems_file']['content'])
         parts.append("\n---\n")
 
     # Daily logs
@@ -348,6 +389,7 @@ def main():
             "loaded_at": context.get('loaded_at'),
             "memory_file_loaded": context.get('memory_file', {}).get('success', False),
             "memory_sections": summary.get('memory_sections', []),
+            "systems_loaded": summary.get('systems_loaded', False),
             "logs_loaded": summary.get('logs_loaded', 0),
             "log_dates": summary.get('log_dates', []),
             "db_entries_loaded": summary.get('db_entries_loaded', 0)

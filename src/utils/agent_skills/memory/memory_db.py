@@ -39,10 +39,52 @@ from typing import Optional, List, Dict, Any
 DB_PATH = (Path(__file__).parent.parent.parent.parent.parent / "database" / "memory" / "memory.db").resolve()
 
 # Valid memory types
-VALID_TYPES = ['fact', 'preference', 'event', 'insight', 'task', 'relationship']
+VALID_TYPES = ['fact', 'preference', 'event', 'insight', 'task', 'relationship', 'decision']
 
 # Valid sources
 VALID_SOURCES = ['user', 'inferred', 'session', 'external', 'system']
+
+
+def _migrate_type_constraint(conn):
+    """Migrate memory_entries table to include 'decision' in type CHECK constraint."""
+    cursor = conn.cursor()
+    cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='memory_entries'")
+    row = cursor.fetchone()
+    if not row:
+        return  # Table doesn't exist yet, will be created with correct constraint
+    table_sql = row[0]
+    if "'decision'" in table_sql:
+        return  # Already migrated
+
+    valid_types_sql = "'" + "', '".join(VALID_TYPES) + "'"
+    cursor.execute('ALTER TABLE memory_entries RENAME TO memory_entries_old')
+    cursor.execute(f'''
+        CREATE TABLE memory_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT NOT NULL CHECK(type IN ({valid_types_sql})),
+            content TEXT NOT NULL,
+            content_hash TEXT UNIQUE,
+            source TEXT DEFAULT 'session' CHECK(source IN ('user', 'inferred', 'session', 'external', 'system')),
+            confidence REAL DEFAULT 1.0,
+            importance INTEGER DEFAULT 5 CHECK(importance BETWEEN 1 AND 10),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_accessed DATETIME,
+            access_count INTEGER DEFAULT 0,
+            embedding BLOB,
+            embedding_model TEXT,
+            tags TEXT,
+            context TEXT,
+            expires_at DATETIME,
+            is_active INTEGER DEFAULT 1
+        )
+    ''')
+    cursor.execute('''
+        INSERT INTO memory_entries
+        SELECT * FROM memory_entries_old
+    ''')
+    cursor.execute('DROP TABLE memory_entries_old')
+    conn.commit()
 
 
 def get_connection():
@@ -53,11 +95,15 @@ def get_connection():
 
     cursor = conn.cursor()
 
+    # Migrate existing DB if type constraint is outdated
+    _migrate_type_constraint(conn)
+
     # Main memory entries table
-    cursor.execute('''
+    valid_types_sql = "'" + "', '".join(VALID_TYPES) + "'"
+    cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS memory_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            type TEXT NOT NULL CHECK(type IN ('fact', 'preference', 'event', 'insight', 'task', 'relationship')),
+            type TEXT NOT NULL CHECK(type IN ({valid_types_sql})),
             content TEXT NOT NULL,
             content_hash TEXT UNIQUE,
             source TEXT DEFAULT 'session' CHECK(source IN ('user', 'inferred', 'session', 'external', 'system')),
