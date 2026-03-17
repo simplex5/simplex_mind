@@ -2,90 +2,119 @@
 
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 
-A model-agnostic AI agent toolkit that gives any project persistent memory, JIRA-like ticket tracking, structured git commits, and a response summary protocol.
+The **brain repo** — a project-agnostic AI agent toolkit that provides persistent memory, ticket tracking, conversation history, structured git commits, and a response summary protocol. It sits alongside your project repos as a sibling, not inside them.
+
+## Architecture
+
+```
+~/projects/
+├── simplex_mind/              ← brain repo (Claude launches here)
+│   ├── CLAUDE.md              ← agnostic base instructions
+│   ├── projects.yaml          ← maps project names → paths
+│   ├── database/              ← all persistent data
+│   │   ├── memory/            ← memory.db, MEMORY.md, systems.md, logs/
+│   │   ├── tickets.db         ← ticket tracking
+│   │   ├── conversation_history.db  ← conversation transcripts
+│   │   └── ARCHITECTURE.md
+│   └── src/utils/agent_skills/ ← all tools
+│
+├── cornucopia2/               ← project workspace (branches freely)
+│   ├── CLAUDE.md.ref          ← project-specific instructions
+│   ├── src/, goals/, args/    ← project code
+│   └── ...
+│
+└── (future projects)/
+```
+
+**Key insight:** Claude's operational state (instructions, memory, tickets, conversation history) lives in simplex_mind and is stable. Project code lives in its own repo and branches freely. Switching branches in a project repo never affects Claude's brain.
 
 ## Compatible AI Tools
-
-simplex_mind works with any AI coding assistant. Each tool reads a different instruction file, but both reference the same protocol (`AGENT_PROTOCOL.md`) and the same tooling (`src/utils/agent_skills/`):
 
 | Tool | Instruction file |
 |------|-----------------|
 | Claude Code | `CLAUDE.md` |
 | OpenAI Codex, Cursor, Windsurf, GitHub Copilot Workspace | `AGENTS.md` |
 
-Both files can coexist in the same project.
-
 ## What's included
 
-- **Memory system** — SQLite-backed persistent memory with daily logs, MEMORY.md curation, and optional semantic search via OpenAI embeddings
-- **Ticket tracker** — JIRA-like issue tracking (configurable PREFIX-NNN IDs via `database/config.json`) with CLI tools for create/read/update/list
+- **Memory system** — SQLite-backed with daily logs, MEMORY.md sync, systems inventory, session digest, and optional semantic search
+- **Ticket tracker** — JIRA-like issue tracking (configurable PREFIX-NNN IDs) with CLI tools
+- **Conversation history** — Verbatim transcript storage from Claude Code JSONL files; cron-ingested; FTS5 search
 - **Git wrapper** — Structured git operations scoped to framework files
-- **Token tracker** — Optional metrics logging for multi-agent orchestration (requires external statusline.sh)
-- **Agent protocol** — CLAUDE.md or AGENTS.md for instructions for response summaries, guardrails, input prefixes, and branching workflow
+- **Session digest** — Focused context loader (< 200 lines): open tickets, decisions, systems, git
+- **Project registry** — `projects.yaml` maps project names to paths; Claude loads the active project's `CLAUDE.md.ref`
 
 ## Installation
 
-1. Copy the `src/` directory into your project root:
-
+1. Clone this repo alongside your project:
 ```bash
-cp -r ~/projects/simplex_mind/src/ /path/to/your/project/src/
+cd ~/projects
+git clone <repo-url> simplex_mind
 ```
 
-2. Run the initializer:
-
+2. Create and activate the virtual environment:
 ```bash
-python src/utils/agent_skills/init.py
+cd ~/projects/simplex_mind
+python3 -m venv venv
+source venv/bin/activate
+pip install python-dotenv
+# Optional — enables semantic memory search:
+# pip install openai numpy rank_bm25
 ```
 
-This creates `database/`, `logs/`, `.tmp/`, and seed files (idempotent — safe to re-run).
-
-3. Set your ticket prefix. The onboarding flow handles this automatically, or pass it to init.py:
+3. Run the initializer:
 ```bash
-python src/utils/agent_skills/init.py --prefix CORN
+python3 src/utils/agent_skills/init.py --prefix CORN
 ```
 
-4. Configure your `CLAUDE.md` or `AGENTS.md`. The onboarding flow (defined in `SETUP.md`) walks you through this on first session. Alternatively, paste the sections from `SETUP.md` manually.
-
-5. Create the initial git commit:
-
+4. Set up conversation history auto-ingestion (cron):
 ```bash
-python src/utils/agent_skills/git_commit.py init
+crontab -e
+# Add:
+*/5 * * * * ~/projects/simplex_mind/venv/bin/python ~/projects/simplex_mind/src/utils/agent_skills/conversation/conversation_ingest.py >> ~/projects/simplex_mind/logs/conversation_ingest.log 2>&1
 ```
+
+5. Register your project in `projects.yaml`:
+```yaml
+projects:
+  my-project:
+    path: ~/projects/my-project
+    ref_file: CLAUDE.md.ref
+    active: true
+```
+
+6. Create the initial git commit:
+```bash
+python3 src/utils/agent_skills/git_commit.py init
+```
+
+## Adding a Project
+
+1. Add an entry to `projects.yaml` with `path`, `ref_file`, and `active: false`
+2. Create `CLAUDE.md.ref` in the project root with project-specific instructions
+3. Set the new project to `active: true` (and the old one to `false`)
+4. Start a new session — Claude will load the new project's instructions
 
 ## Configuration
 
-`init.py` creates `database/config.json` on first run. All fields are optional except `ticket_prefix`.
+`init.py` creates `database/config.json` on first run.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `ticket_prefix` | string | Prefix for ticket IDs (e.g. `MTX` → `MTX-001`) |
+| `ticket_prefix` | string | Prefix for ticket IDs (e.g. `CORN` → `CORN-001`) |
 | `project_name` | string | Human-readable project name |
 | `project_description` | string | Short description |
 | `tech_stack` | string | Comma-separated tech stack |
 | `onboarding_complete` | boolean | Set to `true` after initial onboarding |
-
-Example:
-
-```json
-{
-  "ticket_prefix": "MTX",
-  "project_name": "my-project",
-  "project_description": "A short description",
-  "tech_stack": "Python, SQLite",
-  "onboarding_complete": true
-}
-```
-
-Pass fields at init time or edit the file directly after creation.
 
 ## Prerequisites
 
 - Python 3.10+
 - Git
 - `pip install python-dotenv` (required)
-- `pip install openai numpy rank_bm25` (optional — enables semantic memory search)
+- `pip install openai numpy rank_bm25` (optional — semantic search)
 
-## Directory structure
+## Directory Structure
 
 ```
 src/utils/agent_skills/
@@ -93,77 +122,65 @@ src/utils/agent_skills/
 ├── manifest.md              # Tool inventory
 ├── init.py                  # Project bootstrapper
 ├── git_commit.py            # Git wrapper
-├── track_tokens.py          # Token usage tracking (optional)
+├── track_tokens.py          # Token tracking (optional)
 ├── memory/
-│   ├── __init__.py
 │   ├── memory_db.py         # SQLite CRUD
 │   ├── memory_write.py      # Write to logs + DB
 │   ├── memory_read.py       # Load memory at session start
+│   ├── memory_sync.py       # Regenerate MEMORY.md from DB
+│   ├── session_digest.py    # Session-start context digest
 │   ├── hybrid_search.py     # BM25 + vector search
 │   ├── semantic_search.py   # Vector similarity search
 │   ├── embed_memory.py      # OpenAI embeddings
 │   └── memory_post_run.py   # Post-run metrics writer
-└── tickets/
-    ├── __init__.py
-    ├── ticket_db.py          # SQLite CRUD (prefix from config.json)
-    ├── ticket_create.py      # CLI: create ticket
-    ├── ticket_list.py        # CLI: list tickets
-    ├── ticket_read.py        # CLI: read ticket
-    └── ticket_update.py      # CLI: update ticket
+├── tickets/
+│   ├── ticket_db.py         # SQLite CRUD
+│   ├── ticket_create.py     # CLI: create ticket
+│   ├── ticket_list.py       # CLI: list tickets
+│   ├── ticket_read.py       # CLI: read ticket
+│   └── ticket_update.py     # CLI: update ticket
+└── conversation/
+    ├── conversation_db.py    # SQLite + FTS5 CRUD
+    ├── conversation_ingest.py # JSONL parser (multi-source)
+    └── conversation_read.py  # CLI: search, list, read
 ```
-
-## Notes
-
-- DB path resolution uses `Path(__file__).parent` chains to find the project root. This works as long as `src/utils/agent_skills/` is preserved as a directory structure.
-- `track_tokens.py` depends on an external `statusline.sh` script for the `--claude-delta` mode. This is optional and can be ignored if you don't need token tracking.
-- The `memory_post_run.py` script is designed for orchestrator pipelines. It's optional for projects that don't use automated run loops.
 
 ## Usage
 
-All scripts run from the project root via `python src/utils/agent_skills/...`.
+All scripts run from the simplex_mind root via `python3 src/utils/agent_skills/...`.
+
+### Session Start
+```bash
+python3 src/utils/agent_skills/memory/session_digest.py
+```
 
 ### Memory
-
 ```bash
-# Write a fact to daily log + SQLite
-python src/utils/agent_skills/memory/memory_write.py \
-    --content "User prefers semantic search" --type preference --importance 7
-
-# Load memory at session start (MEMORY.md + last 2 days of logs)
-python src/utils/agent_skills/memory/memory_read.py
-
-# Search memory (keyword + optional vector)
-python src/utils/agent_skills/memory/hybrid_search.py --query "semantic search"
+python3 src/utils/agent_skills/memory/memory_write.py --content "..." --type fact --importance 7
+python3 src/utils/agent_skills/memory/memory_read.py --format markdown
+python3 src/utils/agent_skills/memory/hybrid_search.py --query "..."
+python3 src/utils/agent_skills/memory/memory_sync.py
 ```
 
 ### Tickets
-
 ```bash
-# Create a bug ticket
-python src/utils/agent_skills/tickets/ticket_create.py \
-    --type bug --title "Canvas flickers on resize" --priority high
+python3 src/utils/agent_skills/tickets/ticket_create.py --type bug --title "..." --priority high
+python3 src/utils/agent_skills/tickets/ticket_list.py --status open
+python3 src/utils/agent_skills/tickets/ticket_read.py --id CORN-001
+python3 src/utils/agent_skills/tickets/ticket_update.py --id CORN-001 --status done
+```
 
-# List open tickets
-python src/utils/agent_skills/tickets/ticket_list.py
-
-# Read a ticket
-python src/utils/agent_skills/tickets/ticket_read.py --id MTX-001
-
-# Update a ticket
-python src/utils/agent_skills/tickets/ticket_update.py \
-    --id MTX-001 --status done --note "Fixed in commit abc123"
+### Conversation History
+```bash
+python3 src/utils/agent_skills/conversation/conversation_ingest.py
+python3 src/utils/agent_skills/conversation/conversation_read.py --action search --query "..."
+python3 src/utils/agent_skills/conversation/conversation_read.py --action list-sessions
+python3 src/utils/agent_skills/conversation/conversation_read.py --action stats
 ```
 
 ### Git
-
 ```bash
-# Initialize repo and create first commit
-python src/utils/agent_skills/git_commit.py init
-
-# Commit all framework files
-python src/utils/agent_skills/git_commit.py commit -m "Add feature X"
-
-# Commit specific paths only
-python src/utils/agent_skills/git_commit.py commit -m "Update README" \
-    --paths README.md CLAUDE.md AGENTS.md
+python3 src/utils/agent_skills/git_commit.py init
+python3 src/utils/agent_skills/git_commit.py commit -m "message"
+python3 src/utils/agent_skills/git_commit.py status
 ```

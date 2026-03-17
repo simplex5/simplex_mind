@@ -147,6 +147,15 @@ def _init_databases():
     else:
         print(f"  skip   database/tickets.db")
 
+    conv_db = ROOT / "database" / "conversation_history.db"
+    if not conv_db.exists():
+        from conversation.conversation_db import get_connection as get_conv_conn
+        conn = get_conv_conn()
+        conn.close()
+        print(f"  create database/conversation_history.db")
+    else:
+        print(f"  skip   database/conversation_history.db")
+
 
 if __name__ == "__main__":
     main()

@@ -18,9 +18,11 @@ All tools and reference files Claude invokes directly.
 
 | Tool | File | Description |
 |------|------|-------------|
-| Memory DB | `memory/memory_db.py` | SQLite CRUD for persistent memory entries |
-| Memory Reader | `memory/memory_read.py` | Load MEMORY.md + daily logs at session start |
-| Memory Writer | `memory/memory_write.py` | Append to daily logs and SQLite |
+| Memory DB | `memory/memory_db.py` | SQLite CRUD for persistent memory entries (types: fact, preference, event, insight, task, relationship, decision) |
+| Memory Reader | `memory/memory_read.py` | Load MEMORY.md + systems.md + daily logs at session start |
+| Memory Writer | `memory/memory_write.py` | Append to daily logs and SQLite; supports `--ticket` cross-reference |
+| Memory Sync | `memory/memory_sync.py` | Regenerate MEMORY.md from memory.db (preserves ## Pinned section) |
+| Session Digest | `memory/session_digest.py` | Focused session-start context: open tickets, decisions, systems, git log (< 200 lines) |
 | Embedding Gen | `memory/embed_memory.py` | Vector embeddings for semantic search (optional OpenAI) |
 | Semantic Search | `memory/semantic_search.py` | Cosine similarity search over embeddings |
 | Hybrid Search | `memory/hybrid_search.py` | Combined BM25 + vector search |
@@ -37,3 +39,13 @@ All tools and reference files Claude invokes directly.
 | Ticket Update | `tickets/ticket_update.py` | CLI: update status, priority, notes, title, description |
 | Ticket List | `tickets/ticket_list.py` | CLI: list/filter tickets by status, type, project, priority |
 | Ticket Read | `tickets/ticket_read.py` | CLI: get full detail for a single ticket by ID |
+
+---
+
+## conversation/ — Conversation History Tools
+
+| Tool | File | Description |
+|------|------|-------------|
+| Conversation DB | `conversation/conversation_db.py` | SQLite CRUD + FTS5 for verbatim conversation transcripts |
+| Conversation Ingester | `conversation/conversation_ingest.py` | Parse Claude Code JSONL files into conversation_history.db; multi-source directory support; cron-friendly |
+| Conversation Reader | `conversation/conversation_read.py` | CLI: list sessions, get transcript, full-text search, recent messages, stats |

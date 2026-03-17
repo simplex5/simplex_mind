@@ -49,6 +49,17 @@ except ImportError:
         def db_add_daily_log(**kwargs):
             return {"success": False, "error": "memory_db not available"}
 
+# Import ticket_db for --ticket cross-reference
+_append_note = None
+try:
+    from ..tickets.ticket_db import append_note as _append_note
+except ImportError:
+    try:
+        sys.path.insert(0, str(Path(__file__).parent.parent / "tickets"))
+        from ticket_db import append_note as _append_note
+    except ImportError:
+        pass
+
 
 def ensure_directories():
     """Ensure memory directories exist."""
@@ -304,8 +315,9 @@ def main():
     parser = argparse.ArgumentParser(description='Memory Writer - Write to persistent memory')
     parser.add_argument('--content', required=True, help='Content to write')
     parser.add_argument('--type', default='fact',
-                       choices=['fact', 'preference', 'event', 'insight', 'task', 'relationship', 'note'],
+                       choices=['fact', 'preference', 'event', 'insight', 'task', 'relationship', 'decision', 'note'],
                        help='Type of memory entry')
+    parser.add_argument('--ticket', help='Ticket ID to cross-reference (adds tag and appends note to ticket)')
     parser.add_argument('--source', default='session',
                        choices=['user', 'inferred', 'session', 'external', 'system'],
                        help='Source of the memory')
@@ -338,6 +350,13 @@ def main():
     else:
         tags = args.tags.split(',') if args.tags else None
 
+        # Add ticket ID to tags if --ticket provided
+        if args.ticket:
+            if tags is None:
+                tags = []
+            if args.ticket not in tags:
+                tags.append(args.ticket)
+
         # Determine what to write to
         log_to_file = not args.db_only
         add_to_db = not args.log_only
@@ -361,6 +380,15 @@ def main():
                 log_to_file=log_to_file,
                 add_to_db=add_to_db
             )
+
+        # Cross-reference: append note to ticket if --ticket provided
+        if args.ticket and result and result.get('success') and _append_note:
+            try:
+                snippet = args.content[:120] + ('...' if len(args.content) > 120 else '')
+                note_result = _append_note(args.ticket, f"Memory entry ({args.type}): {snippet}")
+                result["ticket_note"] = note_result
+            except Exception as e:
+                result["ticket_note_error"] = str(e)
 
     if result:
         if result.get('success'):

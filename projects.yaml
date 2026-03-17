@@ -1,0 +1,9 @@
+# projects.yaml — Project Registry
+# Maps project names to their paths and configuration.
+# simplex_mind reads this at session start to load the active project's instructions.
+
+projects:
+  cornucopia2:
+    path: ~/projects/cornucopia2
+    ref_file: CLAUDE.md.ref    # project-specific instructions (loaded after simplex_mind's CLAUDE.md)
+    active: true
