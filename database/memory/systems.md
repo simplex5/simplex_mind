@@ -8,7 +8,7 @@
 ## Active Systems
 
 ### Orchestrator Pipeline
-- **Location:** `src/utils/claude_code_skills/orchestrator.py`
+- **Location:** `src/utils/agent_skills/orchestrator.py`
 - **Purpose:** Benchmark driver that reads PRD, dispatches code generation to LM Studio and review/fix to Gemini, logs token metrics
 - **Key files:** orchestrator.py, dispatcher.py, workflow.py, prd_parser.py, track_tokens.py
 - **Added:** initial
@@ -44,19 +44,19 @@
 - **Added:** CORN-076
 
 ### Memory System
-- **Location:** `src/utils/claude_code_skills/memory/memory_db.py`
+- **Location:** `src/utils/agent_skills/memory/memory_db.py`
 - **Purpose:** SQLite CRUD with hybrid search (BM25 + vector) for persistent cross-session knowledge
 - **Key files:** memory_db.py, memory_read.py, memory_write.py, memory_post_run.py, hybrid_search.py, semantic_search.py, embed_memory.py
 - **Added:** initial
 
 ### Ticket System
-- **Location:** `src/utils/claude_code_skills/tickets/ticket_db.py`
+- **Location:** `src/utils/agent_skills/tickets/ticket_db.py`
 - **Purpose:** SQLite CRUD for JIRA-like ticket tracking with CORN-NNN IDs, types, statuses, priorities
 - **Key files:** ticket_db.py, ticket_create.py, ticket_update.py, ticket_list.py, ticket_read.py
 - **Added:** initial
 
 ### Debug Methodology
-- **Location:** `src/utils/claude_code_skills/debug/`
+- **Location:** `src/utils/agent_skills/debug/`
 - **Purpose:** Markdown process guides for triaging failures; generic template + project-specific failure pattern tables
 - **Key files:** debug_template.md, asteroids/debug.md, snake/debug.md, vampire_survivors/debug.md, oimemusic/debug.md
 - **Added:** initial (enhanced by CORN-082)
@@ -74,7 +74,7 @@
 - **Added:** initial
 
 ### Token Tracker
-- **Location:** `src/utils/claude_code_skills/track_tokens.py`
+- **Location:** `src/utils/agent_skills/track_tokens.py`
 - **Purpose:** Appends LLM call objects to metrics JSON for token accounting and cost analysis
 - **Key files:** track_tokens.py, orchestrator.py, csv_export.py
 - **Added:** initial
@@ -86,19 +86,19 @@
 - **Added:** initial
 
 ### Memory Post-Run Automation
-- **Location:** `src/utils/claude_code_skills/memory/memory_post_run.py`
+- **Location:** `src/utils/agent_skills/memory/memory_post_run.py`
 - **Purpose:** Auto-called after each run; writes run insight, creates bug tickets for high fix-cycle files, upserts model-performance facts
 - **Key files:** memory_post_run.py, memory_db.py, ticket_db.py
 - **Added:** initial
 
 ### Conversation History
-- **Location:** `src/utils/claude_code_skills/conversation/`
+- **Location:** `src/utils/agent_skills/conversation/`
 - **Purpose:** Verbatim conversation transcript storage from Claude Code JSONL files; cron-ingested every 5 min; FTS5 search, session browsing
 - **Key files:** conversation_db.py, conversation_ingest.py, conversation_read.py
 - **Added:** CORN-087
 
 ### Git Operations
-- **Location:** `src/utils/claude_code_skills/git_commit.py`
+- **Location:** `src/utils/agent_skills/git_commit.py`
 - **Purpose:** Init, status, commit, diff for framework files
 - **Key files:** git_commit.py, init.py
 - **Added:** initial

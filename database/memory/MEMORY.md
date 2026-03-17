@@ -22,7 +22,7 @@
 ## Git Integration
 
 - Policy: goals/git.md — commit after framework changes, never after benchmark runs
-- Tool: src/utils/claude_code_skills/git_commit.py — subcommands: init, status, commit, diff
+- Tool: src/utils/agent_skills/git_commit.py — subcommands: init, status, commit, diff
 
 ## Current Configuration
 
