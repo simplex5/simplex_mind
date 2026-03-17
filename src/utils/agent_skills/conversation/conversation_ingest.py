@@ -2,10 +2,9 @@
 Tool: Conversation History Ingester
 Purpose: Parse Claude Code JSONL transcripts and ingest verbatim user/assistant text into conversation_history.db
 
-Source directories (scanned in order):
-    1. ~/.claude/projects/-home-simplex-projects-simplex_mind/*.jsonl  (new sessions)
-    2. ~/.claude/projects/-home-simplex-projects-cornucopia2/*.jsonl   (historical sessions)
-    3. Any additional directories passed via --source-dirs
+Source directories are discovered dynamically from projects.yaml. Each registered project
+path is converted to Claude's slug format (~/.claude/projects/-home-simplex-projects-<name>/).
+simplex_mind itself is always included. Falls back to empty list if projects.yaml is missing.
 
 Usage:
     python3 conversation_ingest.py              # ingest new/changed files
@@ -17,7 +16,7 @@ Usage:
 
 Dependencies:
     - conversation_db.py (local)
-    - json, glob, os (stdlib)
+    - json, glob, os, yaml (stdlib + PyYAML)
 """
 
 import json
@@ -28,15 +27,58 @@ import argparse
 from collections import defaultdict
 from pathlib import Path
 
+import yaml
+
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 from conversation_db import get_connection, upsert_session, insert_message, get_ingest_state, set_ingest_state, get_stats
 
-# Default JSONL source directories
-DEFAULT_SOURCE_DIRS = [
-    Path.home() / ".claude" / "projects" / "-home-simplex-projects-simplex_mind",
-    Path.home() / ".claude" / "projects" / "-home-simplex-projects-cornucopia2",
-]
+# Root of the simplex_mind repo (four levels up from this file)
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+
+
+def _path_to_claude_slug(project_path: Path) -> Path:
+    """Convert an absolute project path to Claude's JSONL directory slug.
+
+    Example: /home/simplex/projects/cornucopia2
+          -> ~/.claude/projects/-home-simplex-projects-cornucopia2
+    """
+    resolved = project_path.expanduser().resolve()
+    slug = str(resolved).replace("/", "-").lstrip("-")
+    return Path.home() / ".claude" / "projects" / f"-{slug}"
+
+
+def _load_source_dirs_from_config() -> list[Path]:
+    """Read projects.yaml and return Claude JSONL directories for all registered projects.
+
+    Always includes simplex_mind itself. Falls back to empty list if projects.yaml is missing.
+    """
+    dirs = []
+
+    # Always include simplex_mind
+    dirs.append(_path_to_claude_slug(_REPO_ROOT))
+
+    config_path = _REPO_ROOT / "projects.yaml"
+    if config_path.is_file():
+        try:
+            with open(config_path, "r") as f:
+                config = yaml.safe_load(f) or {}
+            projects = config.get("projects", {})
+            for name, info in projects.items():
+                raw_path = info.get("path", "")
+                if not raw_path:
+                    continue
+                project_path = Path(raw_path).expanduser().resolve()
+                slug_dir = _path_to_claude_slug(project_path)
+                if slug_dir not in dirs:
+                    dirs.append(slug_dir)
+        except Exception:
+            pass  # fall back to simplex_mind only
+
+    return dirs
+
+
+DEFAULT_SOURCE_DIRS = _load_source_dirs_from_config()
 
 
 def _discover_source_dirs(scan_all: bool = False, extra_dirs: list = None) -> list:
