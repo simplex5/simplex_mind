@@ -8,8 +8,9 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 
 ```
 ~/projects/
-├── simplex_mind/              ← brain repo (Claude launches here)
-│   ├── CLAUDE.md              ← agnostic base instructions
+├── simplex_mind/              ← brain repo (your AI agent launches here)
+│   ├── CLAUDE.md              ← instructions for Claude Code
+│   ├── AGENTS.md              ← instructions for Codex / Cursor / Windsurf
 │   ├── projects.yaml          ← maps project names → paths
 │   ├── database/              ← all persistent data
 │   │   ├── memory/            ← memory.db, MEMORY.md, systems.md, logs/
@@ -26,7 +27,7 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 └── (future projects)/
 ```
 
-**Key insight:** Claude's operational state (instructions, memory, tickets, conversation history) lives in simplex_mind and is stable. Project code lives in its own repo and branches freely. Switching branches in a project repo never affects Claude's brain.
+**Key insight:** Your agent's operational state (instructions, memory, tickets, conversation history) lives in simplex_mind and is stable. Project code lives in its own repo and branches freely. Switching branches in a project repo never affects the agent's brain.
 
 ## Compatible AI Tools
 
@@ -39,10 +40,10 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 
 - **Memory system** — SQLite-backed with daily logs, MEMORY.md sync, systems inventory, session digest, and optional semantic search
 - **Ticket tracker** — JIRA-like issue tracking (configurable PREFIX-NNN IDs) with CLI tools
-- **Conversation history** — Verbatim transcript storage from Claude Code JSONL files; cron-ingested; FTS5 search
+- **Conversation history** — Verbatim transcript storage from AI assistant JSONL transcripts; cron-ingested; FTS5 search
 - **Git wrapper** — Structured git operations scoped to framework files
 - **Session digest** — Focused context loader (< 200 lines): open tickets, decisions, systems, git
-- **Project registry** — `projects.yaml` maps project names to paths; Claude loads the active project's `CLAUDE.md.ref`
+- **Project registry** — `projects.yaml` maps project names to paths; the agent loads the active project's ref file
 
 ## Installation
 
@@ -64,7 +65,7 @@ pip install -r requirements.txt
 
 3. Run the initializer:
 ```bash
-python3 src/utils/agent_skills/init.py --prefix MY
+python3 src/utils/agent_skills/init.py --prefix PROJ
 ```
 
 4. Set up conversation history auto-ingestion (cron):
@@ -93,7 +94,7 @@ python3 src/utils/agent_skills/git_commit.py init
 1. Add an entry to `projects.yaml` with `path`, `ref_file`, and `active: false`
 2. Create `CLAUDE.md.ref` in the project root with project-specific instructions
 3. Set the new project to `active: true` (and the old one to `false`)
-4. Start a new session — Claude will load the new project's instructions
+4. Start a new session — your agent will load the new project's instructions
 
 ## Configuration
 
@@ -101,7 +102,7 @@ python3 src/utils/agent_skills/git_commit.py init
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `ticket_prefix` | string | Prefix for ticket IDs (e.g. `CORN` → `CORN-001`) |
+| `ticket_prefix` | string | Prefix for ticket IDs (e.g. `PROJ` → `PROJ-001`) |
 | `project_name` | string | Human-readable project name |
 | `project_description` | string | Short description |
 | `tech_stack` | string | Comma-separated tech stack |
@@ -166,8 +167,8 @@ python3 src/utils/agent_skills/memory/memory_sync.py
 ```bash
 python3 src/utils/agent_skills/tickets/ticket_create.py --type bug --title "..." --priority high
 python3 src/utils/agent_skills/tickets/ticket_list.py --status open
-python3 src/utils/agent_skills/tickets/ticket_read.py --id CORN-001
-python3 src/utils/agent_skills/tickets/ticket_update.py --id CORN-001 --status done
+python3 src/utils/agent_skills/tickets/ticket_read.py --id PROJ-001
+python3 src/utils/agent_skills/tickets/ticket_update.py --id PROJ-001 --status done
 ```
 
 ### Conversation History
