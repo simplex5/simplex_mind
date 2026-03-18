@@ -1,6 +1,6 @@
 # Database Architecture
 
-Three SQLite databases power the GOTCHA framework's persistence layer.
+Three SQLite databases power simplex_mind's persistence layer.
 
 ---
 
