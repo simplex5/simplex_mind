@@ -243,7 +243,7 @@ When a significant architectural or process decision is made, log it:
 ```bash
 python3 src/utils/agent_skills/memory/memory_write.py \
     --content "Decided to use FTS5 for conversation search" \
-    --type decision --importance 7 --ticket CORN-087
+    --type decision --importance 7 --ticket PROJ-087
 ```
 
 Decisions appear in the session digest and in MEMORY.md (via memory_sync.py).

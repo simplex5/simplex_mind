@@ -91,13 +91,13 @@ Managed by `src/utils/agent_skills/tickets/ticket_db.py`.
 | Table | Purpose |
 |-------|---------|
 | `tickets` | Bug/feature/task/improvement/documentation tracking |
-| `ticket_counter` | Auto-increment counter for CORN-NNN IDs |
+| `ticket_counter` | Auto-increment counter for PROJ-NNN IDs |
 
 ### `tickets` columns
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `id` | TEXT PK | Format: `CORN-NNN` |
+| `id` | TEXT PK | Format: `PROJ-NNN` |
 | `ticket_type` | TEXT | `bug`, `feature`, `task`, `improvement`, `documentation` |
 | `status` | TEXT | `open`, `in_progress`, `blocked`, `done`, `wont_fix` |
 | `priority` | TEXT | `low`, `medium`, `high`, `critical` |

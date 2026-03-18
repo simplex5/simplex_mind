@@ -62,9 +62,9 @@ simplex_mind is the launch directory, but most work happens in the active projec
   ```bash
   cd ~/projects/my-project  # or whatever projects.yaml says
   git add <files>
-  git commit -m "type: description (CORN-NNN)"
+  git commit -m "type: description (PROJ-NNN)"
   # Only when isolation is needed (see Branching Workflow):
-  git checkout -b feature/CORN-NNN-slug
+  git checkout -b feature/PROJ-NNN-slug
   ```
 - **Git operations on simplex_mind itself:** Use `git_commit.py` (rare — only when editing brain tools).
 - **File edits:** Use absolute paths to the project directory (from projects.yaml).
@@ -89,7 +89,7 @@ python3 src/utils/agent_skills/memory/memory_write.py \
 **Write with ticket cross-reference:**
 ```bash
 python3 src/utils/agent_skills/memory/memory_write.py \
-    --content "..." --type decision --ticket CORN-042
+    --content "..." --type decision --ticket PROJ-042
 ```
 
 **Search memory:**
@@ -130,15 +130,15 @@ python3 src/utils/agent_skills/tickets/ticket_create.py \
     --description "Full details"
 
 # Read / list
-python3 src/utils/agent_skills/tickets/ticket_read.py --id CORN-001
+python3 src/utils/agent_skills/tickets/ticket_read.py --id PROJ-001
 python3 src/utils/agent_skills/tickets/ticket_list.py --status open
 python3 src/utils/agent_skills/tickets/ticket_list.py --all
 
 # Update
 python3 src/utils/agent_skills/tickets/ticket_update.py \
-    --id CORN-001 --status <open|in_progress|blocked|done|wont_fix>
+    --id PROJ-001 --status <open|in_progress|blocked|done|wont_fix>
 python3 src/utils/agent_skills/tickets/ticket_update.py \
-    --id CORN-001 --priority high --note "Context note"
+    --id PROJ-001 --priority high --note "Context note"
 ```
 
 ### When to create tickets
@@ -222,7 +222,7 @@ After **every** response that makes changes, append:
 
 ```
 ---
-**Branch:** on `develop` / created `feature/CORN-NNN`
+**Branch:** on `develop` / created `feature/PROJ-NNN`
 **Commit:** `<message>` / no commit — <reason>
 **Ticket:** created <ID> / updated <ID> / no ticket — <reason>
 **DB:** wrote memory / updated ticket db / no db write — <reason>
