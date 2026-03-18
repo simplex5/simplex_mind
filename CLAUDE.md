@@ -300,6 +300,7 @@ use native git commands in the project directory — see [Working Directory](#wo
 - When improving any file derived from a shared template, identify all sibling files. Confirm with the user before updating each.
 - Keep framework tools generic. Domain-specific knowledge belongs only in project PRDs and hardprompts.
 - Update `database/memory/systems.md` when creating, removing, or significantly changing a system.
+- Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
 
