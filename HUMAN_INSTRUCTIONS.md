@@ -1,53 +1,61 @@
 ## Setup Instructions
 
-### Step 1 — Back up your existing files
+### Prerequisites
 
-Rename your existing project files before copying simplex_mind files over:
+- Python 3.10+
+- Git
+- An AI coding assistant (Claude Code, Codex, Cursor, Windsurf, or similar)
 
-```
-CLAUDE.md   → CLAUDE_OG.md
-AGENTS.md   → AGENTS_OG.md
-README.md   → README_OG.md
-SETUP.md    → SETUP_OG.md
-```
+### Step 1 — Clone simplex_mind
 
-### Step 2 — Copy simplex_mind files
+Clone this repo alongside your project repos (not inside them):
 
 ```
-src/              (merge contents into your existing src/ if you have one)
-AGENT_PROTOCOL.md
-AGENTS.md
-CLAUDE.md
-README.md
-SETUP.md
+cd ~/projects          # or wherever you keep repos
+git clone <repo-url> simplex_mind
+```
+
+### Step 2 — Create the virtual environment
+
+```
+cd simplex_mind
+python3 -m venv venv
+source venv/bin/activate   # or: venv/bin/activate.fish
+pip install -r requirements.txt
 ```
 
 ### Step 3 — Run onboarding
 
-#### Claude Code users
+Open your AI assistant in the simplex_mind directory. It will detect that onboarding
+hasn't been completed and guide you through setup:
 
-```bash
-# Open Claude Code (do NOT run /init)
-# Enter plan mode: /plan
-# Type: initialize
-```
+- Claude Code: open Claude Code in `~/projects/simplex_mind`, then type `initialize`
+- Codex / Cursor / Windsurf: open with AGENTS.md loaded, then type `initialize`
 
-It will guide you through integration and put your existing files back.
+The onboarding will ask for your project path, name, ticket prefix, and goals.
 
-#### Codex / Cursor / Windsurf / GitHub Copilot Workspace users
-
-Open the assistant with `AGENTS.md` loaded (it should be picked up automatically from the repo root).
-Then type:
+### Step 4 — Set up conversation history (optional, Claude Code only)
 
 ```
-initialize
+crontab -e
+# Add (adjust path if simplex_mind is not at ~/projects/simplex_mind):
+*/5 * * * * ~/projects/simplex_mind/venv/bin/python \
+  ~/projects/simplex_mind/src/utils/agent_skills/conversation/conversation_ingest.py \
+  >> ~/projects/simplex_mind/logs/conversation_ingest.log 2>&1
 ```
 
-The onboarding flow in `SETUP.md` applies to both Claude and Codex — follow the prompts.
+### Optional: Semantic memory search
 
----
+For vector-based memory search (requires an OpenAI API key):
 
-**Notes:**
-- Use `python3` (not `python`) to run all agent scripts.
-- If you're concerned about file integrity, back up files before copying — in plan mode the assistant must show you diffs before making changes.
-- Both `CLAUDE.md` and `AGENTS.md` can coexist; they reference the same tooling in `src/utils/agent_skills/`.
+```
+pip install openai rank_bm25
+cp .env.example .env
+# Edit .env and add your OPENAI_API_KEY
+```
+
+### Notes
+
+- Use `python3` (not `python`) to run all agent scripts
+- simplex_mind sits alongside your project repos as a sibling — it does not go inside them
+- Both CLAUDE.md and AGENTS.md can coexist; they reference the same tooling

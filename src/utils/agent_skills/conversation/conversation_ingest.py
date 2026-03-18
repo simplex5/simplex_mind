@@ -40,8 +40,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[4]
 def _path_to_claude_slug(project_path: Path) -> Path:
     """Convert an absolute project path to Claude's JSONL directory slug.
 
-    Example: /home/simplex/projects/cornucopia2
-          -> ~/.claude/projects/-home-simplex-projects-cornucopia2
+    Example: /home/user/projects/my-project
+          -> ~/.claude/projects/-home-user-projects-my-project
     """
     resolved = project_path.expanduser().resolve()
     slug = str(resolved).replace("/", "-").replace("_", "-").lstrip("-")

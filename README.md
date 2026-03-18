@@ -18,7 +18,7 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 │   │   └── ARCHITECTURE.md
 │   └── src/utils/agent_skills/ ← all tools
 │
-├── cornucopia2/               ← project workspace (branches freely)
+├── my-project/               ← project workspace (branches freely)
 │   ├── CLAUDE.md.ref          ← project-specific instructions
 │   ├── src/, goals/, args/    ← project code
 │   └── ...
@@ -57,14 +57,14 @@ git clone <repo-url> simplex_mind
 cd ~/projects/simplex_mind
 python3 -m venv venv
 source venv/bin/activate
-pip install python-dotenv
+pip install -r requirements.txt
 # Optional — enables semantic memory search:
 # pip install openai numpy rank_bm25
 ```
 
 3. Run the initializer:
 ```bash
-python3 src/utils/agent_skills/init.py --prefix CORN
+python3 src/utils/agent_skills/init.py --prefix MY
 ```
 
 4. Set up conversation history auto-ingestion (cron):
@@ -111,7 +111,7 @@ python3 src/utils/agent_skills/git_commit.py init
 
 - Python 3.10+
 - Git
-- `pip install python-dotenv` (required)
+- `pip install -r requirements.txt` (required)
 - `pip install openai numpy rank_bm25` (optional — semantic search)
 
 ## Directory Structure

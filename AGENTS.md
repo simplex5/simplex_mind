@@ -28,7 +28,7 @@ At the start of every new session:
 
 2. **Load project config:**
    Read `projects.yaml` in this repo root. Find the project with `active: true`.
-   Expand `path` (e.g., `~/projects/cornucopia2`) and read `<path>/<ref_file>` (e.g., the project reference file).
+   Expand `path` (e.g., `~/projects/my-project`) and read `<path>/<ref_file>` (e.g., the project reference file).
    Follow the project-specific instructions in that file for the remainder of the session.
 
 3. **Report readiness:**
@@ -41,8 +41,8 @@ At the start of every new session:
 ```yaml
 # projects.yaml — maps project names to paths
 projects:
-  cornucopia2:
-    path: ~/projects/cornucopia2
+  my-project:
+    path: ~/projects/my-project
     ref_file: CLAUDE.md.ref
     active: true
 ```
@@ -60,7 +60,7 @@ simplex_mind is the launch directory, but most work happens in the active projec
 - **Tickets, memory, conversation:** Always use simplex_mind's tools (centralized in this repo).
 - **Git operations on project code:** Use native git commands in the project directory:
   ```bash
-  cd ~/projects/cornucopia2  # or whatever projects.yaml says
+  cd ~/projects/my-project  # or whatever projects.yaml says
   git add <files>
   git commit -m "type: description (CORN-NNN)"
   # Only when isolation is needed (see Branching Workflow):
@@ -273,7 +273,7 @@ python3 src/utils/agent_skills/git_commit.py diff
 python3 src/utils/agent_skills/git_commit.py commit -m "message"
 ```
 
-These commands operate on **simplex_mind's own repo**. For project repos (e.g., cornucopia2),
+These commands operate on **simplex_mind's own repo**. For project repos (e.g., my-project),
 use native git commands in the project directory — see [Working Directory](#working-directory).
 
 **Commit automatically after:**

@@ -106,7 +106,7 @@ python3 src/utils/agent_skills/git_commit.py commit -m "onboarding: initialize p
 cd ~/projects/simplex_mind
 python3 -m venv venv
 source venv/bin/activate
-pip install python-dotenv
+pip install -r requirements.txt
 # Optional: pip install openai numpy rank_bm25
 ```
 
@@ -136,11 +136,19 @@ See [`AGENT_PROTOCOL.md`](AGENT_PROTOCOL.md) for the full specification. Key too
 After **every** response that makes changes, append:
 
 ---
-**Git:** committed `<message>` / no commit — <reason>
+**Branch:** on `develop` / created `feature/PREFIX-NNN`
+**Commit:** `<message>` / no commit — <reason>
 **Ticket:** created <ID> / updated <ID> / no ticket — <reason>
 **DB:** wrote memory / updated ticket db / no db write — <reason>
 **Notes:** <warnings, deferred items — omit if nothing>
 **Commands:** `feature:` `bug:` `task:` `improvement:` `docs:` `question:`
+
+Rules:
+- Always include **Branch**, **Commit**, and **Ticket** lines, even when the answer is "nothing done".
+- Always include **DB** line.
+- **Notes** is optional — only include if something actionable or surprising.
+- Always include **Commands:** as a persistent cheatsheet.
+- Keep each line to one sentence.
 ```
 
 ---
@@ -150,12 +158,14 @@ After **every** response that makes changes, append:
 ```markdown
 ## Guardrails — Learned Behaviors
 
-- Always check `src/utils/agent_skills/manifest.md` before writing a new script
-- Always branch from the current working branch, not from develop, unless already on develop
-- Create a ticket and feature branch before any file edits
-- Verification steps in plans must not require running scripts
-- Before updating any documentation file not the immediate subject of the task, ask the user
-- Update `database/memory/systems.md` when creating, removing, or significantly changing a system
+- Always check `src/utils/agent_skills/manifest.md` before writing a new script.
+- Create a ticket before any file edits — no exceptions. Branching is conditional (see Branching Workflow).
+- When branching, always branch from the current working branch.
+- Verification steps in plans must not require running scripts — confirm by inspecting file contents and diffs only.
+- Before updating any documentation file that is not the immediate subject of the current task, ask the user.
+- When improving any file derived from a shared template, identify all sibling files. Confirm with the user before updating each.
+- Keep framework tools generic. Domain-specific knowledge belongs only in project PRDs and hardprompts.
+- Update `database/memory/systems.md` when creating, removing, or significantly changing a system.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
 ```
@@ -170,13 +180,25 @@ After **every** response that makes changes, append:
 ### Branching Workflow
 
 - **`main`** / **`master`** — Stable. Never commit directly.
-- **`develop`** — Integration branch. Feature/fix branches merge here first.
-- **Feature/fix branches** — Branch from current working branch. Named `feature/<ticket-id>-<slug>` or `fix/<ticket-id>-<slug>`.
+- **`develop`** — Default working branch. Most work is committed here directly.
+- **Feature/fix branches** — For work that needs isolation. Named `<type>/<ticket-id>-<slug>`.
+
+Commits always happen. The only decision is whether to create a new branch first.
+
+**Branch when:**
+- The work is experimental, risky, or might be abandoned
+- Multiple tasks are in progress and could conflict
+- The user explicitly requests a branch
+- The work needs a clean revert path (large refactors, migrations)
+
+**Stay on the current branch when:**
+- It is sequential progress on an already-isolated line of work
+- The work is straightforward and will definitely be kept
 
 **Rules:**
-- Never commit directly to main or develop
-- Every branch name must reference a ticket ID
-- Before merging to develop: pass lint and self-review diff check
+- Never commit directly to main/master — always merge from develop or a branch.
+- Always create a ticket before any file edits — branching is conditional, tickets are not.
+- Every branch name must reference a ticket ID.
 ```
 
 ---
