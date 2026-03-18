@@ -7,6 +7,12 @@ Do not assume the user is right. Think critically about every request. Keep desc
 For all questions you ask the user, immediately elaborate on the choices in layman's terms
 so they understand clearly what you're suggesting.
 
+When the user refers to something from a previous conversation that is not in your current
+context, always search conversation history first. Do not search the repo and try to
+recontextualize what they're asking. If the conversation history has no record of it,
+treat that as a bug in the memory system — surface it to the user immediately rather than
+compensating by figuring things out manually.
+
 ---
 
 ## Session Start Protocol
@@ -58,9 +64,10 @@ simplex_mind is the launch directory, but most work happens in the active projec
 - **Git operations on project code:** Use native git commands in the project directory:
   ```bash
   cd ~/projects/cornucopia2  # or whatever projects.yaml says
-  git checkout -b feature/CORN-NNN-slug
   git add <files>
-  git commit -m "message"
+  git commit -m "type: description (CORN-NNN)"
+  # Only when isolation is needed (see Branching Workflow):
+  git checkout -b feature/CORN-NNN-slug
   ```
 - **Git operations on simplex_mind itself:** Use `git_commit.py` (rare — only when editing brain tools)
 - **File edits:** Use absolute paths to the project directory (from projects.yaml)
@@ -218,7 +225,8 @@ After **every** response that makes changes, append:
 
 ```
 ---
-**Git:** committed `<message>` / no commit — <reason>
+**Branch:** on `develop` / created `feature/CORN-NNN`
+**Commit:** `<message>` / no commit — <reason>
 **Ticket:** created <ID> / updated <ID> / no ticket — <reason>
 **DB:** wrote memory / updated ticket db / no db write — <reason>
 **Notes:** <warnings, deferred items — omit if nothing>
@@ -226,7 +234,7 @@ After **every** response that makes changes, append:
 ```
 
 Rules:
-- Always include **Git** and **Ticket** lines, even when the answer is "nothing done".
+- Always include **Branch**, **Commit**, and **Ticket** lines, even when the answer is "nothing done".
 - Always include **DB** line.
 - **Notes** is optional — only include if something actionable or surprising.
 - Always include **Commands:** as a persistent cheatsheet.
@@ -239,13 +247,27 @@ Rules:
 ### Branching Workflow
 
 - **`main`** / **`master`** — Stable. Never commit directly.
-- **`develop`** — Integration branch. All feature/fix branches merge here first.
-- **Feature/fix branches** — Branch from the current working branch (not from develop, unless already on develop). Named `feature/<ticket-id>-<slug>` or `fix/<ticket-id>-<slug>`.
+- **`develop`** — Default working branch. Most work is committed here directly.
+- **Feature/fix branches** — For work that needs isolation. Named `<type>/<ticket-id>-<slug>`.
 
-**Branching rules:**
-- Never commit directly to main/master or develop — always use a branch + merge.
+Commits always happen. The only decision is whether to create a new branch first.
+
+**Branch when:**
+- The work is experimental, risky, or might be abandoned
+- Multiple tasks are in progress and could conflict
+- The user explicitly requests a branch
+- The work needs a clean revert path (large refactors, migrations)
+
+**Stay on the current branch when:**
+- It is sequential progress on an already-isolated line of work
+- The work is straightforward and will definitely be kept
+
+**Decision test:** "Does this work need to be isolated before it lands on the working branch?" If yes → branch. Otherwise → commit to the current branch.
+
+**Rules:**
+- Never commit directly to main/master — always merge from develop or a branch.
+- Always create a ticket before any file edits — branching is conditional, tickets are not.
 - Every branch name must reference a ticket ID.
-- Before making any file edits, create a ticket and check out a feature/fix branch.
 
 **Commands (simplex_mind repo only):**
 ```bash
@@ -271,8 +293,8 @@ use native git commands in the project directory — see [Working Directory](#wo
 ## Guardrails — Learned Behaviors
 
 - Always check `src/utils/agent_skills/manifest.md` before writing a new script.
-- Always branch from the current working branch, not from develop, unless already on develop.
-- Create a ticket and feature branch before any file edits — no exceptions.
+- Create a ticket before any file edits — no exceptions. Branching is conditional (see Branching Workflow).
+- When branching, always branch from the current working branch.
 - Verification steps in plans must not require running scripts — confirm by inspecting file contents and diffs only.
 - Before updating any documentation file that is not the immediate subject of the current task, ask the user.
 - When improving any file derived from a shared template, identify all sibling files. Confirm with the user before updating each.
