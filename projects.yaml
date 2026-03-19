@@ -6,4 +6,10 @@ projects:
   cornucopia2:
     path: ~/projects/cornucopia2
     ref_file: CLAUDE.md.ref    # project-specific instructions (loaded after simplex_mind's CLAUDE.md)
+    ticket_prefix: CORN
     active: true
+  app_test2:
+    path: ~/projects/app_test2
+    ref_file: CLAUDE.md.ref
+    ticket_prefix: SHOP
+    active: false
