@@ -103,6 +103,12 @@
 - **Key files:** git_commit.py, init.py
 - **Added:** initial
 
+### Shop Smart (app_test2)
+- **Location:** ~/projects/app_test2
+- **Purpose:** React Native + Expo grocery shopping optimization app — OCR receipt scanning, multi-store price comparison, payment method optimization
+- **Key files:** App.tsx, src/context/*.js, screens/*.js, PRD.md, CLAUDE.md.ref
+- **Added:** SHOP-118
+
 ---
 
 ## Retired Systems
