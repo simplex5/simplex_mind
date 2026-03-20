@@ -3,9 +3,9 @@ Tool: ticket_read.py
 Purpose: CLI to read a single ticket in full detail
 
 Usage:
-    python src/utils/agent_skills/tickets/ticket_read.py --id CORN-001
-    python src/utils/agent_skills/tickets/ticket_read.py --id SHOP-122
-    python src/utils/agent_skills/tickets/ticket_read.py --id SHOP-122 --target app_test2
+    python src/utils/agent_skills/tickets/ticket_read.py --id PROJ-001
+    python src/utils/agent_skills/tickets/ticket_read.py --id PROJ-122
+    python src/utils/agent_skills/tickets/ticket_read.py --id PROJ-122 --target other-project
 
 Output:
     Formatted ticket detail block + JSON
@@ -47,7 +47,7 @@ def format_ticket(t: dict) -> str:
 
 def main():
     parser = argparse.ArgumentParser(description='Read a single ticket')
-    parser.add_argument('--id', required=True, help='Ticket ID (e.g. CORN-001)')
+    parser.add_argument('--id', required=True, help='Ticket ID (e.g. PROJ-001)')
     parser.add_argument('--target', default=None,
                         help='Target project (routes to that project\'s ticket DB). '
                              'When omitted, inferred from ticket ID prefix.')

@@ -8,7 +8,7 @@ Usage:
     python src/utils/agent_skills/tickets/ticket_list.py --status done
     python src/utils/agent_skills/tickets/ticket_list.py --project myproject --priority high
     python src/utils/agent_skills/tickets/ticket_list.py --type bug --limit 20
-    python src/utils/agent_skills/tickets/ticket_list.py --target app_test2
+    python src/utils/agent_skills/tickets/ticket_list.py --target other-project
     python src/utils/agent_skills/tickets/ticket_list.py --all-projects
 
 Output:

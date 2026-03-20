@@ -3,13 +3,13 @@ Tool: ticket_update.py
 Purpose: CLI to update a ticket's status, priority, notes, title, or description
 
 Usage:
-    python src/utils/agent_skills/tickets/ticket_update.py --id CORN-001 --status done
-    python src/utils/agent_skills/tickets/ticket_update.py --id SHOP-002 --priority high --note "Confirmed on v2"
-    python src/utils/agent_skills/tickets/ticket_update.py --id CORN-003 --title "New title"
-    python src/utils/agent_skills/tickets/ticket_update.py --id SHOP-005 --target app_test2 --status done
+    python src/utils/agent_skills/tickets/ticket_update.py --id PROJ-001 --status done
+    python src/utils/agent_skills/tickets/ticket_update.py --id PROJ-002 --priority high --note "Confirmed on v2"
+    python src/utils/agent_skills/tickets/ticket_update.py --id PROJ-003 --title "New title"
+    python src/utils/agent_skills/tickets/ticket_update.py --id PROJ-005 --target other-project --status done
 
 Output:
-    OK CORN-001 updated
+    OK PROJ-001 updated
     { ... ticket JSON ... }
 """
 
@@ -22,7 +22,7 @@ from ticket_db import update_ticket, append_note, get_ticket, VALID_STATUSES, VA
 
 def main():
     parser = argparse.ArgumentParser(description='Update an existing ticket')
-    parser.add_argument('--id', required=True, help='Ticket ID (e.g. CORN-001)')
+    parser.add_argument('--id', required=True, help='Ticket ID (e.g. PROJ-001)')
     parser.add_argument('--status', choices=VALID_STATUSES, help='New status')
     parser.add_argument('--priority', choices=VALID_PRIORITIES, help='New priority')
     parser.add_argument('--note', help='Text to append to notes (timestamped)')
