@@ -51,12 +51,16 @@ except ImportError:
 
 # Import ticket_db for --ticket cross-reference
 _append_note = None
+_infer_project = None
 try:
     from ..tickets.ticket_db import append_note as _append_note
+    from ..project_resolver import infer_project_from_prefix as _infer_project
 except ImportError:
     try:
         sys.path.insert(0, str(Path(__file__).parent.parent / "tickets"))
         from ticket_db import append_note as _append_note
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from project_resolver import infer_project_from_prefix as _infer_project
     except ImportError:
         pass
 
@@ -384,8 +388,12 @@ def main():
         # Cross-reference: append note to ticket if --ticket provided
         if args.ticket and result and result.get('success') and _append_note:
             try:
+                # Infer target project from ticket ID prefix
+                target = None
+                if _infer_project:
+                    target = _infer_project(args.ticket)
                 snippet = args.content[:120] + ('...' if len(args.content) > 120 else '')
-                note_result = _append_note(args.ticket, f"Memory entry ({args.type}): {snippet}")
+                note_result = _append_note(args.ticket, f"Memory entry ({args.type}): {snippet}", target=target)
                 result["ticket_note"] = note_result
             except Exception as e:
                 result["ticket_note_error"] = str(e)

@@ -1,6 +1,7 @@
 # projects.yaml — Project Registry
 # Maps project names to their paths and configuration.
 # simplex_mind reads this at session start to load the active project's instructions.
+# Each project has its own ticket database at <path>/database/tickets.db
 
 projects:
   cornucopia2:
@@ -12,4 +13,8 @@ projects:
     path: ~/projects/app_test2
     ref_file: CLAUDE.md.ref
     ticket_prefix: SHOP
+    active: false
+  simplex_mind:
+    path: ~/projects/simplex_mind
+    ticket_prefix: SIMP
     active: false

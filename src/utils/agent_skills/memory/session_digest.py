@@ -46,14 +46,18 @@ except ImportError:
         def get_connection():
             return None
 
-# Import ticket_db
+# Import ticket_db and project_resolver
 _ticket_list = None
+_get_active = None
 try:
     from ..tickets.ticket_db import list_tickets as _ticket_list
+    from ..project_resolver import get_active_project as _get_active
 except ImportError:
     try:
         sys.path.insert(0, str(Path(__file__).parent.parent / "tickets"))
         from ticket_db import list_tickets as _ticket_list
+        sys.path.insert(0, str(Path(__file__).parent.parent))
+        from project_resolver import get_active_project as _get_active
     except ImportError:
         pass
 
@@ -64,10 +68,17 @@ def _get_open_tickets() -> Dict[str, Any]:
         return {"count": 0, "critical": [], "high": [], "in_progress": []}
 
     try:
-        result = _ticket_list(status='open')
+        # Route to active project's ticket DB
+        active_target = None
+        if _get_active:
+            active = _get_active()
+            if active:
+                active_target = active["name"]
+
+        result = _ticket_list(status='open', target=active_target)
         tickets = result.get('tickets', []) if result.get('success') else []
 
-        ip_result = _ticket_list(status='in_progress')
+        ip_result = _ticket_list(status='in_progress', target=active_target)
         ip_tickets = ip_result.get('tickets', []) if ip_result.get('success') else []
 
         critical = [t for t in tickets if t.get('priority') == 'critical']
