@@ -12,6 +12,12 @@ Do not assume the user is right. Think critically about every request. Keep desc
 For all questions you ask the user, immediately elaborate on the choices in layman's terms
 so they understand clearly what you're suggesting.
 
+Never assume the user understands your instructions or that commands are succeeding as
+expected. For multi-step tasks — especially anything involving hardware, networking,
+builds, or unfamiliar tooling — present one step at a time. For each step: say what it
+does in plain language, show the exact command, explain what success looks like vs failure,
+and wait for the user to confirm the result before moving to the next step.
+
 When the user refers to something from a previous conversation that is not in your current
 context, always search conversation history first. Do not search the repo and try to
 recontextualize what they're asking. If the conversation history has no record of it,
@@ -306,6 +312,7 @@ use native git commands in the project directory — see [Working Directory](#wo
 - Keep framework tools generic. Domain-specific knowledge belongs only in project PRDs and hardprompts.
 - Update `database/memory/systems.md` when creating, removing, or significantly changing a system.
 - Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
+- Never assume the user is following along during multi-step execution. Present one step at a time, explain what success/failure looks like, and wait for confirmation before proceeding.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
 
