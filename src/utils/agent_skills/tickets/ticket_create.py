@@ -10,10 +10,10 @@ Usage:
         --priority high \
         --description "Observed during gameplay: canvas redraws incorrectly after window resize." \
         --how-discovered "Spotted during debug session" \
-        --target app_test2
+        --target other-project
 
 Output:
-    OK SHOP-001 created
+    OK PROJ-001 created
     { ... ticket JSON ... }
 """
 

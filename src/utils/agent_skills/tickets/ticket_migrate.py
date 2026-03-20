@@ -5,13 +5,8 @@ Purpose: One-time migration from shared tickets.db to per-project ticket databas
 
 What it does:
 1. Reads shared DB (simplex_mind/database/tickets.db)
-2. Routes tickets by project field:
-   - app_test2 → ~/projects/app_test2/database/tickets.db (prefix SHOP)
-   - cornucopia-family → ~/projects/cornucopia2/database/tickets.db (prefix CORN)
-   - global, simplex_mind → simplex_mind/database/tickets.db (prefix SIMP)
-3. Re-IDs mismatched tickets:
-   - CORN-117, CORN-119, CORN-121 → SHOP-NNN (app_test2 tickets with wrong prefix)
-   - PROJECT-108 and global tickets → SIMP-NNN
+2. Routes tickets by project field using projects.yaml config
+3. Re-IDs tickets whose prefix doesn't match their target project
 4. Sets each project's counter to max_ticket_number + 1
 5. Backs up shared DB as tickets.db.bak
 6. Prints migration report
@@ -28,27 +23,24 @@ import sys
 from pathlib import Path
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(_PROJECT_ROOT / "src" / "utils" / "agent_skills"))
 
-# Target databases
-TARGETS = {
-    "cornucopia2": {
-        "db_path": Path("~/projects/cornucopia2/database/tickets.db").expanduser(),
-        "prefix": "CORN",
-        "projects": {"cornucopia", "cornucopia2", "asteroids", "snake", "vampire_survivors", "oimemusic", "asteroid_survivors"},
-    },
-    "app_test2": {
-        "db_path": Path("~/projects/app_test2/database/tickets.db").expanduser(),
-        "prefix": "SHOP",
-        "projects": {"app_test2"},
-    },
-    "simplex_mind": {
-        "db_path": _PROJECT_ROOT / "database" / "tickets.db",
-        "prefix": "SIMP",
-        "projects": {"global", "simplex_mind"},
-    },
-}
+from project_resolver import get_all_projects
 
 SHARED_DB = _PROJECT_ROOT / "database" / "tickets.db"
+
+
+def build_targets() -> dict:
+    """Build target routing from projects.yaml via project_resolver."""
+    targets = {}
+    for proj in get_all_projects():
+        name = proj["name"]
+        targets[name] = {
+            "db_path": Path(proj["path"]) / "database" / "tickets.db",
+            "prefix": proj["ticket_prefix"],
+            "projects": {name},
+        }
+    return targets
 
 
 def init_db(conn: sqlite3.Connection) -> None:
@@ -100,25 +92,27 @@ def read_shared_db() -> list:
     return tickets
 
 
-def route_ticket(ticket: dict) -> str:
+def route_ticket(ticket: dict, targets: dict) -> str:
     """Determine which target DB a ticket belongs to."""
     project = ticket.get("project", "global")
-    for target_name, cfg in TARGETS.items():
+    for target_name, cfg in targets.items():
         if project in cfg["projects"]:
             return target_name
     # Fallback to simplex_mind for unknown projects
     return "simplex_mind"
 
 
-def needs_re_id(ticket: dict, target_name: str) -> bool:
+def needs_re_id(ticket: dict, target_name: str, targets: dict) -> bool:
     """Check if a ticket needs its ID changed to match the target prefix."""
-    expected_prefix = TARGETS[target_name]["prefix"]
+    expected_prefix = targets[target_name]["prefix"]
     current_prefix = ticket["id"].split("-", 1)[0]
     return current_prefix != expected_prefix
 
 
 def migrate(dry_run: bool = False):
     """Run the migration."""
+    targets = build_targets()
+
     print(f"{'DRY RUN — ' if dry_run else ''}Per-Project Ticket Migration")
     print("=" * 60)
 
@@ -128,11 +122,11 @@ def migrate(dry_run: bool = False):
 
     # Route tickets to targets
     routed = {}
-    for target_name in TARGETS:
+    for target_name in targets:
         routed[target_name] = []
 
     for ticket in tickets:
-        target = route_ticket(ticket)
+        target = route_ticket(ticket, targets)
         routed[target].append(ticket)
 
     for target_name, tix in routed.items():
@@ -141,8 +135,8 @@ def migrate(dry_run: bool = False):
     # Process each target
     report = []
 
-    for target_name, cfg in TARGETS.items():
-        target_tickets = routed[target_name]
+    for target_name, cfg in targets.items():
+        target_tickets = routed.get(target_name, [])
         if not target_tickets:
             continue
 
@@ -153,10 +147,8 @@ def migrate(dry_run: bool = False):
         # For simplex_mind, we'll clear and rebuild (it IS the shared DB)
         # For others, we insert missing tickets
         if target_name == "simplex_mind":
-            # This DB will be rebuilt in place after backup
             existing_ids = set()
         else:
-            # Check what already exists in the target DB
             existing_ids = set()
             if db_path.exists():
                 conn = sqlite3.connect(str(db_path))
@@ -176,8 +168,7 @@ def migrate(dry_run: bool = False):
         for ticket in target_tickets:
             old_id = ticket["id"]
 
-            if needs_re_id(ticket, target_name):
-                # Will get a new ID with the correct prefix
+            if needs_re_id(ticket, target_name, targets):
                 re_ids.append((old_id, ticket))
             else:
                 num = get_ticket_num(old_id)
@@ -188,7 +179,6 @@ def migrate(dry_run: bool = False):
                     inserts.append(ticket)
 
         # Assign new IDs for re-IDed tickets
-        # Start numbering after existing max
         next_re_id_num = max_num + 1
         re_id_map = {}
         for old_id, ticket in re_ids:
@@ -222,12 +212,10 @@ def migrate(dry_run: bool = False):
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
         if target_name == "simplex_mind":
-            # Backup first, then rebuild
             backup_path = SHARED_DB.with_suffix(".db.bak")
             shutil.copy2(str(SHARED_DB), str(backup_path))
             print(f"  Backed up → {backup_path}")
 
-            # Delete all tickets, rebuild with only simplex_mind/global tickets
             conn = sqlite3.connect(str(db_path))
             conn.row_factory = sqlite3.Row
             init_db(conn)
