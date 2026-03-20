@@ -137,11 +137,13 @@ def _init_databases():
     else:
         print(f"  skip   database/memory/memory.db")
 
+    # Per-project ticket DBs are created via project_resolver routing.
+    # For simplex_mind's own brain ticket DB:
     tickets_db = ROOT / "database" / "tickets.db"
     tickets_db.parent.mkdir(parents=True, exist_ok=True)
     if not tickets_db.exists():
         from tickets.ticket_db import get_connection as get_ticket_conn
-        conn = get_ticket_conn()
+        conn = get_ticket_conn(db_path=tickets_db)
         conn.close()
         print(f"  create database/tickets.db")
     else:

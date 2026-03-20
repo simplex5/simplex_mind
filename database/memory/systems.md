@@ -51,9 +51,9 @@
 
 ### Ticket System
 - **Location:** `src/utils/agent_skills/tickets/ticket_db.py`
-- **Purpose:** SQLite CRUD for JIRA-like ticket tracking with CORN-NNN IDs, types, statuses, priorities
-- **Key files:** ticket_db.py, ticket_create.py, ticket_update.py, ticket_list.py, ticket_read.py
-- **Added:** initial
+- **Purpose:** Per-project SQLite CRUD for JIRA-like ticket tracking; each project has its own `<project_path>/database/tickets.db` with project-specific prefix (CORN, SHOP, SIMP); routing via `project_resolver.py`
+- **Key files:** ticket_db.py, ticket_create.py, ticket_update.py, ticket_list.py, ticket_read.py, project_resolver.py
+- **Added:** initial (refactored to per-project DBs by SHOP-123)
 
 ### Debug Methodology
 - **Location:** `src/utils/agent_skills/debug/`

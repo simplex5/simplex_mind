@@ -7,34 +7,55 @@ Schema:
            how_discovered, created_at, updated_at, resolved_at, notes
 - ticket_counter: auto-increment counter for ID generation
 
-Prefix is read from database/config.json ("ticket_prefix" key).
-Falls back to "PROJECT" if config is missing or unset.
+Per-project databases: each project gets its own tickets.db at
+<project_path>/database/tickets.db with its own prefix and counter.
+Prefix is resolved from projects.yaml via project_resolver.
 
 Usage (via CLI tools — not called directly):
     from ticket_db import create_ticket, update_ticket, get_ticket, list_tickets, append_note
-
-DB path: database/tickets.db (resolved relative to project root)
 """
 
-import json
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
-DB_PATH = (_PROJECT_ROOT / "database" / "tickets.db").resolve()
-_CONFIG_PATH = (_PROJECT_ROOT / "database" / "config.json").resolve()
+# Import project_resolver (handle both relative and sys.path import)
+try:
+    from ..project_resolver import (
+        get_ticket_db_path,
+        get_ticket_prefix,
+        get_all_projects,
+        infer_project_from_prefix,
+    )
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from project_resolver import (
+        get_ticket_db_path,
+        get_ticket_prefix,
+        get_all_projects,
+        infer_project_from_prefix,
+    )
 
 VALID_TYPES = ['bug', 'feature', 'task', 'improvement', 'documentation']
 VALID_STATUSES = ['open', 'in_progress', 'blocked', 'done', 'wont_fix']
 VALID_PRIORITIES = ['low', 'medium', 'high', 'critical']
 
 
-def get_connection() -> sqlite3.Connection:
-    """Get database connection with row_factory, creating tables if needed."""
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH))
+def get_connection(db_path: Path = None, target: str = None) -> sqlite3.Connection:
+    """Get database connection with row_factory, creating tables if needed.
+
+    Args:
+        db_path: Explicit path to database file. Takes priority over target.
+        target: Project name to resolve DB path from projects.yaml.
+                If both are None, resolves from active project.
+    """
+    if db_path is None:
+        db_path = get_ticket_db_path(target)
+    db_path = Path(db_path)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     init_db(conn)
     return conn
@@ -79,19 +100,8 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def _get_prefix() -> str:
-    """Read ticket prefix from database/config.json, fall back to 'PROJECT'."""
-    try:
-        with open(_CONFIG_PATH) as f:
-            cfg = json.load(f)
-        return cfg.get("ticket_prefix", "PROJECT")
-    except (FileNotFoundError, json.JSONDecodeError, KeyError):
-        return "PROJECT"
-
-
-def _next_id(cursor: sqlite3.Cursor) -> str:
+def _next_id(cursor: sqlite3.Cursor, prefix: str) -> str:
     """Atomically increment counter and return PREFIX-NNN id."""
-    prefix = _get_prefix()
     cursor.execute('UPDATE ticket_counter SET next_num = next_num + 1 WHERE id = 1')
     cursor.execute('SELECT next_num - 1 AS num FROM ticket_counter WHERE id = 1')
     num = cursor.fetchone()['num']
@@ -105,6 +115,14 @@ def row_to_dict(row) -> Optional[Dict]:
     return dict(row)
 
 
+def _resolve_target_for_id(ticket_id: str, target: str = None) -> str:
+    """Resolve target project from ticket ID prefix when target is not explicit."""
+    if target:
+        return target
+    inferred = infer_project_from_prefix(ticket_id)
+    return inferred  # May be None — will fall through to active project
+
+
 def create_ticket(
     ticket_type: str,
     title: str,
@@ -112,22 +130,27 @@ def create_ticket(
     project: str = 'global',
     how_discovered: str = 'manually logged',
     priority: str = 'medium',
+    target: str = None,
 ) -> Dict[str, Any]:
     """
     Create a new ticket.
 
+    Args:
+        target: Project name to route to. If None, uses active project.
+
     Returns:
-        {"success": True, "id": "PROJECT-NNN", "ticket": {...}}
+        {"success": True, "id": "PREFIX-NNN", "ticket": {...}}
     """
     if ticket_type not in VALID_TYPES:
         return {"success": False, "error": f"Invalid type. Must be one of: {VALID_TYPES}"}
     if priority not in VALID_PRIORITIES:
         return {"success": False, "error": f"Invalid priority. Must be one of: {VALID_PRIORITIES}"}
 
-    conn = get_connection()
+    prefix = get_ticket_prefix(target)
+    conn = get_connection(target=target)
     cursor = conn.cursor()
 
-    ticket_id = _next_id(cursor)
+    ticket_id = _next_id(cursor, prefix)
 
     cursor.execute('''
         INSERT INTO tickets (id, ticket_type, title, description, project, how_discovered, priority)
@@ -143,16 +166,20 @@ def create_ticket(
     return {"success": True, "id": ticket_id, "ticket": ticket}
 
 
-def update_ticket(ticket_id: str, **fields) -> Dict[str, Any]:
+def update_ticket(ticket_id: str, target: str = None, **fields) -> Dict[str, Any]:
     """
     Update any subset of mutable fields on a ticket.
 
     Mutable fields: status, priority, title, description, project, how_discovered, notes
     Sets updated_at automatically. Sets resolved_at when status becomes done/wont_fix.
+
+    Args:
+        target: Project name. If None, inferred from ticket ID prefix.
     """
     mutable = {'status', 'priority', 'title', 'description', 'project', 'how_discovered', 'notes'}
 
-    conn = get_connection()
+    resolved_target = _resolve_target_for_id(ticket_id, target)
+    conn = get_connection(target=resolved_target)
     cursor = conn.cursor()
 
     cursor.execute('SELECT * FROM tickets WHERE id = ?', (ticket_id,))
@@ -199,9 +226,14 @@ def update_ticket(ticket_id: str, **fields) -> Dict[str, Any]:
     return {"success": True, "id": ticket_id, "ticket": ticket}
 
 
-def get_ticket(ticket_id: str) -> Dict[str, Any]:
-    """Fetch a single ticket by ID."""
-    conn = get_connection()
+def get_ticket(ticket_id: str, target: str = None) -> Dict[str, Any]:
+    """Fetch a single ticket by ID.
+
+    Args:
+        target: Project name. If None, inferred from ticket ID prefix.
+    """
+    resolved_target = _resolve_target_for_id(ticket_id, target)
+    conn = get_connection(target=resolved_target)
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM tickets WHERE id = ?', (ticket_id,))
     ticket = row_to_dict(cursor.fetchone())
@@ -219,13 +251,17 @@ def list_tickets(
     priority: Optional[str] = None,
     limit: int = 50,
     show_all: bool = False,
+    target: str = None,
 ) -> Dict[str, Any]:
     """
     List tickets with optional filters.
 
     If show_all is False and status is None, defaults to open tickets only.
+
+    Args:
+        target: Project name to list from. If None, uses active project.
     """
-    conn = get_connection()
+    conn = get_connection(target=target)
     cursor = conn.cursor()
 
     conditions = []
@@ -285,9 +321,59 @@ def list_tickets(
     return {"success": True, "tickets": tickets, "total": total, "limit": limit}
 
 
-def append_note(ticket_id: str, note: str) -> Dict[str, Any]:
-    """Append a timestamped note to the ticket's notes field."""
-    conn = get_connection()
+def list_tickets_all(
+    status: Optional[str] = None,
+    ticket_type: Optional[str] = None,
+    project: Optional[str] = None,
+    priority: Optional[str] = None,
+    limit: int = 50,
+    show_all: bool = False,
+) -> Dict[str, Any]:
+    """
+    List tickets across ALL project databases, merged and sorted.
+    """
+    all_tickets = []
+    total = 0
+
+    for proj in get_all_projects():
+        db_path = Path(proj["path"]) / "database" / "tickets.db"
+        if not db_path.exists():
+            continue
+        result = list_tickets(
+            status=status,
+            ticket_type=ticket_type,
+            project=project,
+            priority=priority,
+            limit=limit,
+            show_all=show_all,
+            target=proj["name"],
+        )
+        if result.get("success"):
+            all_tickets.extend(result.get("tickets", []))
+            total += result.get("total", 0)
+
+    # Sort merged results by priority then date
+    priority_map = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+    all_tickets.sort(key=lambda t: (
+        priority_map.get(t.get('priority', 'low'), 4),
+        t.get('created_at', ''),
+    ))
+
+    # Apply limit to merged results
+    if len(all_tickets) > limit:
+        all_tickets = all_tickets[:limit]
+
+    return {"success": True, "tickets": all_tickets, "total": total, "limit": limit}
+
+
+def append_note(ticket_id: str, note: str, target: str = None) -> Dict[str, Any]:
+    """Append a timestamped note to the ticket's notes field.
+
+    Args:
+        target: Project name. If None, inferred from ticket ID prefix.
+    """
+    resolved_target = _resolve_target_for_id(ticket_id, target)
+    conn = get_connection(target=resolved_target)
     cursor = conn.cursor()
 
     cursor.execute('SELECT notes FROM tickets WHERE id = ?', (ticket_id,))

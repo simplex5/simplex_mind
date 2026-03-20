@@ -50,9 +50,16 @@ try:
         list_tickets,
         update_ticket,
     )
+    from src.utils.agent_skills.project_resolver import get_project
 except ImportError:
     sys.path.insert(0, str(_SCRIPT_DIR.parent / "tickets"))
     from ticket_db import create_ticket, list_tickets, update_ticket
+    sys.path.insert(0, str(_SCRIPT_DIR.parent))
+    try:
+        from project_resolver import get_project
+    except ImportError:
+        def get_project(name):
+            return None
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -71,6 +78,12 @@ def _project_label(run_config: dict) -> str:
     prd = run_config.get("prd_file", "")
     m = re.search(r"projects[/\\]([^/\\]+)[/\\]", prd)
     return m.group(1) if m else "unknown"
+
+
+def _resolve_target(project_label: str) -> Optional[str]:
+    """Map a project label (from PRD path) to a projects.yaml target name."""
+    proj = get_project(project_label)
+    return project_label if proj else None
 
 
 def _write_run_insight(summary: dict) -> Dict[str, Any]:
@@ -116,10 +129,13 @@ def _check_anomalies(summary: dict, threshold: int) -> List[Dict[str, Any]]:
     run_id   = summary.get("run_id", "unknown")
     cycles   = summary.get("fix_cycles_per_file", {})
 
+    # Resolve target for per-project ticket DB routing
+    target = _resolve_target(project)
+
     # Pre-fetch open bug tickets once for dedup lookup
     open_tickets = []
     try:
-        ticket_result = list_tickets(status="open", ticket_type="bug", project=project)
+        ticket_result = list_tickets(status="open", ticket_type="bug", project=project, target=target)
         if ticket_result.get("success"):
             open_tickets = ticket_result.get("tickets", [])
     except Exception:
@@ -143,6 +159,7 @@ def _check_anomalies(summary: dict, threshold: int) -> List[Dict[str, Any]]:
                 )
                 result = update_ticket(
                     existing["id"],
+                    target=target,
                     notes=(old_notes + new_note).strip(),
                 )
                 results.append({"file": filename, "cycles": count, "ticket": result, "action": "updated"})
@@ -158,6 +175,7 @@ def _check_anomalies(summary: dict, threshold: int) -> List[Dict[str, Any]]:
                     project=project,
                     how_discovered=f"auto-detected by memory_post_run.py during run {run_id}",
                     priority="high" if count > threshold * 2 else "medium",
+                    target=target,
                 )
                 results.append({"file": filename, "cycles": count, "ticket": result, "action": "created"})
     return results

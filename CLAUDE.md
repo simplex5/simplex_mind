@@ -131,28 +131,35 @@ python3 src/utils/agent_skills/memory/memory_sync.py --dry-run # preview
 
 ## Ticket Protocol
 
-**Location:** `database/tickets.db`
+**Location:** Per-project: `<project_path>/database/tickets.db`
+Tickets auto-target the active project. Use `--target <name>` to override.
+Ticket ID prefix is auto-inferred for read/update operations (e.g. SHOP-122 → app_test2).
 
 **Commands:**
 ```bash
-# Create
+# Create (targets active project by default)
 python3 src/utils/agent_skills/tickets/ticket_create.py \
     --type <bug|feature|task|improvement|documentation> \
     --title "Short summary" \
     --project <name> \
     --priority <low|medium|high|critical> \
     --description "Full details"
+# Create targeting a specific project
+python3 src/utils/agent_skills/tickets/ticket_create.py \
+    --type task --title "..." --target app_test2
 
 # Read / list
 python3 src/utils/agent_skills/tickets/ticket_read.py --id CORN-001
 python3 src/utils/agent_skills/tickets/ticket_list.py --status open
 python3 src/utils/agent_skills/tickets/ticket_list.py --all
+python3 src/utils/agent_skills/tickets/ticket_list.py --target app_test2
+python3 src/utils/agent_skills/tickets/ticket_list.py --all-projects
 
-# Update
+# Update (auto-infers project from ticket ID prefix)
 python3 src/utils/agent_skills/tickets/ticket_update.py \
     --id CORN-001 --status <open|in_progress|blocked|done|wont_fix>
 python3 src/utils/agent_skills/tickets/ticket_update.py \
-    --id CORN-001 --priority high --note "Context note"
+    --id SHOP-001 --priority high --note "Context note"
 ```
 
 ### When to create tickets
