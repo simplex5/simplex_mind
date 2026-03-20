@@ -11,6 +11,7 @@ All tools and reference files Claude invokes directly.
 | Token Tracker | `track_tokens.py` | Appends call objects to metrics JSON (optional — requires statusline.sh) |
 | Git Operations | `git_commit.py` | Init, status, commit, diff for framework files |
 | Initializer | `init.py` | Creates full project scaffold (idempotent) |
+| Project Resolver | `project_resolver.py` | Shared utility for resolving project config from projects.yaml; routes ticket operations to per-project databases |
 
 ---
 
@@ -34,11 +35,11 @@ All tools and reference files Claude invokes directly.
 
 | Tool | File | Description |
 |------|------|-------------|
-| Ticket DB | `tickets/ticket_db.py` | SQLite CRUD core for persistent ticket tracking (prefix config-driven via `database/config.json`, falls back to PROJECT) |
-| Ticket Create | `tickets/ticket_create.py` | CLI: create a ticket (type, title, project, priority, description) |
-| Ticket Update | `tickets/ticket_update.py` | CLI: update status, priority, notes, title, description |
-| Ticket List | `tickets/ticket_list.py` | CLI: list/filter tickets by status, type, project, priority |
-| Ticket Read | `tickets/ticket_read.py` | CLI: get full detail for a single ticket by ID |
+| Ticket DB | `tickets/ticket_db.py` | SQLite CRUD core for per-project ticket tracking; prefix resolved from projects.yaml via project_resolver; supports `--target` routing |
+| Ticket Create | `tickets/ticket_create.py` | CLI: create a ticket (type, title, project, priority, description, --target) |
+| Ticket Update | `tickets/ticket_update.py` | CLI: update status, priority, notes, title, description (--target or auto-infer from ID prefix) |
+| Ticket List | `tickets/ticket_list.py` | CLI: list/filter tickets by status, type, project, priority (--target, --all-projects) |
+| Ticket Read | `tickets/ticket_read.py` | CLI: get full detail for a single ticket by ID (--target or auto-infer from ID prefix) |
 
 ---
 

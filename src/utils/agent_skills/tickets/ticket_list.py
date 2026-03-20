@@ -1,13 +1,15 @@
 """
 Tool: ticket_list.py
-Purpose: CLI to list and filter tickets from database/tickets.db
+Purpose: CLI to list and filter tickets from per-project ticket databases
 
 Usage:
-    python src/utils/agent_skills/tickets/ticket_list.py               # open tickets (default)
+    python src/utils/agent_skills/tickets/ticket_list.py               # open tickets from active project
     python src/utils/agent_skills/tickets/ticket_list.py --all         # all statuses
     python src/utils/agent_skills/tickets/ticket_list.py --status done
     python src/utils/agent_skills/tickets/ticket_list.py --project myproject --priority high
     python src/utils/agent_skills/tickets/ticket_list.py --type bug --limit 20
+    python src/utils/agent_skills/tickets/ticket_list.py --target app_test2
+    python src/utils/agent_skills/tickets/ticket_list.py --all-projects
 
 Output:
     Formatted table to stdout + JSON block
@@ -17,7 +19,7 @@ import argparse
 import json
 import sys
 
-from ticket_db import list_tickets, VALID_STATUSES, VALID_TYPES, VALID_PRIORITIES
+from ticket_db import list_tickets, list_tickets_all, VALID_STATUSES, VALID_TYPES, VALID_PRIORITIES
 
 # Priority sort order for display
 PRIORITY_ORDER = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
@@ -63,17 +65,33 @@ def main():
     parser.add_argument('--limit', type=int, default=50, help='Max results (default: 50)')
     parser.add_argument('--all', action='store_true', dest='show_all',
                         help='Show all statuses (not just open)')
+    parser.add_argument('--target', default=None,
+                        help='Target project (routes to that project\'s ticket DB). '
+                             'Defaults to active project.')
+    parser.add_argument('--all-projects', action='store_true', dest='all_projects',
+                        help='List tickets from ALL project databases')
 
     args = parser.parse_args()
 
-    result = list_tickets(
-        status=args.status,
-        ticket_type=args.ticket_type,
-        project=args.project,
-        priority=args.priority,
-        limit=args.limit,
-        show_all=args.show_all,
-    )
+    if args.all_projects:
+        result = list_tickets_all(
+            status=args.status,
+            ticket_type=args.ticket_type,
+            project=args.project,
+            priority=args.priority,
+            limit=args.limit,
+            show_all=args.show_all,
+        )
+    else:
+        result = list_tickets(
+            status=args.status,
+            ticket_type=args.ticket_type,
+            project=args.project,
+            priority=args.priority,
+            limit=args.limit,
+            show_all=args.show_all,
+            target=args.target,
+        )
 
     if not result.get('success'):
         print(f"ERROR {result.get('error')}")
