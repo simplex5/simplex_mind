@@ -8,12 +8,12 @@ projects:
     path: ~/projects/cornucopia2
     ref_file: CLAUDE.md.ref    # project-specific instructions (loaded after simplex_mind's CLAUDE.md)
     ticket_prefix: CORN
-    active: true
+    active: false
   app_test2:
     path: ~/projects/app_test2
     ref_file: CLAUDE.md.ref
     ticket_prefix: SHOP
-    active: false
+    active: true
   simplex_mind:
     path: ~/projects/simplex_mind
     ticket_prefix: SIMP
