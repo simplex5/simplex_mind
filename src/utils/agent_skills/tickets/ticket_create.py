@@ -1,6 +1,6 @@
 """
 Tool: ticket_create.py
-Purpose: CLI to create a new ticket in database/tickets.db
+Purpose: CLI to create a new ticket in the per-project ticket database
 
 Usage:
     python src/utils/agent_skills/tickets/ticket_create.py \
@@ -9,10 +9,11 @@ Usage:
         --project myproject \
         --priority high \
         --description "Observed during gameplay: canvas redraws incorrectly after window resize." \
-        --how-discovered "Spotted during debug session"
+        --how-discovered "Spotted during debug session" \
+        --target app_test2
 
 Output:
-    OK PROJECT-001 created
+    OK SHOP-001 created
     { ... ticket JSON ... }
 """
 
@@ -30,12 +31,15 @@ def main():
     parser.add_argument('--title', required=True, help='Short summary')
     parser.add_argument('--description', default='', help='Full description')
     parser.add_argument('--project', default='global',
-                        help='Project name')
+                        help='Project name (metadata field)')
     parser.add_argument('--priority', default='medium', choices=VALID_PRIORITIES,
                         help='Priority level')
     parser.add_argument('--how-discovered', default='manually logged',
                         dest='how_discovered',
                         help='Context for how this was found')
+    parser.add_argument('--target', default=None,
+                        help='Target project (routes to that project\'s ticket DB). '
+                             'Defaults to active project in projects.yaml.')
 
     args = parser.parse_args()
 
@@ -46,6 +50,7 @@ def main():
         project=args.project,
         how_discovered=args.how_discovered,
         priority=args.priority,
+        target=args.target,
     )
 
     if result.get('success'):
