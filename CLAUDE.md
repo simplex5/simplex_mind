@@ -285,6 +285,10 @@ python3 src/utils/agent_skills/tickets/ticket_update.py \
     --id PROJ-001 --priority high --note "Context note"
 ```
 
+### Ambiguous ticket queries
+
+**Hard rule: When the user asks about tickets without explicitly naming a project, ask which project they mean. Do not guess or scan a default — ask first.**
+
 ### When to create tickets
 
 **Hard rule: Create a ticket before starting any work that edits files.**
@@ -447,6 +451,7 @@ use native git commands in the project directory — see [Working Directory](#wo
 - Plans for coding tasks must include an Agent Delegation section assigning work to specific agents. Never frame implementation as direct execution.
 - When switching projects, always switch to the target project's simplex_mind branch first. Check `projects.yaml` for the `branch` field. Never modify `projects.yaml` on the wrong project's branch.
 - Only `projects.yaml` should differ between project branches. Protocol changes to CLAUDE.md must go to master first, then merge into all project branches.
+- When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
 
