@@ -63,12 +63,13 @@ projects:
     active: true
 ```
 
+- `projects.yaml` is a **local config file** (gitignored, never committed). It is identical everywhere — not per-branch.
 - Only one project should have `active: true` at a time.
-- Each project has a dedicated `branch` in simplex_mind. Never modify `projects.yaml` on the wrong branch.
-- To switch projects: **(1)** switch to the target project's branch in simplex_mind (`git checkout <branch>`), **(2)** set the current project to `active: false`, **(3)** set the new one to `active: true`.
+- Each project has a dedicated `branch` in simplex_mind for project-specific work.
+- To switch projects: **(1)** set the current project to `active: false` and the new one to `active: true` in `projects.yaml`, **(2)** switch to the target project's branch in simplex_mind (`git checkout <branch>`).
 - To add a project: add an entry with `path`, `ref_file`, `ticket_prefix`, `branch`, and `active: false`.
 - New project branches are always created from `master`.
-- Only `projects.yaml` should differ between project branches. CLAUDE.md protocols are shared — commit protocol changes to master first, then merge into project branches.
+- CLAUDE.md protocols are shared — commit protocol changes to master first, then merge into project branches.
 
 ---
 
@@ -430,7 +431,8 @@ use native git commands in the project directory — see [Working Directory](#wo
 - Writing or updating any file in `src/`
 - Modifying `CLAUDE.md`, `AGENTS.md`, `projects.yaml`, or `database/memory/MEMORY.md`
 
-**Never commit after:**
+**Never commit:**
+- `projects.yaml` — local config, gitignored
 - Benchmark runs — output is gitignored
 - Edits to `database/memory/logs/` or `database/*.db` — local session state
 
@@ -449,8 +451,8 @@ use native git commands in the project directory — see [Working Directory](#wo
 - Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
 - Never assume the user is following along during multi-step execution. Present one step at a time, explain what success/failure looks like, and wait for confirmation before proceeding.
 - Plans for coding tasks must include an Agent Delegation section assigning work to specific agents. Never frame implementation as direct execution.
-- When switching projects, always switch to the target project's simplex_mind branch first. Check `projects.yaml` for the `branch` field. Never modify `projects.yaml` on the wrong project's branch.
-- Only `projects.yaml` should differ between project branches. Protocol changes to CLAUDE.md must go to master first, then merge into all project branches.
+- `projects.yaml` is local config (gitignored). Never commit it. When switching projects, edit the active flag then checkout the target branch.
+- Protocol changes to CLAUDE.md must go to master first, then merge into all project branches.
 - When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
