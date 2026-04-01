@@ -23,6 +23,9 @@ ENV/
 .env.local
 .env.*.local
 
+# Local project config
+projects.yaml
+
 # IDE
 .idea/
 .vscode/
