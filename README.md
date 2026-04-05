@@ -81,7 +81,8 @@ projects:
   my-project:
     path: ~/projects/my-project
     ref_file: CLAUDE.md.ref
-    active: true
+    ticket_prefix: PROJ
+    branch: my-project
 ```
 
 6. Create the initial git commit:
@@ -91,10 +92,12 @@ python3 src/utils/agent_skills/git_commit.py init
 
 ## Adding a Project
 
-1. Add an entry to `projects.yaml` with `path`, `ref_file`, and `active: false`
+1. Add an entry to `projects.yaml` with `path`, `ref_file`, `ticket_prefix`, and `branch`
 2. Create `CLAUDE.md.ref` in the project root with project-specific instructions
-3. Set the new project to `active: true` (and the old one to `false`)
-4. Start a new session — your agent will load the new project's instructions
+3. Create the project's branch in simplex_mind from master: `git checkout master && git checkout -b <branch>`
+4. `git checkout <branch>` to activate the project, then start a new session — your agent will load the new project's instructions
+
+The active project is derived from the current simplex_mind git branch (matching against each project's `branch:` field). On `master`, no project is active.
 
 ## Configuration
 

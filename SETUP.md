@@ -23,7 +23,7 @@ Before acting on any non-trivial request, restate your understanding in plain la
 At the start of every new session, check for `database/config.json`. If it contains `"onboarding_complete": true`, skip onboarding and proceed to normal session startup:
 
 1. Run session digest: `python3 src/utils/agent_skills/memory/session_digest.py`
-2. Read `projects.yaml` to find the active project
+2. Read `projects.yaml` and find the project whose `branch:` matches the current simplex_mind git branch (on `master`, no project is active)
 3. Read the active project's `CLAUDE.md.ref` (at `<path>/<ref_file>`)
 4. Report open ticket count + critical/high items
 5. Proceed to normal conversation

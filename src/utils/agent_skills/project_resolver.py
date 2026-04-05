@@ -6,19 +6,25 @@ Purpose: Shared utility for resolving project config from projects.yaml.
 
 Functions:
     load_projects()              -> dict of project configs
-    get_active_project()         -> {name, path, prefix, ref_file} for active project
+    get_active_project()         -> config for project whose branch matches
+                                    the current simplex_mind git branch, or None
     get_project(name)            -> config for a specific project
     get_ticket_db_path(target)   -> Path to <project_path>/database/tickets.db
     get_all_projects()           -> list of all project configs
     infer_project_from_prefix(ticket_id) -> project name matching the prefix
 
+The active project is derived from the current simplex_mind git branch, by
+matching against each project's `branch:` field in projects.yaml. On master,
+no project is active.
+
 Resolution order for ticket DB:
     1. Explicit target (project name)
     2. Prefix inference from ticket ID
-    3. Active project (default)
+    3. Active project (current git branch)
     4. Fallback: simplex_mind brain DB (prefix SIMP)
 """
 
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -36,7 +42,7 @@ _SIMPLEX_MIND_ENTRY = {
     "path": str(_REPO_ROOT),
     "ticket_prefix": "SIMP",
     "ref_file": None,
-    "active": False,
+    "branch": "master",
 }
 
 
@@ -56,11 +62,7 @@ def _parse_yaml(text: str) -> dict:
             key, _, value = stripped.partition(":")
             key = key.strip()
             value = value.strip().strip("'\"")
-            if current_project and key in ("path", "ref_file", "ticket_prefix", "active"):
-                if value.lower() == "true":
-                    value = True
-                elif value.lower() == "false":
-                    value = False
+            if current_project and key in ("path", "ref_file", "ticket_prefix", "branch"):
                 projects[current_project][key] = value
         elif line.startswith("  ") and not line.startswith("    ") and stripped.endswith(":"):
             current_project = stripped[:-1].strip()
@@ -85,7 +87,7 @@ def load_projects() -> Dict[str, Dict[str, Any]]:
             "path": str(Path(path_str).expanduser()),
             "ticket_prefix": cfg.get("ticket_prefix", name.upper()[:4]),
             "ref_file": cfg.get("ref_file"),
-            "active": cfg.get("active", False),
+            "branch": cfg.get("branch"),
         }
     return result
 
@@ -100,10 +102,30 @@ def get_all_projects() -> List[Dict[str, Any]]:
     return result
 
 
+def _get_current_branch() -> Optional[str]:
+    """Return the current simplex_mind git branch name, or None if unavailable."""
+    try:
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            capture_output=True, text=True, cwd=str(_REPO_ROOT),
+            timeout=5,
+        )
+        if result.returncode == 0:
+            branch = result.stdout.strip()
+            return branch or None
+    except Exception:
+        pass
+    return None
+
+
 def get_active_project() -> Optional[Dict[str, Any]]:
-    """Return the project with active: true, or None."""
+    """Return the project whose branch matches the current simplex_mind git
+    branch, or None. On master (or any unmapped branch), returns None."""
+    current = _get_current_branch()
+    if not current:
+        return None
     for cfg in load_projects().values():
-        if cfg.get("active"):
+        if cfg.get("branch") == current:
             return cfg
     return None
 
