@@ -315,7 +315,12 @@ Also create a ticket immediately for:
 
 ## Conversation History Protocol
 
-**Ingest** (runs automatically via cron every 5 minutes):
+**Hard rule: After `/clear`, if the user references anything from a past conversation, your FIRST action is to run `conversation_read.py --action list-sessions --limit 10`. Never say "I have no prior context." The Stop hook keeps the DB fresh after every response — trust it and query.**
+
+**Ingest** (runs automatically via two mechanisms):
+- **Stop hook** (`.claude/settings.json`): runs after every Claude response, ~0 lag.
+- **Cron** (every 5 min): safety net for crashes or missed hooks.
+
 ```bash
 python3 src/utils/agent_skills/conversation/conversation_ingest.py
 ```
