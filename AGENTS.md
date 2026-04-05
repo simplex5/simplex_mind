@@ -27,12 +27,13 @@ At the start of every new session:
    This outputs: open tickets (count + critical/high), recent decisions, active systems, recent git commits.
 
 2. **Load project config:**
-   Read `projects.yaml` in this repo root. Find the project with `active: true`.
+   Read `projects.yaml` in this repo root. Find the project whose `branch:` matches the current simplex_mind git branch (`git branch --show-current`).
    Expand `path` (e.g., `~/projects/my-project`) and read `<path>/<ref_file>` (e.g., the project reference file).
    Follow the project-specific instructions in that file for the remainder of the session.
+   **On `master`:** no project is active — report that and proceed with simplex_mind brain tools only (SIMP tickets).
 
 3. **Report readiness:**
-   Report the open ticket count, any critical/high items, and confirm which project is active.
+   Report the open ticket count, any critical/high items, and confirm which project is active (or that you're on master with no active project).
 
 ---
 
@@ -44,12 +45,13 @@ projects:
   my-project:
     path: ~/projects/my-project
     ref_file: CLAUDE.md.ref
-    active: true
+    ticket_prefix: PROJ
+    branch: my-project        # simplex_mind branch for this project
 ```
 
-- Only one project should have `active: true` at a time.
-- To switch projects: set the current project to `active: false`, set the new one to `active: true`.
-- To add a project: add an entry with `path`, `ref_file`, and `active: false`.
+- The active project is **derived** from the current simplex_mind git branch: whichever project's `branch:` matches. No flag to toggle.
+- **To switch projects:** `git checkout <branch>` in simplex_mind. On `master`, no project is active.
+- To add a project: add an entry with `path`, `ref_file`, `ticket_prefix`, and `branch`.
 
 ---
 
