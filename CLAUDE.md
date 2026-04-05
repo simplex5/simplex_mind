@@ -41,12 +41,13 @@ At the start of every new session:
    This outputs: open tickets (count + critical/high), recent decisions, active systems, recent git commits.
 
 2. **Load project config:**
-   Read `projects.yaml` in this repo root. Find the project with `active: true`.
+   Read `projects.yaml` in this repo root. Find the project whose `branch:` matches the current simplex_mind git branch (`git branch --show-current`).
    Expand `path` (e.g., `~/projects/my-project`) and read `<path>/<ref_file>` (e.g., `CLAUDE.md.ref`).
    Follow the project-specific instructions in that file for the remainder of the session.
+   **On `master`:** no project is active — report that and proceed with simplex_mind brain tools only (SIMP tickets).
 
 3. **Report readiness:**
-   Report the open ticket count, any critical/high items, and confirm which project is active.
+   Report the open ticket count, any critical/high items, and confirm which project is active (or that you're on master with no active project).
 
 ---
 
@@ -60,14 +61,13 @@ projects:
     ref_file: CLAUDE.md.ref
     ticket_prefix: PROJ
     branch: my-project        # simplex_mind branch for this project
-    active: true
 ```
 
 - `projects.yaml` is a **local config file** (gitignored, never committed). It is identical everywhere — not per-branch.
-- Only one project should have `active: true` at a time.
+- The active project is **derived** from the current simplex_mind git branch: whichever project's `branch:` matches. No flag to toggle, no state to drift.
 - Each project has a dedicated `branch` in simplex_mind for project-specific work.
-- To switch projects: **(1)** set the current project to `active: false` and the new one to `active: true` in `projects.yaml`, **(2)** switch to the target project's branch in simplex_mind (`git checkout <branch>`).
-- To add a project: add an entry with `path`, `ref_file`, `ticket_prefix`, `branch`, and `active: false`.
+- **To switch projects:** `git checkout <branch>` in simplex_mind. That's the whole operation. On `master`, no project is active.
+- To add a project: add an entry with `path`, `ref_file`, `ticket_prefix`, and `branch`.
 - New project branches are always created from `master`.
 - CLAUDE.md protocols are shared — commit protocol changes to master first, then merge into project branches.
 
@@ -451,7 +451,7 @@ use native git commands in the project directory — see [Working Directory](#wo
 - Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
 - Never assume the user is following along during multi-step execution. Present one step at a time, explain what success/failure looks like, and wait for confirmation before proceeding.
 - Plans for coding tasks must include an Agent Delegation section assigning work to specific agents. Never frame implementation as direct execution.
-- `projects.yaml` is local config (gitignored). Never commit it. When switching projects, edit the active flag then checkout the target branch.
+- `projects.yaml` is local config (gitignored). Never commit it. The active project is derived from the current simplex_mind git branch — no flag to toggle. To switch projects, just `git checkout <branch>`.
 - Protocol changes to CLAUDE.md must go to master first, then merge into all project branches.
 - When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
 
