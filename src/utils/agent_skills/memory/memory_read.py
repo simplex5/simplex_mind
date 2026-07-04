@@ -212,14 +212,11 @@ def read_db_entries(
     Returns:
         List of entries
     """
-    result = list_entries(
-        entry_type=entry_type,
-        min_importance=min_importance,
-        limit=50
-    )
+    result = get_recent(hours=hours, entry_type=entry_type)
 
     if result.get('success'):
-        return result.get('entries', [])
+        entries = result.get('entries', [])
+        return [e for e in entries if (e.get('importance') or 0) >= min_importance]
 
     log.warning("[memory] DB read failed: %s", result.get('error', 'unknown'))
     return []
