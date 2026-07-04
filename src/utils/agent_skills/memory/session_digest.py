@@ -24,7 +24,7 @@ Output:
 import sys
 import json
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -32,7 +32,6 @@ from typing import Dict, Any, List, Optional
 PROJECT_ROOT = (Path(__file__).parent.parent.parent.parent.parent).resolve()
 MEMORY_DIR = PROJECT_ROOT / "database" / "memory"
 SYSTEMS_FILE = MEMORY_DIR / "systems.md"
-TICKETS_DB = PROJECT_ROOT / "database" / "tickets.db"
 
 # Import memory_db
 try:
@@ -101,7 +100,8 @@ def _get_recent_decisions(days: int = 14) -> List[Dict[str, Any]]:
         if not result.get('success'):
             return []
 
-        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        # created_at is UTC 'YYYY-MM-DD HH:MM:SS' (CURRENT_TIMESTAMP) — match it
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
         return [
             e for e in result.get('entries', [])
             if e.get('created_at', '') >= cutoff
@@ -111,7 +111,11 @@ def _get_recent_decisions(days: int = 14) -> List[Dict[str, Any]]:
 
 
 def _get_active_systems_summary() -> List[str]:
-    """Get one-line summaries from systems.md Active Systems section."""
+    """Get one-line summaries from systems.md Active Systems section.
+
+    systems.md entries are prose paragraphs under ###/#### headings — take
+    each heading plus the first non-empty line beneath it as the summary.
+    """
     if not SYSTEMS_FILE.exists():
         return []
 
@@ -130,11 +134,16 @@ def _get_active_systems_summary() -> List[str]:
         if not in_active:
             continue
 
-        if line.startswith('### '):
-            current_name = line[4:].strip()
-        elif line.strip().startswith('- **Purpose:**') and current_name:
-            purpose = line.strip().replace('- **Purpose:** ', '')
-            summaries.append(f"- **{current_name}**: {purpose}")
+        if line.startswith('### ') or line.startswith('#### '):
+            current_name = line.lstrip('#').strip()
+        elif current_name and line.strip() and not line.strip().startswith('*'):
+            first_line = line.strip()
+            # Legacy '- **Purpose:**' bullets stay supported
+            if first_line.startswith('- **Purpose:**'):
+                first_line = first_line.replace('- **Purpose:** ', '')
+            if len(first_line) > 120:
+                first_line = first_line[:117] + '...'
+            summaries.append(f"- **{current_name}**: {first_line}")
             current_name = None
 
     return summaries

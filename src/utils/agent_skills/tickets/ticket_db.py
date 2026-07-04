@@ -16,7 +16,7 @@ Usage (via CLI tools — not called directly):
 """
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -26,6 +26,7 @@ try:
         get_ticket_db_path,
         get_ticket_prefix,
         get_all_projects,
+        get_active_project,
         infer_project_from_prefix,
     )
 except ImportError:
@@ -35,6 +36,7 @@ except ImportError:
         get_ticket_db_path,
         get_ticket_prefix,
         get_all_projects,
+        get_active_project,
         infer_project_from_prefix,
     )
 
@@ -127,7 +129,7 @@ def create_ticket(
     ticket_type: str,
     title: str,
     description: str = '',
-    project: str = 'global',
+    project: str = None,
     how_discovered: str = 'manually logged',
     priority: str = 'medium',
     target: str = None,
@@ -136,6 +138,8 @@ def create_ticket(
     Create a new ticket.
 
     Args:
+        project: Metadata label. If None, defaults to the routed project name
+                 (explicit target, else active project, else 'global').
         target: Project name to route to. If None, uses active project.
 
     Returns:
@@ -146,8 +150,21 @@ def create_ticket(
     if priority not in VALID_PRIORITIES:
         return {"success": False, "error": f"Invalid priority. Must be one of: {VALID_PRIORITIES}"}
 
-    prefix = get_ticket_prefix(target)
-    conn = get_connection(target=target)
+    try:
+        prefix = get_ticket_prefix(target)
+        conn = get_connection(target=target)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+
+    # Default the project label to wherever the ticket is actually routed,
+    # so the column stays consistent with the DB it lands in.
+    if not project:
+        if target:
+            project = target
+        else:
+            active = get_active_project()
+            project = active["name"] if active else "global"
+
     cursor = conn.cursor()
 
     ticket_id = _next_id(cursor, prefix)
@@ -179,7 +196,10 @@ def update_ticket(ticket_id: str, target: str = None, **fields) -> Dict[str, Any
     mutable = {'status', 'priority', 'title', 'description', 'project', 'how_discovered', 'notes'}
 
     resolved_target = _resolve_target_for_id(ticket_id, target)
-    conn = get_connection(target=resolved_target)
+    try:
+        conn = get_connection(target=resolved_target)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
     cursor = conn.cursor()
 
     cursor.execute('SELECT * FROM tickets WHERE id = ?', (ticket_id,))
@@ -207,13 +227,15 @@ def update_ticket(ticket_id: str, target: str = None, **fields) -> Dict[str, Any
         return {"success": False, "error": "No valid fields to update"}
 
     updates.append('updated_at = ?')
-    values.append(datetime.utcnow().isoformat(sep=' ', timespec='seconds'))
+    values.append(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
 
-    # Set resolved_at if closing
+    # Set resolved_at when closing; clear it when reopening
     new_status = fields.get('status')
     if new_status in ('done', 'wont_fix'):
         updates.append('resolved_at = ?')
-        values.append(datetime.utcnow().isoformat(sep=' ', timespec='seconds'))
+        values.append(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
+    elif new_status in ('open', 'in_progress', 'blocked'):
+        updates.append('resolved_at = NULL')
 
     values.append(ticket_id)
     cursor.execute(f'UPDATE tickets SET {", ".join(updates)} WHERE id = ?', values)
@@ -233,7 +255,10 @@ def get_ticket(ticket_id: str, target: str = None) -> Dict[str, Any]:
         target: Project name. If None, inferred from ticket ID prefix.
     """
     resolved_target = _resolve_target_for_id(ticket_id, target)
-    conn = get_connection(target=resolved_target)
+    try:
+        conn = get_connection(target=resolved_target)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM tickets WHERE id = ?', (ticket_id,))
     ticket = row_to_dict(cursor.fetchone())
@@ -261,7 +286,10 @@ def list_tickets(
     Args:
         target: Project name to list from. If None, uses active project.
     """
-    conn = get_connection(target=target)
+    try:
+        conn = get_connection(target=target)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
     cursor = conn.cursor()
 
     conditions = []
@@ -373,7 +401,10 @@ def append_note(ticket_id: str, note: str, target: str = None) -> Dict[str, Any]
         target: Project name. If None, inferred from ticket ID prefix.
     """
     resolved_target = _resolve_target_for_id(ticket_id, target)
-    conn = get_connection(target=resolved_target)
+    try:
+        conn = get_connection(target=resolved_target)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
     cursor = conn.cursor()
 
     cursor.execute('SELECT notes FROM tickets WHERE id = ?', (ticket_id,))
@@ -382,7 +413,7 @@ def append_note(ticket_id: str, note: str, target: str = None) -> Dict[str, Any]
         conn.close()
         return {"success": False, "error": f"Ticket {ticket_id} not found"}
 
-    timestamp = datetime.utcnow().isoformat(sep=' ', timespec='seconds')
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     existing = row['notes'] or ''
     separator = '\n\n' if existing else ''
     new_notes = f"{existing}{separator}[{timestamp}] {note}"

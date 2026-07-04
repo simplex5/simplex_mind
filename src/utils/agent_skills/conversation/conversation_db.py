@@ -18,7 +18,7 @@ Dependencies:
 
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
@@ -110,6 +110,12 @@ def get_connection():
         )
     ''')
 
+    # byte_offset enables incremental ingest (parse only appended bytes)
+    try:
+        cursor.execute('ALTER TABLE ingest_state ADD COLUMN byte_offset INTEGER DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass  # column already exists
+
     # Indexes
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_role ON messages(role)')
@@ -140,7 +146,7 @@ def upsert_session(
     message_count: int = 0
 ):
     """Insert or update session metadata."""
-    now = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     conn.execute('''
         INSERT INTO sessions (session_id, slug, source_file, git_branch,
                               first_message_at, last_message_at, message_count,
@@ -173,12 +179,14 @@ def insert_message(
 ) -> bool:
     """Insert a message, ignoring duplicates. Returns True if inserted."""
     try:
-        conn.execute('''
+        cursor = conn.execute('''
             INSERT OR IGNORE INTO messages
             (uuid, session_id, parent_uuid, role, content, timestamp, git_branch, sequence_num)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''', (uuid, session_id, parent_uuid, role, content, timestamp, git_branch, sequence_num))
-        return conn.total_changes > 0
+        # rowcount is per-statement; conn.total_changes is cumulative and
+        # would report True for every ignored duplicate after the first insert
+        return cursor.rowcount > 0
     except sqlite3.IntegrityError:
         return False
 
@@ -241,8 +249,9 @@ def search_messages(
     limit: int = 50
 ) -> List[Dict]:
     """Full-text search across messages using FTS5."""
-    # Build FTS query — quote terms for safety
-    fts_query = ' '.join(f'"{w}"' for w in query.split())
+    # Build FTS query — quote terms for safety; double up embedded quotes so a
+    # literal '"' in the query can't produce invalid FTS5 syntax
+    fts_query = ' '.join('"{}"'.format(w.replace('"', '""')) for w in query.split())
 
     if session_id and role:
         cursor = conn.execute('''
@@ -294,18 +303,21 @@ def get_ingest_state(conn, file_name: str) -> Optional[Dict]:
     return row_to_dict(cursor.fetchone())
 
 
-def set_ingest_state(conn, file_name: str, file_size: int, file_mtime: float, lines_processed: int):
+def set_ingest_state(conn, file_name: str, file_size: int, file_mtime: float,
+                     lines_processed: int, byte_offset: int = 0):
     """Update ingestion state for a file."""
-    now = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     conn.execute('''
-        INSERT INTO ingest_state (file_name, file_size, file_mtime, lines_processed, last_ingested_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO ingest_state (file_name, file_size, file_mtime, lines_processed,
+                                  byte_offset, last_ingested_at)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(file_name) DO UPDATE SET
             file_size = excluded.file_size,
             file_mtime = excluded.file_mtime,
             lines_processed = excluded.lines_processed,
+            byte_offset = excluded.byte_offset,
             last_ingested_at = excluded.last_ingested_at
-    ''', (file_name, file_size, file_mtime, lines_processed, now))
+    ''', (file_name, file_size, file_mtime, lines_processed, byte_offset, now))
 
 
 def get_stats(conn) -> Dict[str, Any]:
