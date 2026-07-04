@@ -229,11 +229,13 @@ def update_ticket(ticket_id: str, target: str = None, **fields) -> Dict[str, Any
     updates.append('updated_at = ?')
     values.append(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
 
-    # Set resolved_at if closing
+    # Set resolved_at when closing; clear it when reopening
     new_status = fields.get('status')
     if new_status in ('done', 'wont_fix'):
         updates.append('resolved_at = ?')
         values.append(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
+    elif new_status in ('open', 'in_progress', 'blocked'):
+        updates.append('resolved_at = NULL')
 
     values.append(ticket_id)
     cursor.execute(f'UPDATE tickets SET {", ".join(updates)} WHERE id = ?', values)

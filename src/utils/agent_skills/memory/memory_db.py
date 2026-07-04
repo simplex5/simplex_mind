@@ -721,7 +721,8 @@ def main():
     parser.add_argument('--type', help='Memory type (fact, preference, event, insight, task, relationship)')
     parser.add_argument('--source', default=None, help='Source (user, inferred, session, external, system)')
     parser.add_argument('--confidence', type=float, default=1.0, help='Confidence score 0-1')
-    parser.add_argument('--importance', type=int, default=5, help='Importance level 1-10')
+    parser.add_argument('--importance', type=int, default=None,
+                       help='Importance level 1-10 (add default: 5; update: unchanged unless given)')
     parser.add_argument('--tags', help='Comma-separated tags')
     parser.add_argument('--context', help='Context about when/why this was learned')
     parser.add_argument('--query', help='Search query')
@@ -747,7 +748,7 @@ def main():
             entry_type=args.type or 'fact',
             source=args.source or 'session',
             confidence=args.confidence,
-            importance=args.importance,
+            importance=args.importance if args.importance is not None else 5,
             tags=tags,
             context=args.context
         )
@@ -787,7 +788,7 @@ def main():
             kwargs['tags'] = args.tags.split(',')
         if args.context:
             kwargs['context'] = args.context
-        if args.importance:
+        if args.importance is not None:
             kwargs['importance'] = args.importance
         result = update_entry(args.id, **kwargs)
 
