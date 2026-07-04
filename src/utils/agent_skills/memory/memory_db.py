@@ -400,12 +400,11 @@ def search_entries(
 
     entries = [row_to_dict(row) for row in cursor.fetchall()]
 
-    # Log search
-    for entry in entries:
-        cursor.execute(
-            'INSERT INTO memory_access_log (memory_id, access_type, query) VALUES (?, ?, ?)',
-            (entry['id'], 'search', query)
-        )
+    # Log the search once (not one row per hit — that just bloats the log)
+    cursor.execute(
+        'INSERT INTO memory_access_log (memory_id, access_type, query) VALUES (?, ?, ?)',
+        (entries[0]['id'] if entries else None, 'search', query)
+    )
 
     conn.commit()
     conn.close()

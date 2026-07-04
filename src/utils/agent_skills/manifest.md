@@ -40,6 +40,7 @@ All tools and reference files Claude invokes directly.
 | Ticket Update | `tickets/ticket_update.py` | CLI: update status, priority, notes, title, description (--target or auto-infer from ID prefix) |
 | Ticket List | `tickets/ticket_list.py` | CLI: list/filter tickets by status, type, project, priority (--target, --all-projects) |
 | Ticket Read | `tickets/ticket_read.py` | CLI: get full detail for a single ticket by ID (--target or auto-infer from ID prefix) |
+| Ticket Migrate | `tickets/ticket_migrate.py` | One-time migration from shared tickets.db to per-project databases (historical; keep for reference) |
 
 ---
 
