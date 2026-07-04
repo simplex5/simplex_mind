@@ -16,7 +16,7 @@ Usage (via CLI tools — not called directly):
 """
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -207,13 +207,13 @@ def update_ticket(ticket_id: str, target: str = None, **fields) -> Dict[str, Any
         return {"success": False, "error": "No valid fields to update"}
 
     updates.append('updated_at = ?')
-    values.append(datetime.utcnow().isoformat(sep=' ', timespec='seconds'))
+    values.append(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
 
     # Set resolved_at if closing
     new_status = fields.get('status')
     if new_status in ('done', 'wont_fix'):
         updates.append('resolved_at = ?')
-        values.append(datetime.utcnow().isoformat(sep=' ', timespec='seconds'))
+        values.append(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
 
     values.append(ticket_id)
     cursor.execute(f'UPDATE tickets SET {", ".join(updates)} WHERE id = ?', values)
@@ -382,7 +382,7 @@ def append_note(ticket_id: str, note: str, target: str = None) -> Dict[str, Any]
         conn.close()
         return {"success": False, "error": f"Ticket {ticket_id} not found"}
 
-    timestamp = datetime.utcnow().isoformat(sep=' ', timespec='seconds')
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     existing = row['notes'] or ''
     separator = '\n\n' if existing else ''
     new_notes = f"{existing}{separator}[{timestamp}] {note}"

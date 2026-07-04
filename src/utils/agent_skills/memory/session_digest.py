@@ -24,7 +24,7 @@ Output:
 import sys
 import json
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -101,7 +101,8 @@ def _get_recent_decisions(days: int = 14) -> List[Dict[str, Any]]:
         if not result.get('success'):
             return []
 
-        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        # created_at is UTC 'YYYY-MM-DD HH:MM:SS' (CURRENT_TIMESTAMP) — match it
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
         return [
             e for e in result.get('entries', [])
             if e.get('created_at', '') >= cutoff
