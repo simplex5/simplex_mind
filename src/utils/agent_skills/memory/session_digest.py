@@ -32,7 +32,6 @@ from typing import Dict, Any, List, Optional
 PROJECT_ROOT = (Path(__file__).parent.parent.parent.parent.parent).resolve()
 MEMORY_DIR = PROJECT_ROOT / "database" / "memory"
 SYSTEMS_FILE = MEMORY_DIR / "systems.md"
-TICKETS_DB = PROJECT_ROOT / "database" / "tickets.db"
 
 # Import memory_db
 try:

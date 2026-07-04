@@ -54,17 +54,21 @@ LMSTUDIO_LOG_PATH  = Path("/tmp/lmstudio_log_stream.jsonl")
 
 
 def read_session_counts(path: Path) -> dict:
-    """Returns dict with input, cache_creation, cache_read, output, cost fields."""
+    """Returns dict with input, cache_creation, cache_read, output, cost, model fields."""
     if not path.exists():
-        return {"input": 0, "cache_creation": 0, "cache_read": 0, "output": 0, "cost": 0.0}
+        return {"input": 0, "cache_creation": 0, "cache_read": 0, "output": 0,
+                "cost": 0.0, "model": ""}
     raw = json.loads(path.read_text())
     cw = raw.get("context_window", {}).get("current_usage", {})
+    model_info = raw.get("model", {})
+    model_id = model_info.get("id", "") if isinstance(model_info, dict) else str(model_info)
     return {
         "input":          cw.get("input_tokens", 0),
         "cache_creation": cw.get("cache_creation_input_tokens", 0),
         "cache_read":     cw.get("cache_read_input_tokens", 0),
         "output":         cw.get("output_tokens", 0),
         "cost":           raw.get("cost", {}).get("total_cost_usd", 0.0),
+        "model":          model_id,
     }
 
 
@@ -170,11 +174,15 @@ def main() -> None:
             notes_parts.append(f"| {args.notes}")
         notes_str = " ".join(notes_parts)
 
+        # Model comes from session state, --model override, or 'unknown' —
+        # never a hardcoded id that silently goes stale
+        model_id = args.model or current.get("model") or "unknown"
+
         call_obj = {
             "seq": args.seq,
             "phase": phase,
             "agent": args.agent,
-            "model": "claude-sonnet-4-6",
+            "model": model_id,
             "tokens_prompt": str(prompt_total),
             "tokens_response": str(output_delta),
             "fix_cycle": args.fix_cycle,
