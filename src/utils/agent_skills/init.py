@@ -7,7 +7,6 @@ Creates project-specific runtime directories — never overwrites existing files
 
 import argparse
 import json
-import sqlite3
 from pathlib import Path
 
 # Allow importing memory_db from same package

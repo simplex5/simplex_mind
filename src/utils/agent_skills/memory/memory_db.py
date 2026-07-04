@@ -31,7 +31,7 @@ import json
 import sqlite3
 import argparse
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
@@ -87,11 +87,20 @@ def _migrate_type_constraint(conn):
     conn.commit()
 
 
+# Schema/migration only needs to run once per process — the DB path is fixed
+# and every connection targets the same file.
+_schema_ready = False
+
+
 def get_connection():
     """Get database connection, creating tables if needed."""
+    global _schema_ready
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
+
+    if _schema_ready:
+        return conn
 
     cursor = conn.cursor()
 
@@ -158,6 +167,7 @@ def get_connection():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_logs_date ON daily_logs(date)')
 
     conn.commit()
+    _schema_ready = True
     return conn
 
 
@@ -390,12 +400,11 @@ def search_entries(
 
     entries = [row_to_dict(row) for row in cursor.fetchall()]
 
-    # Log search
-    for entry in entries:
-        cursor.execute(
-            'INSERT INTO memory_access_log (memory_id, access_type, query) VALUES (?, ?, ?)',
-            (entry['id'], 'search', query)
-        )
+    # Log the search once (not one row per hit — that just bloats the log)
+    cursor.execute(
+        'INSERT INTO memory_access_log (memory_id, access_type, query) VALUES (?, ?, ?)',
+        (entries[0]['id'] if entries else None, 'search', query)
+    )
 
     conn.commit()
     conn.close()
@@ -508,20 +517,22 @@ def get_recent(hours: int = 24, entry_type: Optional[str] = None) -> Dict[str, A
     conn = get_connection()
     cursor = conn.cursor()
 
-    cutoff = datetime.now() - timedelta(hours=hours)
+    # created_at is written by CURRENT_TIMESTAMP: UTC, 'YYYY-MM-DD HH:MM:SS'.
+    # The cutoff must use the same clock and format for string comparison.
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
 
     if entry_type:
         cursor.execute('''
             SELECT * FROM memory_entries
             WHERE is_active = 1 AND type = ? AND created_at >= ?
             ORDER BY created_at DESC
-        ''', (entry_type, cutoff.isoformat()))
+        ''', (entry_type, cutoff))
     else:
         cursor.execute('''
             SELECT * FROM memory_entries
             WHERE is_active = 1 AND created_at >= ?
             ORDER BY created_at DESC
-        ''', (cutoff.isoformat(),))
+        ''', (cutoff,))
 
     entries = [row_to_dict(row) for row in cursor.fetchall()]
 
@@ -709,7 +720,8 @@ def main():
     parser.add_argument('--type', help='Memory type (fact, preference, event, insight, task, relationship)')
     parser.add_argument('--source', default=None, help='Source (user, inferred, session, external, system)')
     parser.add_argument('--confidence', type=float, default=1.0, help='Confidence score 0-1')
-    parser.add_argument('--importance', type=int, default=5, help='Importance level 1-10')
+    parser.add_argument('--importance', type=int, default=None,
+                       help='Importance level 1-10 (add default: 5; update: unchanged unless given)')
     parser.add_argument('--tags', help='Comma-separated tags')
     parser.add_argument('--context', help='Context about when/why this was learned')
     parser.add_argument('--query', help='Search query')
@@ -735,7 +747,7 @@ def main():
             entry_type=args.type or 'fact',
             source=args.source or 'session',
             confidence=args.confidence,
-            importance=args.importance,
+            importance=args.importance if args.importance is not None else 5,
             tags=tags,
             context=args.context
         )
@@ -775,7 +787,7 @@ def main():
             kwargs['tags'] = args.tags.split(',')
         if args.context:
             kwargs['context'] = args.context
-        if args.importance:
+        if args.importance is not None:
             kwargs['importance'] = args.importance
         result = update_entry(args.id, **kwargs)
 

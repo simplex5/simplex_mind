@@ -14,12 +14,12 @@ Usage:
     python src/utils/agent_skills/memory/semantic_search.py --query "learned behavior" --threshold 0.7
 
 Dependencies:
-    - openai (for query embedding)
-    - numpy (for cosine similarity)
+    - fastembed (local, preferred) or openai (fallback) — via embed_memory
     - sqlite3 (stdlib)
+    - cosine similarity is pure Python (no numpy required)
 
 Env Vars:
-    - OPENAI_API_KEY (required)
+    - OPENAI_API_KEY (only for the OpenAI fallback)
 
 Output:
     JSON with ranked results and similarity scores
@@ -33,10 +33,13 @@ import struct
 import math
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Tuple
-from dotenv import load_dotenv
 
-# Load environment
-load_dotenv()
+# Optional .env loading — never a hard dependency
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # Import from sibling modules
 try:
@@ -157,10 +160,14 @@ def semantic_search(
             "message": "No entries with embeddings found"
         }
 
-    # Calculate similarities
+    # Calculate similarities — skip entries embedded by a different-dimension
+    # backend (e.g. old OpenAI 1536-dim vs local 384-dim); comparing them
+    # would raise. Re-run embed_memory --reindex after switching backends.
     scored_entries = []
     for entry in entries:
         if entry.get('embedding'):
+            if len(entry['embedding']) != len(query_embedding):
+                continue
             similarity = cosine_similarity(query_embedding, entry['embedding'])
             if similarity >= threshold:
                 scored_entries.append({
@@ -234,6 +241,8 @@ def find_similar(
     scored = []
     for entry in entries:
         if entry['id'] != entry_id and entry.get('embedding'):
+            if len(entry['embedding']) != len(source_embedding):
+                continue
             similarity = cosine_similarity(source_embedding, entry['embedding'])
             if similarity >= threshold:
                 scored.append({

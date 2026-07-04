@@ -15,15 +15,14 @@ Usage:
     python src/utils/agent_skills/memory/hybrid_search.py --query "API key" --keyword-only
 
 Dependencies:
-    - openai (for embeddings)
-    - rank_bm25 (optional, falls back to simple TF-IDF)
+    - fastembed (local, preferred) or openai (fallback) — for the semantic half
+    - rank_bm25 (optional, falls back to built-in BM25)
     - sqlite3 (stdlib)
 
-Env Vars:
-    - OPENAI_API_KEY (required for semantic search)
-
 Output:
-    JSON with ranked results combining both search methods
+    JSON with ranked results combining both search methods.
+    When the semantic backend is unavailable, results degrade to keyword-only
+    and the response says so explicitly (method + semantic_error fields).
 """
 
 import os
@@ -35,19 +34,20 @@ import math
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Set
 from collections import Counter
-from dotenv import load_dotenv
 
-# Load environment
-load_dotenv()
+# Optional .env loading — never a hard dependency
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # Import from sibling modules
 try:
-    from .semantic_search import semantic_search, cosine_similarity
-    from .embed_memory import generate_embedding, bytes_to_embedding
+    from .semantic_search import semantic_search
     from .memory_db import get_connection, search_entries
 except ImportError:
-    from semantic_search import semantic_search, cosine_similarity
-    from embed_memory import generate_embedding, bytes_to_embedding
+    from semantic_search import semantic_search
     from memory_db import get_connection, search_entries
 
 # Try to import rank_bm25, fall back to simple implementation
@@ -258,14 +258,19 @@ def hybrid_search(
     bm25_results = bm25_search(query, all_entries, limit=limit * 3)
     bm25_scores = {r["id"]: r["bm25_score"] for r in bm25_results}
 
-    # Step 2: Semantic search on candidates
+    # Step 2: Semantic search on candidates. If the backend is unavailable,
+    # degrade to keyword-only — but say so instead of pretending it's hybrid.
     sem_results = semantic_search(query, entry_type=entry_type, limit=limit * 3, threshold=0.2)
     semantic_scores = {}
     if sem_results.get("success"):
         semantic_scores = {r["id"]: r["similarity"] for r in sem_results.get("results", [])}
+    else:
+        results["method"] = "keyword_only (semantic backend unavailable)"
+        results["semantic_error"] = sem_results.get("error", "unknown")
 
     # Step 3: Combine scores
     all_ids = set(bm25_scores.keys()) | set(semantic_scores.keys())
+    entries_by_id = {e["id"]: e for e in all_entries}
     combined = []
 
     for entry_id in all_ids:
@@ -276,8 +281,7 @@ def hybrid_search(
         combined_score = (bm25_weight * bm25) + (semantic_weight * semantic)
 
         if combined_score >= min_score:
-            # Find the entry data
-            entry_data = next((e for e in all_entries if e["id"] == entry_id), None)
+            entry_data = entries_by_id.get(entry_id)
             if entry_data:
                 combined.append({
                     "id": entry_id,

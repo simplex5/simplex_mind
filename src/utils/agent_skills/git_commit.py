@@ -146,6 +146,23 @@ def cmd_commit(args: argparse.Namespace) -> None:
 
     _git("add", *paths)
 
+    # Show exactly what is being committed — blanket framework staging has
+    # silently swept in unrelated files and silently missed unlisted ones before
+    staged = _git("diff", "--cached", "--name-status", check=False)
+    staged_out = staged.stdout.strip()
+    if staged_out:
+        print("[git_commit] Staging:")
+        for line in staged_out.splitlines():
+            print(f"  {line}")
+
+    # Warn about tracked-modified files that are NOT being committed
+    unstaged = _git("diff", "--name-only", check=False)
+    unstaged_out = unstaged.stdout.strip()
+    if unstaged_out:
+        print("[git_commit] NOT staged (outside framework paths):")
+        for line in unstaged_out.splitlines():
+            print(f"  {line}")
+
     result = _git("commit", "-m", args.message, check=False)
     if result.returncode == 0:
         # Extract short summary from git output
