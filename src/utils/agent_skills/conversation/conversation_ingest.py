@@ -119,10 +119,14 @@ def extract_text(content) -> str:
     return ''
 
 
-def parse_jsonl_file(filepath: str) -> dict:
-    """Parse a JSONL file and return grouped messages by session.
+def parse_jsonl_file(filepath: str, start_offset: int = 0) -> tuple:
+    """Parse a JSONL file (optionally from a byte offset) and group messages by session.
+
+    Only complete lines (ending in a newline) are consumed, so a partially
+    written tail is left for the next run instead of being lost.
 
     Returns:
+        (sessions_dict, lines_read, end_offset) where sessions_dict is
         {
             session_id: {
                 'slug': str or None,
@@ -131,6 +135,7 @@ def parse_jsonl_file(filepath: str) -> dict:
                 'messages': [{uuid, parent_uuid, role, content, timestamp, git_branch}, ...]
             }
         }
+        and end_offset is the byte position after the last consumed line.
     """
     sessions = defaultdict(lambda: {
         'slug': None,
@@ -139,69 +144,81 @@ def parse_jsonl_file(filepath: str) -> dict:
         'messages': []
     })
 
+    with open(filepath, 'rb') as f:
+        f.seek(start_offset)
+        data = f.read()
+
+    last_nl = data.rfind(b'\n')
+    if last_nl == -1:
+        # No complete line beyond the offset yet
+        return dict(sessions), 0, start_offset
+
+    consumed = last_nl + 1
+    chunk = data[:consumed].decode('utf-8', errors='replace')
+    end_offset = start_offset + consumed
+
     lines_read = 0
-    with open(filepath, 'r', encoding='utf-8') as f:
-        for line in f:
-            lines_read += 1
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError:
-                continue
+    for line in chunk.splitlines():
+        lines_read += 1
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
 
-            msg_type = obj.get('type')
-            if msg_type not in ('user', 'assistant'):
-                continue
+        msg_type = obj.get('type')
+        if msg_type not in ('user', 'assistant'):
+            continue
 
-            # Skip sidechain messages
-            if obj.get('isSidechain'):
-                continue
+        # Skip sidechain messages
+        if obj.get('isSidechain'):
+            continue
 
-            session_id = obj.get('sessionId')
-            if not session_id:
-                continue
+        session_id = obj.get('sessionId')
+        if not session_id:
+            continue
 
-            uuid = obj.get('uuid')
-            if not uuid:
-                continue
+        uuid = obj.get('uuid')
+        if not uuid:
+            continue
 
-            # Extract slug if present (appears on some messages)
-            slug = obj.get('slug')
-            if slug:
-                sessions[session_id]['slug'] = slug
+        # Extract slug if present (appears on some messages)
+        slug = obj.get('slug')
+        if slug:
+            sessions[session_id]['slug'] = slug
 
-            # Track git branch
-            git_branch = obj.get('gitBranch')
-            if git_branch and not sessions[session_id]['git_branch']:
-                sessions[session_id]['git_branch'] = git_branch
+        # Track git branch
+        git_branch = obj.get('gitBranch')
+        if git_branch and not sessions[session_id]['git_branch']:
+            sessions[session_id]['git_branch'] = git_branch
 
-            # Extract text content
-            message = obj.get('message', {})
-            content_raw = message.get('content', '') if isinstance(message, dict) else ''
+        # Extract text content
+        message = obj.get('message', {})
+        content_raw = message.get('content', '') if isinstance(message, dict) else ''
 
-            # Also check for planContent on user messages (plan mode)
-            if not content_raw and msg_type == 'user':
-                content_raw = obj.get('planContent', '')
+        # Also check for planContent on user messages (plan mode)
+        if not content_raw and msg_type == 'user':
+            content_raw = obj.get('planContent', '')
 
-            text = extract_text(content_raw)
-            if not text or not text.strip():
-                continue
+        text = extract_text(content_raw)
+        if not text or not text.strip():
+            continue
 
-            timestamp = obj.get('timestamp', '')
-            parent_uuid = obj.get('parentUuid')
+        timestamp = obj.get('timestamp', '')
+        parent_uuid = obj.get('parentUuid')
 
-            sessions[session_id]['messages'].append({
-                'uuid': uuid,
-                'parent_uuid': parent_uuid,
-                'role': msg_type,
-                'content': text,
-                'timestamp': timestamp,
-                'git_branch': git_branch,
-            })
+        sessions[session_id]['messages'].append({
+            'uuid': uuid,
+            'parent_uuid': parent_uuid,
+            'role': msg_type,
+            'content': text,
+            'timestamp': timestamp,
+            'git_branch': git_branch,
+        })
 
-    return dict(sessions), lines_read
+    return dict(sessions), lines_read, end_offset
 
 
 def ingest_file(conn, filepath: str, force: bool = False, dry_run: bool = False) -> dict:
@@ -215,14 +232,24 @@ def ingest_file(conn, filepath: str, force: bool = False, dry_run: bool = False)
     file_size = stat.st_size
     file_mtime = stat.st_mtime
 
-    # Check ingest state
+    # Check ingest state; resume from the stored byte offset when the file
+    # only grew (the common Stop-hook case) instead of reparsing everything.
+    start_offset = 0
+    prev_lines = 0
     if not force:
         state = get_ingest_state(conn, fname)
-        if state and state['file_size'] == file_size and abs(state['file_mtime'] - file_mtime) < 0.01:
-            return {'skipped': True, 'sessions': 0, 'messages_new': 0, 'messages_total': 0, 'lines': 0}
+        if state:
+            if state['file_size'] == file_size and abs(state['file_mtime'] - file_mtime) < 0.01:
+                return {'skipped': True, 'sessions': 0, 'messages_new': 0, 'messages_total': 0, 'lines': 0}
+            prev_offset = state['byte_offset'] if 'byte_offset' in state.keys() else 0
+            if prev_offset and 0 < prev_offset <= file_size and file_size >= (state['file_size'] or 0):
+                start_offset = prev_offset
+                prev_lines = state['lines_processed'] or 0
+            # else: file shrank/rewritten or no offset — full reparse
+            # (INSERT OR IGNORE dedups already-stored messages)
 
-    # Parse the file
-    sessions_data, lines_read = parse_jsonl_file(filepath)
+    # Parse the file (from offset if incremental)
+    sessions_data, lines_read, end_offset = parse_jsonl_file(filepath, start_offset=start_offset)
 
     if dry_run:
         total_msgs = sum(len(s['messages']) for s in sessions_data.values())
@@ -237,12 +264,20 @@ def ingest_file(conn, filepath: str, force: bool = False, dry_run: bool = False)
         if not msgs:
             continue
 
-        # Sort by timestamp, assign sequence numbers
+        # Sort by timestamp, assign sequence numbers.
+        # Incremental chunks continue numbering after the session's stored max.
+        seq_base = 0
+        if start_offset > 0:
+            row = conn.execute(
+                'SELECT MAX(sequence_num) AS m FROM messages WHERE session_id = ?',
+                (session_id,)
+            ).fetchone()
+            seq_base = (row['m'] + 1) if row and row['m'] is not None else 0
         msgs.sort(key=lambda m: m['timestamp'])
         for i, msg in enumerate(msgs):
-            msg['sequence_num'] = i
+            msg['sequence_num'] = seq_base + i
 
-        # Compute session metadata
+        # Compute session metadata (upsert keeps MIN first / MAX last)
         first_ts = msgs[0]['timestamp']
         last_ts = msgs[-1]['timestamp']
 
@@ -259,8 +294,7 @@ def ingest_file(conn, filepath: str, force: bool = False, dry_run: bool = False)
 
         for msg in msgs:
             messages_total += 1
-            before = conn.total_changes
-            insert_message(
+            if insert_message(
                 conn,
                 uuid=msg['uuid'],
                 session_id=session_id,
@@ -270,12 +304,19 @@ def ingest_file(conn, filepath: str, force: bool = False, dry_run: bool = False)
                 parent_uuid=msg['parent_uuid'],
                 git_branch=msg['git_branch'],
                 sequence_num=msg['sequence_num'],
-            )
-            if conn.total_changes > before:
+            ):
                 messages_new += 1
 
-    # Update ingest state
-    set_ingest_state(conn, fname, file_size, file_mtime, lines_read)
+        # message_count must reflect the whole session, not just this chunk
+        conn.execute(
+            'UPDATE sessions SET message_count = '
+            '(SELECT COUNT(*) FROM messages WHERE session_id = ?) WHERE session_id = ?',
+            (session_id, session_id)
+        )
+
+    # Update ingest state (lines are cumulative across incremental runs)
+    set_ingest_state(conn, fname, file_size, file_mtime,
+                     prev_lines + lines_read, byte_offset=end_offset)
     conn.commit()
 
     return {'skipped': False, 'sessions': len(sessions_data), 'messages_new': messages_new,
@@ -358,6 +399,8 @@ def main():
     parser.add_argument('--stats', action='store_true', help='Show ingestion statistics')
     parser.add_argument('--scan-all', action='store_true', help='Scan all ~/.claude/projects/*/ directories')
     parser.add_argument('--source-dirs', nargs='+', help='Additional JSONL source directories')
+    parser.add_argument('--quiet', action='store_true',
+                        help='Suppress normal output (errors still printed) — for hook/cron use')
 
     args = parser.parse_args()
 
@@ -365,17 +408,21 @@ def main():
         show_stats()
         return
 
-    mode = "DRY RUN" if args.dry_run else ("FORCE" if args.force else "incremental")
-    source_dirs = _discover_source_dirs(scan_all=args.scan_all, extra_dirs=args.source_dirs)
-    print(f"Ingestion mode: {mode}")
-    print(f"Source dirs: {[str(d) for d in source_dirs]}")
+    if not args.quiet:
+        mode = "DRY RUN" if args.dry_run else ("FORCE" if args.force else "incremental")
+        source_dirs = _discover_source_dirs(scan_all=args.scan_all, extra_dirs=args.source_dirs)
+        print(f"Ingestion mode: {mode}")
+        print(f"Source dirs: {[str(d) for d in source_dirs]}")
 
     result = run_ingestion(force=args.force, dry_run=args.dry_run,
                            scan_all=args.scan_all, extra_dirs=args.source_dirs)
 
     if 'error' in result:
-        print(f"ERROR: {result['error']}")
+        print(f"ERROR: {result['error']}", file=sys.stderr)
         sys.exit(1)
+
+    if args.quiet:
+        return
 
     print(f"\nFiles:    {result['files_processed']} processed, {result['files_skipped']} skipped (of {result['files_total']})")
     print(f"Sessions: {result['sessions_total']}")
