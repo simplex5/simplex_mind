@@ -71,10 +71,21 @@ def _parse_yaml(text: str) -> dict:
     return {"projects": projects}
 
 
-def load_projects() -> Dict[str, Dict[str, Any]]:
-    """Parse projects.yaml and return dict of {name: config}."""
+# Process-lifetime caches. CLI tools are one-shot processes, so staleness
+# is bounded to a single invocation; long-lived callers can pass refresh=True.
+_projects_cache: Optional[Dict[str, Dict[str, Any]]] = None
+_branch_cache: Any = ...  # Ellipsis = "not yet resolved" (None is a valid result)
+
+
+def load_projects(refresh: bool = False) -> Dict[str, Dict[str, Any]]:
+    """Parse projects.yaml and return dict of {name: config}. Cached per process."""
+    global _projects_cache
+    if _projects_cache is not None and not refresh:
+        return _projects_cache
+
     if not _PROJECTS_YAML.exists():
-        return {}
+        _projects_cache = {}
+        return _projects_cache
     text = _PROJECTS_YAML.read_text(encoding="utf-8")
     data = _parse_yaml(text)
     raw = data.get("projects", {})
@@ -89,6 +100,7 @@ def load_projects() -> Dict[str, Dict[str, Any]]:
             "ref_file": cfg.get("ref_file"),
             "branch": cfg.get("branch"),
         }
+    _projects_cache = result
     return result
 
 
@@ -103,7 +115,13 @@ def get_all_projects() -> List[Dict[str, Any]]:
 
 
 def _get_current_branch() -> Optional[str]:
-    """Return the current simplex_mind git branch name, or None if unavailable."""
+    """Return the current simplex_mind git branch name, or None if unavailable.
+    Cached per process — the branch cannot change mid-invocation."""
+    global _branch_cache
+    if _branch_cache is not ...:
+        return _branch_cache
+
+    branch = None
     try:
         result = subprocess.run(
             ["git", "branch", "--show-current"],
@@ -111,11 +129,11 @@ def _get_current_branch() -> Optional[str]:
             timeout=5,
         )
         if result.returncode == 0:
-            branch = result.stdout.strip()
-            return branch or None
+            branch = result.stdout.strip() or None
     except Exception:
         pass
-    return None
+    _branch_cache = branch
+    return branch
 
 
 def get_active_project() -> Optional[Dict[str, Any]]:
@@ -153,8 +171,13 @@ def get_ticket_db_path(target: Optional[str] = None) -> Path:
     """
     if target:
         proj = get_project(target)
-        if proj:
-            return Path(proj["path"]) / "database" / "tickets.db"
+        if not proj:
+            # An explicitly named target must resolve — falling through to the
+            # active project would silently misroute tickets into the wrong DB.
+            raise ValueError(
+                f"Unknown project target '{target}' — not registered in projects.yaml"
+            )
+        return Path(proj["path"]) / "database" / "tickets.db"
 
     # Fall back to active project
     active = get_active_project()
@@ -177,8 +200,11 @@ def get_ticket_prefix(target: Optional[str] = None) -> str:
     """
     if target:
         proj = get_project(target)
-        if proj:
-            return proj["ticket_prefix"]
+        if not proj:
+            raise ValueError(
+                f"Unknown project target '{target}' — not registered in projects.yaml"
+            )
+        return proj["ticket_prefix"]
 
     active = get_active_project()
     if active:
