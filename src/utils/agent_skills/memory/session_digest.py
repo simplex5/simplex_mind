@@ -112,7 +112,11 @@ def _get_recent_decisions(days: int = 14) -> List[Dict[str, Any]]:
 
 
 def _get_active_systems_summary() -> List[str]:
-    """Get one-line summaries from systems.md Active Systems section."""
+    """Get one-line summaries from systems.md Active Systems section.
+
+    systems.md entries are prose paragraphs under ###/#### headings — take
+    each heading plus the first non-empty line beneath it as the summary.
+    """
     if not SYSTEMS_FILE.exists():
         return []
 
@@ -131,11 +135,16 @@ def _get_active_systems_summary() -> List[str]:
         if not in_active:
             continue
 
-        if line.startswith('### '):
-            current_name = line[4:].strip()
-        elif line.strip().startswith('- **Purpose:**') and current_name:
-            purpose = line.strip().replace('- **Purpose:** ', '')
-            summaries.append(f"- **{current_name}**: {purpose}")
+        if line.startswith('### ') or line.startswith('#### '):
+            current_name = line.lstrip('#').strip()
+        elif current_name and line.strip() and not line.strip().startswith('*'):
+            first_line = line.strip()
+            # Legacy '- **Purpose:**' bullets stay supported
+            if first_line.startswith('- **Purpose:**'):
+                first_line = first_line.replace('- **Purpose:** ', '')
+            if len(first_line) > 120:
+                first_line = first_line[:117] + '...'
+            summaries.append(f"- **{current_name}**: {first_line}")
             current_name = None
 
     return summaries
