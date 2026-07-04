@@ -31,7 +31,7 @@ import json
 import sqlite3
 import argparse
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
@@ -508,20 +508,22 @@ def get_recent(hours: int = 24, entry_type: Optional[str] = None) -> Dict[str, A
     conn = get_connection()
     cursor = conn.cursor()
 
-    cutoff = datetime.now() - timedelta(hours=hours)
+    # created_at is written by CURRENT_TIMESTAMP: UTC, 'YYYY-MM-DD HH:MM:SS'.
+    # The cutoff must use the same clock and format for string comparison.
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
 
     if entry_type:
         cursor.execute('''
             SELECT * FROM memory_entries
             WHERE is_active = 1 AND type = ? AND created_at >= ?
             ORDER BY created_at DESC
-        ''', (entry_type, cutoff.isoformat()))
+        ''', (entry_type, cutoff))
     else:
         cursor.execute('''
             SELECT * FROM memory_entries
             WHERE is_active = 1 AND created_at >= ?
             ORDER BY created_at DESC
-        ''', (cutoff.isoformat(),))
+        ''', (cutoff,))
 
     entries = [row_to_dict(row) for row in cursor.fetchall()]
 

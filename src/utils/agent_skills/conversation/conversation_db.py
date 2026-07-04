@@ -18,7 +18,7 @@ Dependencies:
 
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
@@ -140,7 +140,7 @@ def upsert_session(
     message_count: int = 0
 ):
     """Insert or update session metadata."""
-    now = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     conn.execute('''
         INSERT INTO sessions (session_id, slug, source_file, git_branch,
                               first_message_at, last_message_at, message_count,
@@ -296,7 +296,7 @@ def get_ingest_state(conn, file_name: str) -> Optional[Dict]:
 
 def set_ingest_state(conn, file_name: str, file_size: int, file_mtime: float, lines_processed: int):
     """Update ingestion state for a file."""
-    now = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+    now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     conn.execute('''
         INSERT INTO ingest_state (file_name, file_size, file_mtime, lines_processed, last_ingested_at)
         VALUES (?, ?, ?, ?, ?)

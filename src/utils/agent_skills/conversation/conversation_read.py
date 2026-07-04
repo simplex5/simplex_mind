@@ -16,7 +16,7 @@ Dependencies:
 import json
 import sys
 import argparse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -173,7 +173,7 @@ def action_stats(args):
 def action_recent(args):
     """Show messages from the last N hours."""
     hours = args.hours or 24
-    cutoff = (datetime.utcnow() - timedelta(hours=hours)).strftime('%Y-%m-%dT%H:%M:%SZ')
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     conn = get_connection()
     cursor = conn.execute('''
