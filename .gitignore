@@ -45,3 +45,6 @@ database/memory/*
 !database/memory/systems.md
 logs/
 .tmp/
+
+# Unrelated nested repos (not part of simplex_mind; own .git, left in working dir)
+LTX-2/
