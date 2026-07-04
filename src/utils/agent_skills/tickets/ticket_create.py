@@ -30,8 +30,9 @@ def main():
                         help='Ticket type')
     parser.add_argument('--title', required=True, help='Short summary')
     parser.add_argument('--description', default='', help='Full description')
-    parser.add_argument('--project', default='global',
-                        help='Project name (metadata field)')
+    parser.add_argument('--project', default=None,
+                        help='Project name (metadata field). Defaults to the '
+                             'routed project (target/active), or "global" on the brain DB.')
     parser.add_argument('--priority', default='medium', choices=VALID_PRIORITIES,
                         help='Priority level')
     parser.add_argument('--how-discovered', default='manually logged',

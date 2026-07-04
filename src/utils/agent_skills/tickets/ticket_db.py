@@ -26,6 +26,7 @@ try:
         get_ticket_db_path,
         get_ticket_prefix,
         get_all_projects,
+        get_active_project,
         infer_project_from_prefix,
     )
 except ImportError:
@@ -35,6 +36,7 @@ except ImportError:
         get_ticket_db_path,
         get_ticket_prefix,
         get_all_projects,
+        get_active_project,
         infer_project_from_prefix,
     )
 
@@ -127,7 +129,7 @@ def create_ticket(
     ticket_type: str,
     title: str,
     description: str = '',
-    project: str = 'global',
+    project: str = None,
     how_discovered: str = 'manually logged',
     priority: str = 'medium',
     target: str = None,
@@ -136,6 +138,8 @@ def create_ticket(
     Create a new ticket.
 
     Args:
+        project: Metadata label. If None, defaults to the routed project name
+                 (explicit target, else active project, else 'global').
         target: Project name to route to. If None, uses active project.
 
     Returns:
@@ -151,6 +155,16 @@ def create_ticket(
         conn = get_connection(target=target)
     except ValueError as e:
         return {"success": False, "error": str(e)}
+
+    # Default the project label to wherever the ticket is actually routed,
+    # so the column stays consistent with the DB it lands in.
+    if not project:
+        if target:
+            project = target
+        else:
+            active = get_active_project()
+            project = active["name"] if active else "global"
+
     cursor = conn.cursor()
 
     ticket_id = _next_id(cursor, prefix)
