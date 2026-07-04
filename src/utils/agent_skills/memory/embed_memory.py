@@ -2,8 +2,11 @@
 Tool: Memory Embedding Generator
 Purpose: Generate vector embeddings for memory entries to enable semantic search
 
-Uses OpenAI's text-embedding-3-small model (1536 dimensions, ~$0.02/1M tokens)
-Stores embeddings as BLOBs in SQLite for use with sqlite-vec or manual cosine similarity.
+Backend preference (fully local first):
+1. fastembed (local ONNX model, no API key, no network after first model download)
+2. OpenAI text-embedding-3-small (requires openai package + OPENAI_API_KEY)
+
+Stores embeddings as BLOBs in SQLite for manual cosine similarity search.
 
 Usage:
     python src/utils/agent_skills/memory/embed_memory.py --all              # Embed all entries without embeddings
@@ -13,13 +16,12 @@ Usage:
     python src/utils/agent_skills/memory/embed_memory.py --reindex          # Re-embed all entries
 
 Dependencies:
-    - openai
-    - numpy (for serialization)
+    - fastembed (preferred, local) OR openai (fallback, remote)
     - sqlite3 (stdlib)
 
 Env Vars:
-    - OPENAI_API_KEY (required)
-    - HELICONE_API_KEY (optional, for observability)
+    - OPENAI_API_KEY (only for the OpenAI fallback)
+    - HELICONE_API_KEY (optional, for observability with OpenAI)
 
 Output:
     JSON result with success status and embedding info
@@ -32,18 +34,27 @@ import argparse
 import struct
 from pathlib import Path
 from typing import Optional, List, Dict, Any
-from dotenv import load_dotenv
 
-# Load environment
-load_dotenv()
+# Optional .env loading — never a hard dependency
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
-# Check for OpenAI
+# Local embedding backend (preferred)
+try:
+    from fastembed import TextEmbedding
+    HAS_FASTEMBED = True
+except ImportError:
+    HAS_FASTEMBED = False
+
+# OpenAI backend (fallback)
 try:
     from openai import OpenAI
     HAS_OPENAI = True
 except ImportError:
     HAS_OPENAI = False
-    print("Warning: openai package not installed. Run: pip install openai", file=sys.stderr)
 
 # Import memory_db functions
 try:
@@ -62,8 +73,18 @@ except ImportError:
     )
 
 # Constants
-EMBEDDING_MODEL = "text-embedding-3-small"
-EMBEDDING_DIMENSIONS = 1536
+LOCAL_EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"   # 384-dim, ~130MB, fully local
+OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"  # 1536-dim, remote
+
+# Lazy-initialized local model (first call downloads the ONNX model to cache)
+_local_model = None
+
+
+def _get_local_model():
+    global _local_model
+    if _local_model is None:
+        _local_model = TextEmbedding(model_name=LOCAL_EMBEDDING_MODEL)
+    return _local_model
 
 
 def get_openai_client():
@@ -102,40 +123,58 @@ def generate_embedding(text: str, client=None) -> Dict[str, Any]:
     """
     Generate embedding for a text string.
 
+    Prefers the local fastembed backend; falls back to OpenAI when fastembed
+    is unavailable but openai + OPENAI_API_KEY are present.
+
     Args:
         text: Text to embed
-        client: Optional OpenAI client (creates one if not provided)
+        client: Optional OpenAI client (only used on the OpenAI path)
 
     Returns:
-        dict with embedding and metadata
+        dict with embedding and metadata (model records which backend produced it)
     """
-    if not HAS_OPENAI:
-        return {"success": False, "error": "openai package not installed"}
-
-    if client is None:
-        client = get_openai_client()
-
-    try:
-        response = client.embeddings.create(
-            model=EMBEDDING_MODEL,
-            input=text,
-            encoding_format="float"
-        )
-
-        embedding = response.data[0].embedding
-
-        return {
-            "success": True,
-            "embedding": embedding,
-            "model": EMBEDDING_MODEL,
-            "dimensions": len(embedding),
-            "usage": {
-                "prompt_tokens": response.usage.prompt_tokens,
-                "total_tokens": response.usage.total_tokens
+    if HAS_FASTEMBED:
+        try:
+            vector = next(iter(_get_local_model().embed([text])))
+            embedding = [float(x) for x in vector]
+            return {
+                "success": True,
+                "embedding": embedding,
+                "model": LOCAL_EMBEDDING_MODEL,
+                "dimensions": len(embedding),
+                "usage": {"prompt_tokens": 0, "total_tokens": 0}
             }
-        }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+        except Exception as e:
+            return {"success": False, "error": f"fastembed failed: {e}"}
+
+    if HAS_OPENAI and os.getenv('OPENAI_API_KEY'):
+        if client is None:
+            client = get_openai_client()
+        try:
+            response = client.embeddings.create(
+                model=OPENAI_EMBEDDING_MODEL,
+                input=text,
+                encoding_format="float"
+            )
+            embedding = response.data[0].embedding
+            return {
+                "success": True,
+                "embedding": embedding,
+                "model": OPENAI_EMBEDDING_MODEL,
+                "dimensions": len(embedding),
+                "usage": {
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "total_tokens": response.usage.total_tokens
+                }
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    return {
+        "success": False,
+        "error": "No embedding backend available — install fastembed (local, preferred) "
+                 "or openai + set OPENAI_API_KEY"
+    }
 
 
 def embed_entry(entry_id: int, client=None) -> Dict[str, Any]:
@@ -149,14 +188,18 @@ def embed_entry(entry_id: int, client=None) -> Dict[str, Any]:
     Returns:
         dict with success status
     """
-    # Get the entry
-    entry_result = get_entry(entry_id)
-    if not entry_result.get('success'):
-        return entry_result
+    # Fetch content directly — get_entry() would bump access_count and write
+    # an access-log row, polluting usage analytics with embedding runs.
+    conn = get_connection()
+    row = conn.execute(
+        'SELECT content FROM memory_entries WHERE id = ?', (entry_id,)
+    ).fetchone()
+    conn.close()
 
-    entry = entry_result['entry']
-    content = entry.get('content', '')
+    if row is None:
+        return {"success": False, "error": f"Memory entry {entry_id} not found"}
 
+    content = row['content'] or ''
     if not content:
         return {"success": False, "error": f"Entry {entry_id} has no content"}
 
@@ -165,9 +208,9 @@ def embed_entry(entry_id: int, client=None) -> Dict[str, Any]:
     if not embed_result.get('success'):
         return embed_result
 
-    # Store embedding
+    # Store embedding, recording which backend model produced it
     embedding_bytes = embedding_to_bytes(embed_result['embedding'])
-    store_result = store_embedding(entry_id, embedding_bytes, EMBEDDING_MODEL)
+    store_result = store_embedding(entry_id, embedding_bytes, embed_result['model'])
 
     return {
         "success": store_result.get('success', False),
@@ -175,7 +218,7 @@ def embed_entry(entry_id: int, client=None) -> Dict[str, Any]:
         "content_preview": content[:100] + "..." if len(content) > 100 else content,
         "dimensions": embed_result['dimensions'],
         "tokens_used": embed_result['usage']['total_tokens'],
-        "model": EMBEDDING_MODEL
+        "model": embed_result['model']
     }
 
 
@@ -190,8 +233,8 @@ def embed_all_pending(batch_size: int = 50, client=None) -> Dict[str, Any]:
     Returns:
         dict with batch results
     """
-    if client is None:
-        client = get_openai_client()
+    # Client is only needed on the OpenAI path; generate_embedding creates one
+    # lazily there. Requiring it up front would break the local backend.
 
     # Get entries without embeddings
     pending = get_entries_without_embeddings(limit=batch_size)
@@ -236,16 +279,16 @@ def reindex_all(batch_size: int = 100, client=None) -> Dict[str, Any]:
     """
     Re-embed all entries (regenerate all embeddings).
 
+    Loops in batches until nothing is left pending — a single batch would
+    leave every entry beyond batch_size permanently without an embedding.
+
     Args:
         batch_size: Number of entries to process per batch
-        client: Optional OpenAI client
+        client: Optional OpenAI client (OpenAI path only)
 
     Returns:
-        dict with reindex results
+        dict with aggregated reindex results
     """
-    if client is None:
-        client = get_openai_client()
-
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -254,8 +297,27 @@ def reindex_all(batch_size: int = 100, client=None) -> Dict[str, Any]:
     conn.commit()
     conn.close()
 
-    # Now embed all
-    return embed_all_pending(batch_size=batch_size, client=client)
+    totals = {"success": True, "processed": 0, "failed": 0, "total_tokens": 0, "batches": 0}
+    while True:
+        result = embed_all_pending(batch_size=batch_size, client=client)
+        if not result.get('success'):
+            return result
+        processed = result.get('processed', 0)
+        failed = result.get('failed', 0)
+        if processed == 0 and failed == 0:
+            break  # nothing pending
+        totals["batches"] += 1
+        totals["processed"] += processed
+        totals["failed"] += failed
+        totals["total_tokens"] += result.get('total_tokens', 0)
+        if processed == 0:
+            # Every remaining entry failed — stop instead of looping forever
+            totals["success"] = False
+            totals["error"] = "All entries in last batch failed to embed"
+            break
+
+    totals['estimated_cost'] = f"${totals['total_tokens'] * 0.00002:.6f}"
+    return totals
 
 
 def get_embedding_stats() -> Dict[str, Any]:
@@ -324,10 +386,7 @@ def main():
         result = get_embedding_stats()
 
     elif args.content:
-        # Just get embedding for text
-        if not HAS_OPENAI:
-            print("Error: openai package not installed")
-            sys.exit(1)
+        # Just get embedding for text (backend availability handled inside)
         result = generate_embedding(args.content)
         # Don't print full embedding, just metadata
         if result.get('success'):
