@@ -146,8 +146,11 @@ def create_ticket(
     if priority not in VALID_PRIORITIES:
         return {"success": False, "error": f"Invalid priority. Must be one of: {VALID_PRIORITIES}"}
 
-    prefix = get_ticket_prefix(target)
-    conn = get_connection(target=target)
+    try:
+        prefix = get_ticket_prefix(target)
+        conn = get_connection(target=target)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
     cursor = conn.cursor()
 
     ticket_id = _next_id(cursor, prefix)
@@ -179,7 +182,10 @@ def update_ticket(ticket_id: str, target: str = None, **fields) -> Dict[str, Any
     mutable = {'status', 'priority', 'title', 'description', 'project', 'how_discovered', 'notes'}
 
     resolved_target = _resolve_target_for_id(ticket_id, target)
-    conn = get_connection(target=resolved_target)
+    try:
+        conn = get_connection(target=resolved_target)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
     cursor = conn.cursor()
 
     cursor.execute('SELECT * FROM tickets WHERE id = ?', (ticket_id,))
@@ -233,7 +239,10 @@ def get_ticket(ticket_id: str, target: str = None) -> Dict[str, Any]:
         target: Project name. If None, inferred from ticket ID prefix.
     """
     resolved_target = _resolve_target_for_id(ticket_id, target)
-    conn = get_connection(target=resolved_target)
+    try:
+        conn = get_connection(target=resolved_target)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM tickets WHERE id = ?', (ticket_id,))
     ticket = row_to_dict(cursor.fetchone())
@@ -261,7 +270,10 @@ def list_tickets(
     Args:
         target: Project name to list from. If None, uses active project.
     """
-    conn = get_connection(target=target)
+    try:
+        conn = get_connection(target=target)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
     cursor = conn.cursor()
 
     conditions = []
@@ -373,7 +385,10 @@ def append_note(ticket_id: str, note: str, target: str = None) -> Dict[str, Any]
         target: Project name. If None, inferred from ticket ID prefix.
     """
     resolved_target = _resolve_target_for_id(ticket_id, target)
-    conn = get_connection(target=resolved_target)
+    try:
+        conn = get_connection(target=resolved_target)
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
     cursor = conn.cursor()
 
     cursor.execute('SELECT notes FROM tickets WHERE id = ?', (ticket_id,))

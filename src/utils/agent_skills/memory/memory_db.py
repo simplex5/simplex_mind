@@ -87,11 +87,20 @@ def _migrate_type_constraint(conn):
     conn.commit()
 
 
+# Schema/migration only needs to run once per process — the DB path is fixed
+# and every connection targets the same file.
+_schema_ready = False
+
+
 def get_connection():
     """Get database connection, creating tables if needed."""
+    global _schema_ready
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
+
+    if _schema_ready:
+        return conn
 
     cursor = conn.cursor()
 
@@ -158,6 +167,7 @@ def get_connection():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_logs_date ON daily_logs(date)')
 
     conn.commit()
+    _schema_ready = True
     return conn
 
 
