@@ -84,7 +84,7 @@ python3 src/utils/agent_skills/memory/memory_read.py --format markdown
 ```bash
 python3 src/utils/agent_skills/memory/memory_write.py \
     --content "..." \
-    --type <fact|preference|event|insight|task|relationship|decision> \
+    --type <fact|preference|event|insight|task|relationship|decision|note> \
     --importance <1-10>
 ```
 
@@ -119,29 +119,41 @@ python3 src/utils/agent_skills/memory/memory_sync.py --dry-run # preview
 
 ## Ticket Protocol
 
-**Location:** `database/tickets.db`
+**Location:** Per-project: `<project_path>/database/tickets.db`
+Tickets auto-target the active project. Use `--target <name>` to override.
+Ticket ID prefix is auto-inferred for read/update operations (e.g. PROJ-122 → my-project).
+On `master` (no active project), tickets fall through to simplex_mind's own `database/tickets.db` under prefix `SIMP`.
 
 **Commands:**
 ```bash
-# Create
+# Create (targets active project by default)
 python3 src/utils/agent_skills/tickets/ticket_create.py \
     --type <bug|feature|task|improvement|documentation> \
     --title "Short summary" \
     --project <name> \
     --priority <low|medium|high|critical> \
     --description "Full details"
+# Create targeting a specific project
+python3 src/utils/agent_skills/tickets/ticket_create.py \
+    --type task --title "..." --target other-project
 
 # Read / list
 python3 src/utils/agent_skills/tickets/ticket_read.py --id PROJ-001
 python3 src/utils/agent_skills/tickets/ticket_list.py --status open
 python3 src/utils/agent_skills/tickets/ticket_list.py --all
+python3 src/utils/agent_skills/tickets/ticket_list.py --target other-project
+python3 src/utils/agent_skills/tickets/ticket_list.py --all-projects
 
-# Update
+# Update (auto-infers project from ticket ID prefix)
 python3 src/utils/agent_skills/tickets/ticket_update.py \
     --id PROJ-001 --status <open|in_progress|blocked|done|wont_fix>
 python3 src/utils/agent_skills/tickets/ticket_update.py \
     --id PROJ-001 --priority high --note "Context note"
 ```
+
+### Ambiguous ticket queries
+
+**Hard rule: When the user asks about tickets without explicitly naming a project, ask which project they mean. Do not guess or scan a default — ask first.**
 
 ### When to create tickets
 
@@ -159,7 +171,8 @@ Also create a ticket immediately for:
 
 ### Session triggers
 
-- **Start**: run `ticket_list.py --status open`, report count + critical/high items.
+- **Start**: run `ticket_list.py --status open` (targets active project by default), report count + critical/high items.
+- **Scoping rule**: Only use `--all-projects` when on the main simplex_mind branch (no active project). When a project is active, all ticket queries scope to that project only.
 - **During work**: create tickets as issues surface — do not batch at the end.
 - **End**: summarise tickets created this session by ID and title.
 
@@ -167,7 +180,7 @@ Also create a ticket immediately for:
 
 ## Conversation History Protocol
 
-**Ingest** (runs automatically via cron every 5 minutes):
+**Ingest** — runs automatically via cron every 5 minutes. (Claude Code additionally runs ingestion via a Stop hook in `.claude/settings.json` after every response — see CLAUDE.md; other agents rely on the cron job.)
 ```bash
 python3 src/utils/agent_skills/conversation/conversation_ingest.py
 ```
@@ -270,6 +283,7 @@ Commits always happen. The only decision is whether to create a new branch first
 
 **Commands (simplex_mind repo only):**
 ```bash
+python3 src/utils/agent_skills/git_commit.py init      # one-time: git init + first framework commit
 python3 src/utils/agent_skills/git_commit.py status
 python3 src/utils/agent_skills/git_commit.py diff
 python3 src/utils/agent_skills/git_commit.py commit -m "message"
@@ -281,9 +295,10 @@ use native git commands in the project directory — see [Working Directory](#wo
 **Commit automatically after:**
 - Running `init.py` for the first time
 - Writing or updating any file in `src/`
-- Modifying `AGENTS.md`, `projects.yaml`, or `database/memory/MEMORY.md`
+- Modifying `AGENTS.md` or `database/memory/MEMORY.md`
 
-**Never commit after:**
+**Never commit:**
+- `projects.yaml` — local config, gitignored
 - Benchmark runs — output is gitignored
 - Edits to `database/memory/logs/` or `database/*.db` — local session state
 
@@ -299,6 +314,9 @@ use native git commands in the project directory — see [Working Directory](#wo
 - When improving any file derived from a shared template, identify all sibling files. Confirm with the user before updating each.
 - Keep framework tools generic. Domain-specific knowledge belongs only in project PRDs and hardprompts.
 - Update `database/memory/systems.md` when creating, removing, or significantly changing a system.
+- Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
+- When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
+- `projects.yaml` is local config (gitignored). Never commit it. The active project is derived from the current simplex_mind git branch — to switch projects, just `git checkout <branch>`.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
 
@@ -310,7 +328,7 @@ use native git commands in the project directory — see [Working Directory](#wo
 simplex_mind/                          <- brain repo (agent launches here)
 |-- CLAUDE.md                          <- Claude Code instructions
 |-- AGENTS.md                          <- this file — Codex/Cursor/Windsurf instructions
-|-- projects.yaml                      <- maps project names -> paths
+|-- projects.yaml                      <- maps project names -> paths (local, gitignored)
 |-- database/
 |   |-- memory/
 |   |   |-- memory.db                  <- structured memory (SQLite)
@@ -318,7 +336,7 @@ simplex_mind/                          <- brain repo (agent launches here)
 |   |   |-- MEMORY.md                  <- curated persistent memory
 |   |   |-- systems.md                 <- system inventory
 |   |   +-- logs/                      <- daily logs (YYYY-MM-DD.md)
-|   |-- tickets.db                     <- ticket tracking
+|   |-- tickets.db                     <- brain (SIMP) tickets — each project has its own <project>/database/tickets.db
 |   |-- conversation_history.db        <- conversation transcripts
 |   +-- ARCHITECTURE.md                <- database schema docs
 +-- src/utils/agent_skills/
@@ -327,6 +345,8 @@ simplex_mind/                          <- brain repo (agent launches here)
     |-- conversation/                  <- conversation history tools
     |-- git_commit.py                  <- git operations
     |-- init.py                        <- project bootstrapper
+    |-- project_resolver.py            <- branch -> project resolution, ticket DB routing
+    |-- track_tokens.py                <- token metrics logger (optional)
     +-- manifest.md                    <- tool inventory
 ```
 

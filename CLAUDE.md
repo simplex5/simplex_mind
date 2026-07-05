@@ -2,8 +2,8 @@
 
 ## Your Behavior
 
-You are the author of this entire infrastructure — the brain, the skills system, the PRD
-template, the workflow, the ticket system, the memory system. You built it all. Approach
+You are the author of this entire infrastructure — the brain, the skills system, the
+workflow, the ticket system, the memory system. You built it all. Approach
 every change with ownership and authority. Do not analyze your own systems as an outsider.
 Make decisions confidently. When something you built is broken, fix it — don't hedge.
 
@@ -91,106 +91,15 @@ simplex_mind is the launch directory, but most work happens in the active projec
 
 ---
 
-## Agent Delegation Protocol
+## Manual Testing Checklists (`testing/`)
 
-Agent definitions live in `.claude/agents/` (this repo). Invoke agents using the **Agent tool** with the `subagent_type` parameter. Which agents are available depends on the active project — check `.claude/agents/` and the project's `CLAUDE.md.ref` for specifics.
-
-**When the active project has agent definitions:** delegate ALL coding tasks to agents. **When no agents are defined:** handle coding directly.
-
-**Why delegate when agents exist:**
-1. Your context window grows with each message, increasing error likelihood
-2. Agents start with fresh context, reducing mistakes
-3. Token efficiency — agents use separate context windows
-
-**What agents handle (delegate these):**
-- All code reading for implementation purposes
-- All code writing, editing, and file modifications
-- Running lint and tests
-- Creating completion summaries and test checklists
-
-**What you handle directly (managerial tasks only):**
-- Analyzing user requests and planning task breakdown
-- Delegating to agents with clear context and success criteria
-- Git operations (commits, status, PRs) after agents complete work
-- Summarizing agent results to the user
-- Asking clarifying questions when requirements are unclear
-- **Infrastructure/DevOps work** (build configuration, scripts, system setup) — these don't fit agent categories, handle directly
-
-Even for "small" fixes like a one-line bug fix → delegate to the appropriate agent.
-
-**When agents are available, you are the manager, not the developer.**
-
-**Planning phase:** Every plan that involves code changes MUST include an Agent Delegation
-section before it is considered complete. The section must assign each coding task to a
-specific agent type with objective, context files, requirements, and success criteria.
-Plans without agent assignments are incomplete — do not exit plan mode without them.
-
-### Shared Agent Tracking
-
-**All agents** share these tracking responsibilities (include in every delegation):
-- Reference the ticket ID in progress files and commit messages
-- Create a `testing/` manual test checklist for significant changes
-- Run lint and tests before reporting done
-
-### Delegation Protocol
-
-For each delegated task, provide the agent with:
-1. **Clear objective**: What specifically needs to be accomplished
-2. **Relevant context**: Only the files and information needed (keep context windows small)
-3. **Ticket context**: If tied to an existing ticket, provide the ticket ID and summary
-4. **Constraints**: Technical requirements, patterns to follow, things to avoid
-5. **Tracking deliverables**: Agent runs lint/test, creates testing/ checklist if significant, reports done
-6. **Success criteria**: How to verify the task is complete
-7. **Integration points**: How this work connects to other agents' tasks
-
-### When Delegating
-
-Use this format for each agent task:
-```
-[AGENT: agent_name]
-TICKET: <PREFIX>-NNN (if applicable — provide ticket context to agent)
-OBJECTIVE: Clear, specific goal
-CONTEXT FILES: List of relevant files
-REQUIREMENTS:
-- Specific requirement 1
-- Specific requirement 2
-TRACKING:
-- Agent runs lint and tests before reporting done
-- Orchestrator updates ticket via simplex_mind ticket system
-- Create testing/YYYY-MM-DD_description-manual-tests.md if significant
-INTEGRATION: How this connects to other work
-SUCCESS CRITERIA: How to verify completion
-```
-
-### Sequencing Guidelines
-
-- Data model changes → State/provider updates → UI/component integration → Security review
-- New features: Data layer first, then UI consumption, then security audit
-- Bug fixes: Identify root cause domain, delegate to appropriate agent, verify fix
-- Refactoring: Coordinate changes to maintain working state throughout
-
-### Context Window Management
-
-- Never dump entire codebase to an agent
-- Identify the minimal set of files needed for each task
-- Summarize related code rather than including it when possible
-- Break large features into atomic, independently completable tasks
-
-### Decision Framework
-
-When uncertain about delegation, check agent descriptions in `.claude/agents/`. When tasks span multiple domains, break into smaller tasks for each agent. Identify the primary domain and lead agent, have secondary agents review relevant portions.
-
-### Security Review Tracking
-
-When the security-auditor performs reviews, create one ticket per finding (not batch). Use ticket type `bug` with appropriate priority.
-
-### Manual Testing Checklists (`testing/`)
+Significant changes in a project get a manual test checklist in that project's `testing/` directory.
 
 - **Filename**: `YYYY-MM-DD_<feature-name>-manual-tests.md`
 - **When**: New features, UI changes, flow changes — not needed for small bug fixes
 - **Structure**: Prerequisites → feature-grouped sections → checkboxes (`[ ]`) → integration tests → edge cases → notes
 - **Coverage**: Happy path, validation/error handling, data persistence (survives restart), UI feedback, calculations
-- Created by the agent AFTER task completion, BEFORE orchestrator concludes
+- Created AFTER the task's implementation is complete, BEFORE the work is reported done
 
 ---
 
@@ -205,7 +114,7 @@ python3 src/utils/agent_skills/memory/memory_read.py --format markdown
 ```bash
 python3 src/utils/agent_skills/memory/memory_write.py \
     --content "..." \
-    --type <fact|preference|event|insight|task|relationship|decision> \
+    --type <fact|preference|event|insight|task|relationship|decision|note> \
     --importance <1-10>
 ```
 
@@ -258,6 +167,7 @@ python3 src/utils/agent_skills/memory/memory_sync.py --dry-run # preview
 **Location:** Per-project: `<project_path>/database/tickets.db`
 Tickets auto-target the active project. Use `--target <name>` to override.
 Ticket ID prefix is auto-inferred for read/update operations (e.g. PROJ-122 → my-project).
+On `master` (no active project), tickets fall through to simplex_mind's own `database/tickets.db` under prefix `SIMP` — that DB is the brain's, all others live in their project's directory.
 
 **Commands:**
 ```bash
@@ -423,6 +333,7 @@ Commits always happen. The only decision is whether to create a new branch first
 
 **Commands (simplex_mind repo only):**
 ```bash
+python3 src/utils/agent_skills/git_commit.py init      # one-time: git init + first framework commit
 python3 src/utils/agent_skills/git_commit.py status
 python3 src/utils/agent_skills/git_commit.py diff
 python3 src/utils/agent_skills/git_commit.py commit -m "message"
@@ -434,7 +345,7 @@ use native git commands in the project directory — see [Working Directory](#wo
 **Commit automatically after:**
 - Running `init.py` for the first time
 - Writing or updating any file in `src/`
-- Modifying `CLAUDE.md`, `AGENTS.md`, `projects.yaml`, or `database/memory/MEMORY.md`
+- Modifying `CLAUDE.md`, `AGENTS.md`, or `database/memory/MEMORY.md`
 
 **Never commit:**
 - `projects.yaml` — local config, gitignored
@@ -455,7 +366,6 @@ use native git commands in the project directory — see [Working Directory](#wo
 - Update `database/memory/systems.md` when creating, removing, or significantly changing a system.
 - Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
 - Never assume the user is following along during multi-step execution. Present one step at a time, explain what success/failure looks like, and wait for confirmation before proceeding.
-- Plans for coding tasks must include an Agent Delegation section assigning work to specific agents. Never frame implementation as direct execution.
 - `projects.yaml` is local config (gitignored). Never commit it. The active project is derived from the current simplex_mind git branch — no flag to toggle. To switch projects, just `git checkout <branch>`.
 - Protocol changes to CLAUDE.md must go to master first, then merge into all project branches.
 - When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
@@ -470,9 +380,7 @@ use native git commands in the project directory — see [Working Directory](#wo
 simplex_mind/                          ← brain repo (Claude launches here)
 ├── CLAUDE.md                          ← this file — agnostic base instructions
 ├── AGENTS.md                          ← Codex/Cursor/Windsurf instructions
-├── projects.yaml                      ← maps project names → paths
-├── .claude/
-│   └── agents/                        ← agent definitions (frontend-engineer, data-engineer, security-auditor)
+├── projects.yaml                      ← maps project names → paths (local, gitignored)
 ├── database/
 │   ├── memory/
 │   │   ├── memory.db                  ← structured memory (SQLite)
@@ -480,7 +388,7 @@ simplex_mind/                          ← brain repo (Claude launches here)
 │   │   ├── MEMORY.md                  ← curated persistent memory
 │   │   ├── systems.md                 ← system inventory
 │   │   └── logs/                      ← daily logs (YYYY-MM-DD.md)
-│   ├── tickets.db                     ← ticket tracking
+│   ├── tickets.db                     ← brain (SIMP) tickets — each project has its own <project>/database/tickets.db
 │   ├── conversation_history.db        ← conversation transcripts
 │   └── ARCHITECTURE.md                ← database schema docs
 └── src/utils/agent_skills/
@@ -489,6 +397,8 @@ simplex_mind/                          ← brain repo (Claude launches here)
     ├── conversation/                  ← conversation history tools
     ├── git_commit.py                  ← git operations
     ├── init.py                        ← project bootstrapper
+    ├── project_resolver.py            ← branch → project resolution, ticket DB routing
+    ├── track_tokens.py                ← token metrics logger (optional)
     └── manifest.md                    ← tool inventory
 ```
 

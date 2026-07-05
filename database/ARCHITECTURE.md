@@ -1,6 +1,7 @@
 # Database Architecture
 
-Three SQLite databases power simplex_mind's persistence layer.
+Four SQLite databases power simplex_mind's persistence layer: `memory.db`, `activity.db`,
+`tickets.db` (one per project + a brain fallback), and `conversation_history.db`.
 
 ---
 
@@ -21,7 +22,7 @@ Managed by `src/utils/agent_skills/memory/memory_db.py`.
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | INTEGER PK | Auto-increment |
-| `type` | TEXT | `fact`, `preference`, `event`, `insight`, `task`, `relationship` |
+| `type` | TEXT | `fact`, `preference`, `event`, `insight`, `task`, `relationship`, `decision`, `note` |
 | `content` | TEXT | Free-text entry |
 | `content_hash` | TEXT UNIQUE | Dedup key (SHA of content) |
 | `source` | TEXT | `user`, `inferred`, `session`, `external`, `system` |
@@ -55,6 +56,12 @@ Managed by `src/utils/agent_skills/memory/memory_db.py`.
 
 Created by `src/utils/agent_skills/init.py`. Minimal audit trail.
 
+**Scope note:** this database is an optional integration point for *external* PRD-driven
+code-generation pipelines (e.g. cornucopia2's `orchestrator.py`, which lives in that project's
+own repo — not here). simplex_mind provides the generic hook (`memory_post_run.py` + this
+audit table); nothing inside simplex_mind itself writes to it. It is dormant while no
+PRD-driven project is running, not dead.
+
 ### Tables
 
 | Table | Purpose |
@@ -74,7 +81,7 @@ Created by `src/utils/agent_skills/init.py`. Minimal audit trail.
 
 ### Writers
 
-- `orchestrator.py` → `record_prd_history()` — one row per run
+- An external orchestrator's `record_prd_history()` — one row per run (see scope note above)
 
 ### Readers
 
@@ -82,11 +89,18 @@ Created by `src/utils/agent_skills/init.py`. Minimal audit trail.
 
 ---
 
-## 3. `database/tickets.db`
+## 3. Ticket databases — per project
 
-Managed by `src/utils/agent_skills/tickets/ticket_db.py`.
+Managed by `src/utils/agent_skills/tickets/ticket_db.py`, routed via `project_resolver.py`.
 
-### Tables
+**One database per project:** each project registered in `projects.yaml` has its own DB at
+`<project_path>/database/tickets.db`, with its own prefix (e.g. `PROJ`) and counter.
+simplex_mind's own `database/tickets.db` is the fallback used on `master` / no active project
+(prefix `SIMP`). Resolution order: explicit `--target` → prefix inference from ticket ID →
+active project (git branch) → brain DB. `ticket_migrate.py` is the historical one-time script
+that split the original shared DB into per-project databases; it is kept for reference only.
+
+### Tables (identical schema in every ticket DB)
 
 | Table | Purpose |
 |-------|---------|
@@ -97,7 +111,7 @@ Managed by `src/utils/agent_skills/tickets/ticket_db.py`.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `id` | TEXT PK | Format: `PROJ-NNN` |
+| `id` | TEXT PK | Format: `<PREFIX>-NNN` (prefix from projects.yaml) |
 | `ticket_type` | TEXT | `bug`, `feature`, `task`, `improvement`, `documentation` |
 | `status` | TEXT | `open`, `in_progress`, `blocked`, `done`, `wont_fix` |
 | `priority` | TEXT | `low`, `medium`, `high`, `critical` |
@@ -117,13 +131,39 @@ Managed by `src/utils/agent_skills/tickets/ticket_db.py`.
 
 ### Readers
 
-- `ticket_list.py` — list/filter tickets
+- `ticket_list.py` — list/filter tickets (`--all-projects` iterates every project's DB)
 - `ticket_read.py` — read single ticket by ID
 - `memory_post_run.py` — reads open tickets for dedup before creating new ones
+- `session_digest.py` — open/in-progress ticket summary at session start
 
 ---
 
-## Data Flow
+## 4. `database/conversation_history.db`
+
+Managed by `src/utils/agent_skills/conversation/conversation_db.py`.
+
+### Tables
+
+| Table | Purpose |
+|-------|---------|
+| `sessions` | One row per Claude Code session (UUID, project, timestamps) |
+| `messages` | Verbatim transcript messages (role, content, timestamp) |
+| `messages_fts` | FTS5 full-text index over message content |
+| `ingest_state` | Per-file byte offsets for incremental ingestion |
+
+### Writers
+
+- `conversation_ingest.py` — parses Claude Code JSONL transcripts (source dirs derived from
+  `projects.yaml`); incremental via byte offsets. Triggered by the Stop hook in
+  `.claude/settings.json` after every response, plus an optional 5-minute cron as safety net.
+
+### Readers
+
+- `conversation_read.py` — list sessions, full transcripts, FTS search, recent messages, stats
+
+---
+
+## Data Flow (external PRD-driven pipeline — dormant unless such a project is active)
 
 ```
 orchestrator run
