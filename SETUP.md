@@ -166,6 +166,10 @@ Rules:
 - When improving any file derived from a shared template, identify all sibling files. Confirm with the user before updating each.
 - Keep framework tools generic. Domain-specific knowledge belongs only in project PRDs and hardprompts.
 - Update `database/memory/systems.md` when creating, removing, or significantly changing a system.
+- Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
+- When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
+- `projects.yaml` is local config (gitignored). Never commit it. The active project is derived from the current simplex_mind git branch — to switch projects, just `git checkout <branch>`.
+- Protocol changes to shared instruction files go to master first, then merge into all project branches.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
 ```

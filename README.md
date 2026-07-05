@@ -14,13 +14,14 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 │   ├── projects.yaml          ← maps project names → paths
 │   ├── database/              ← all persistent data
 │   │   ├── memory/            ← memory.db, MEMORY.md, systems.md, logs/
-│   │   ├── tickets.db         ← ticket tracking
+│   │   ├── tickets.db         ← simplex_mind's own (fallback) ticket DB
 │   │   ├── conversation_history.db  ← conversation transcripts
 │   │   └── ARCHITECTURE.md
 │   └── src/utils/agent_skills/ ← all tools
 │
 ├── my-project/               ← project workspace (branches freely)
 │   ├── CLAUDE.md.ref          ← project-specific instructions
+│   ├── database/tickets.db    ← this project's tickets (each project has its own)
 │   ├── src/, goals/, args/    ← project code
 │   └── ...
 │
@@ -38,8 +39,8 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 
 ## What's included
 
-- **Memory system** — SQLite-backed with daily logs, MEMORY.md sync, systems inventory, session digest, and optional semantic search
-- **Ticket tracker** — JIRA-like issue tracking (configurable PREFIX-NNN IDs) with CLI tools
+- **Memory system** — SQLite-backed with daily logs, MEMORY.md sync, systems inventory, session digest, and local semantic search (fastembed)
+- **Ticket tracker** — JIRA-like issue tracking (configurable PREFIX-NNN IDs) with CLI tools; per-project databases routed via `projects.yaml`
 - **Conversation history** — Verbatim transcript storage from AI assistant JSONL transcripts; cron-ingested; FTS5 search
 - **Git wrapper** — Structured git operations scoped to framework files
 - **Session digest** — Focused context loader (< 200 lines): open tickets, decisions, systems, git
@@ -58,9 +59,9 @@ git clone <repo-url> simplex_mind
 cd ~/projects/simplex_mind
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
-# Optional — enables semantic memory search:
-# pip install openai numpy rank_bm25
+pip install -r requirements.txt   # includes fastembed — local semantic search works out of the box
+# Optional — OpenAI embeddings fallback instead of the local model:
+# pip install openai
 ```
 
 3. Run the initializer:
@@ -115,8 +116,8 @@ The active project is derived from the current simplex_mind git branch (matching
 
 - Python 3.10+
 - Git
-- `pip install -r requirements.txt` (required)
-- `pip install openai numpy rank_bm25` (optional — semantic search)
+- `pip install -r requirements.txt` (required — includes fastembed for local semantic search)
+- `pip install openai` (optional — OpenAI embeddings fallback)
 
 ## Directory Structure
 
@@ -126,6 +127,7 @@ src/utils/agent_skills/
 ├── manifest.md              # Tool inventory
 ├── init.py                  # Project bootstrapper
 ├── git_commit.py            # Git wrapper
+├── project_resolver.py      # Branch → project resolution, ticket DB routing
 ├── track_tokens.py          # Token tracking (optional)
 ├── memory/
 │   ├── memory_db.py         # SQLite CRUD
@@ -135,14 +137,15 @@ src/utils/agent_skills/
 │   ├── session_digest.py    # Session-start context digest
 │   ├── hybrid_search.py     # BM25 + vector search
 │   ├── semantic_search.py   # Vector similarity search
-│   ├── embed_memory.py      # OpenAI embeddings
+│   ├── embed_memory.py      # Embeddings (local fastembed; OpenAI fallback)
 │   └── memory_post_run.py   # Post-run metrics writer
 ├── tickets/
-│   ├── ticket_db.py         # SQLite CRUD
+│   ├── ticket_db.py         # SQLite CRUD (per-project routing)
 │   ├── ticket_create.py     # CLI: create ticket
 │   ├── ticket_list.py       # CLI: list tickets
 │   ├── ticket_read.py       # CLI: read ticket
-│   └── ticket_update.py     # CLI: update ticket
+│   ├── ticket_update.py     # CLI: update ticket
+│   └── ticket_migrate.py    # Historical: one-time shared→per-project migration
 └── conversation/
     ├── conversation_db.py    # SQLite + FTS5 CRUD
     ├── conversation_ingest.py # JSONL parser (multi-source)

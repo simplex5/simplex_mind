@@ -17,9 +17,10 @@ and structured git commit behaviour across all projects.
 ## 2. Install dependencies
 
 ```bash
-pip install python-dotenv
-# Optional — enables semantic memory search:
-# pip install openai numpy rank_bm25
+pip install -r requirements.txt
+# Includes fastembed — semantic memory search runs fully locally, no API key.
+# Optional — OpenAI embeddings fallback instead of the local model:
+# pip install openai
 ```
 
 ---
@@ -34,8 +35,12 @@ Creates:
 - `database/memory/MEMORY.md` — curated persistent memory file
 - `database/memory/logs/` — daily log directory
 - `database/memory/memory.db` — SQLite: facts, insights, daily logs
-- `database/tickets.db` — SQLite: issue tracker
+- `database/tickets.db` — SQLite: simplex_mind's own (fallback) issue tracker
+- `database/conversation_history.db` — SQLite: conversation transcripts
 - `logs/` and `.tmp/` — runtime directories
+
+Per-project ticket databases (`<project_path>/database/tickets.db`) are created automatically
+on first use, routed via `projects.yaml`.
 
 Then create the first commit:
 ```bash
@@ -51,26 +56,37 @@ python src/utils/agent_skills/git_commit.py init
 **Hard rule: Create a ticket before starting any work that edits files.**
 No exceptions. Pure questions (using the `question:` prefix) are the only exemption.
 
+**Routing:** Each registered project has its own ticket database at
+`<project_path>/database/tickets.db`. Commands auto-target the active project (derived from
+the current simplex_mind git branch); use `--target <name>` to override. Ticket ID prefix is
+auto-inferred for read/update operations (e.g. PROJ-122 → my-project). On `master` (no active
+project), tickets fall through to simplex_mind's own `database/tickets.db` under prefix `SIMP`.
+
 **Commands:**
 ```bash
-# Create
+# Create (targets active project by default)
 python src/utils/agent_skills/tickets/ticket_create.py \
     --type <bug|feature|task|improvement|documentation> \
     --title "Short summary" \
     --project <name> \
     --priority <low|medium|high|critical> \
     --description "Full details"
+# Create targeting a specific project
+python src/utils/agent_skills/tickets/ticket_create.py \
+    --type task --title "..." --target other-project
 
 # Read / list
-python src/utils/agent_skills/tickets/ticket_read.py --id PROJECT-001
+python src/utils/agent_skills/tickets/ticket_read.py --id PROJ-001
 python src/utils/agent_skills/tickets/ticket_list.py --status open
 python src/utils/agent_skills/tickets/ticket_list.py --all
+python src/utils/agent_skills/tickets/ticket_list.py --target other-project
+python src/utils/agent_skills/tickets/ticket_list.py --all-projects
 
-# Update
+# Update (auto-infers project from ticket ID prefix)
 python src/utils/agent_skills/tickets/ticket_update.py \
-    --id PROJECT-001 --status <open|in_progress|blocked|done|wont_fix>
+    --id PROJ-001 --status <open|in_progress|blocked|done|wont_fix>
 python src/utils/agent_skills/tickets/ticket_update.py \
-    --id PROJECT-001 --priority high --note "Context note"
+    --id PROJ-001 --priority high --note "Context note"
 ```
 
 **Also create a ticket immediately (without being asked) for:**
@@ -100,7 +116,7 @@ python src/utils/agent_skills/memory/memory_read.py --format markdown
 ```bash
 python src/utils/agent_skills/memory/memory_write.py \
     --content "..." \
-    --type <fact|preference|event|insight|task|relationship> \
+    --type <fact|preference|event|insight|task|relationship|decision|note> \
     --importance <1-10>
 ```
 
@@ -189,7 +205,7 @@ When a prefix is present: ticket is created at the start, prefix stripped before
 
 **Ticket priorities:** `low` · `medium` · `high` · `critical`
 
-**Memory types:** `fact` · `preference` · `event` · `insight` · `task` · `relationship` · `decision`
+**Memory types:** `fact` · `preference` · `event` · `insight` · `task` · `relationship` · `decision` · `note`
 
 **Memory importance:** 1–10 (default 5). Higher = surfaced more prominently in search.
 
@@ -197,7 +213,9 @@ When a prefix is present: ticket is created at the start, prefix stripped before
 
 ### 4.5 Conversation History Protocol
 
-Conversation transcripts are ingested automatically from Claude Code JSONL files every 5 minutes via cron.
+Conversation transcripts are ingested automatically from Claude Code JSONL files via two
+mechanisms: a Stop hook in `.claude/settings.json` (runs after every Claude Code response,
+~0 lag) and an optional cron job every 5 minutes (safety net for crashes or non-Claude agents).
 
 **Search past conversations:**
 ```bash
@@ -259,7 +277,8 @@ python3 src/utils/agent_skills/memory/memory_sync.py          # regenerate
 python3 src/utils/agent_skills/memory/memory_sync.py --dry-run # preview
 ```
 
-Preserves the `## Pinned` section. All other sections are rebuilt from memory.db.
+Non-destructive: only a marker-delimited AUTO-SYNC block is rebuilt from memory.db — all
+hand-curated content outside the block is preserved verbatim.
 
 ---
 

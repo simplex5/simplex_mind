@@ -8,7 +8,7 @@ All tools and reference files Claude invokes directly.
 
 | Tool | File | Description |
 |------|------|-------------|
-| Token Tracker | `track_tokens.py` | Appends call objects to metrics JSON (optional — requires statusline.sh) |
+| Token Tracker | `track_tokens.py` | Appends call objects to metrics JSON (optional — consumed by a user-side statusline script outside this repo) |
 | Git Operations | `git_commit.py` | Init, status, commit, diff for framework files |
 | Initializer | `init.py` | Creates full project scaffold (idempotent) |
 | Project Resolver | `project_resolver.py` | Shared utility for resolving project config from projects.yaml; routes ticket operations to per-project databases |

@@ -34,7 +34,12 @@ hasn't been completed and guide you through setup:
 
 The onboarding will ask for your project path, name, ticket prefix, and goals.
 
-### Step 4 — Set up conversation history (optional, Claude Code only)
+### Step 4 — Conversation history (Claude Code: automatic)
+
+For Claude Code, conversation ingestion runs automatically via a Stop hook in
+`.claude/settings.json` after every response — nothing to set up.
+
+Optionally add a cron job as a safety net (covers crashed sessions and non-Claude agents):
 
 ```
 crontab -e
@@ -44,12 +49,19 @@ crontab -e
   >> ~/projects/simplex_mind/logs/conversation_ingest.log 2>&1
 ```
 
-### Optional: Semantic memory search
+### Semantic memory search (works out of the box)
 
-For vector-based memory search (requires an OpenAI API key):
+Semantic search runs fully locally via `fastembed`, which Step 2 already installed from
+`requirements.txt` — no API key, no extra setup.
+
+Troubleshooting: if memory search reports `keyword_only (semantic backend unavailable)`,
+fastembed didn't install into the venv — re-run `pip install -r requirements.txt` with the
+venv activated.
+
+Optional OpenAI fallback instead of the local model:
 
 ```
-pip install openai rank_bm25
+pip install openai
 cp .env.example .env
 # Edit .env and add your OPENAI_API_KEY
 ```
