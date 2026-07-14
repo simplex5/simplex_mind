@@ -35,6 +35,16 @@ import struct
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
+# Embedding backends are installed in the repo venv, but callers invoke these
+# tools with system python3 (Stop hook) as well as venv/bin/python (cron).
+# Expose the venv's site-packages to system python so both paths work.
+_VENV_SITE = (
+    Path(__file__).resolve().parents[4] / "venv" / "lib"
+    / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
+)
+if sys.prefix == sys.base_prefix and _VENV_SITE.is_dir() and str(_VENV_SITE) not in sys.path:
+    sys.path.insert(0, str(_VENV_SITE))
+
 # Optional .env loading — never a hard dependency
 try:
     from dotenv import load_dotenv

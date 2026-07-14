@@ -193,6 +193,18 @@ def write_to_memory(
         if not db_result.get('success') and 'Duplicate' not in db_result.get('error', ''):
             results["success"] = False
 
+        # Embed at write time so semantic search stays current. Best-effort:
+        # a missing backend must never block the write itself.
+        if db_result.get('success') and db_result.get('entry'):
+            try:
+                try:
+                    from .embed_memory import embed_entry
+                except ImportError:
+                    from embed_memory import embed_entry
+                results["embed_result"] = embed_entry(db_result["entry"]["id"])
+            except Exception as e:
+                results["embed_result"] = {"success": False, "error": str(e)}
+
     return results
 
 
