@@ -65,6 +65,17 @@ databases on different machines can never mint colliding IDs. projects.yaml is
 gitignored, so each machine keeps its own identifier. Ticket creation refuses
 to run until this key is set.
 
+**Step 2c — Subconscious library (optional)**
+If a project hosts reasoning-philosophy pieces (a `subconscious/` directory of
+keyword-tagged markdown pieces injected into context when a prompt topically
+matches), point the engine at it with a top-level projects.yaml key:
+```yaml
+subconscious: <project-name>
+```
+Unset = the subconscious engine is a no-op. After adding or editing pieces:
+`python3 src/utils/agent_skills/subconscious/subconscious_index.py`.
+See the Subconscious section in CLAUDE.md for the full protocol.
+
 **Step 3 — Project goals**
 Ask for top 1–3 project goals (one sentence each).
 
