@@ -169,6 +169,27 @@ def action_stats(args):
     print(f"Latest session:     {stats['latest_session']}")
     print(f"DB size:            {stats.get('db_size_mb', '?')} MB")
 
+    # Token usage (SIMP-040) — coverage starts when capture shipped; older
+    # sessions have content but no usage (source JSONL already cleaned up).
+    tu = stats.get('token_usage', {})
+    if tu.get('responses'):
+        print()
+        print("=== Token Usage (captured API responses) ===")
+        print(f"Responses:          {tu['responses']:,}")
+        print(f"Output tokens:      {tu['output_tokens']:,}")
+        print(f"Input tokens:       {tu['input_tokens']:,}")
+        print(f"Cache write:        {tu['cache_creation_tokens']:,}")
+        print(f"Cache read:         {tu['cache_read_tokens']:,}")
+        print(f"Total:              {tu['total_tokens']:,}")
+        print(f"Coverage:           {tu['earliest']} -> {tu['latest']}")
+        by_month = stats.get('token_usage_by_month', [])
+        if by_month:
+            print("Per month (total / output):")
+            for m in by_month:
+                print(f"  {m['month']}: {m['total_tokens']:,} / {m['output_tokens']:,}")
+    else:
+        print("Token usage:        none captured yet (run conversation_ingest.py --force to backfill)")
+
 
 def action_recent(args):
     """Show messages from the last N hours."""

@@ -49,5 +49,5 @@ All tools and reference files Claude invokes directly.
 | Tool | File | Description |
 |------|------|-------------|
 | Conversation DB | `conversation/conversation_db.py` | SQLite CRUD + FTS5 for verbatim conversation transcripts |
-| Conversation Ingester | `conversation/conversation_ingest.py` | Parse Claude Code JSONL files into conversation_history.db; multi-source directory support; cron-friendly |
-| Conversation Reader | `conversation/conversation_read.py` | CLI: list sessions, get transcript, full-text search, recent messages, stats |
+| Conversation Ingester | `conversation/conversation_ingest.py` | Parse Claude Code JSONL files into conversation_history.db; multi-source directory support; captures per-response token usage; cron-friendly |
+| Conversation Reader | `conversation/conversation_read.py` | CLI: list sessions, get transcript, full-text search, recent messages, stats incl. token totals + per-month breakdown |
