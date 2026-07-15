@@ -150,6 +150,7 @@ Managed by `src/utils/agent_skills/conversation/conversation_db.py`.
 | `messages` | Verbatim transcript messages (role, content, timestamp) |
 | `messages_fts` | FTS5 full-text index over message content |
 | `ingest_state` | Per-file byte offsets for incremental ingestion |
+| `message_usage` | Per-response API token counts (input/output/cache), incl. tool-call-only responses that never reach `messages`; survives Claude Code's ~30-day JSONL cleanup (SIMP-040) |
 
 ### Writers
 
