@@ -42,6 +42,7 @@ At the start of every new session:
 ```yaml
 # projects.yaml — maps project names to paths
 machine: L1  # this machine's ticket-ID segment (e.g. L1 = laptop 1, D1 = desktop 1)
+subconscious: my-project  # optional: project whose subconscious/ dir holds reasoning-philosophy pieces
 projects:
   my-project:
     path: ~/projects/my-project
@@ -373,6 +374,7 @@ simplex_mind/                          <- brain repo (agent launches here)
     |-- memory/                        <- memory tools
     |-- tickets/                       <- ticket tools
     |-- conversation/                  <- conversation history tools
+    |-- subconscious/                  <- context-triggered philosophy: index, recall hook, miner
     |-- git_commit.py                  <- git operations
     |-- init.py                        <- project bootstrapper
     |-- project_resolver.py            <- branch -> project resolution, ticket DB routing

@@ -13,7 +13,8 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 │   ├── AGENTS.md              ← instructions for Codex / Cursor / Windsurf
 │   ├── projects.yaml          ← maps project names → paths
 │   ├── database/              ← all persistent data
-│   │   ├── memory/            ← memory.db, MEMORY.md, systems.md, logs/
+│   │   ├── memory/            ← memory.db, MEMORY.md, systems.md, logs/,
+│   │   │                            subconscious_index.json (derived, gitignored)
 │   │   ├── tickets.db         ← simplex_mind's own (fallback) ticket DB
 │   │   ├── conversation_history.db  ← conversation transcripts + token usage
 │   │   └── ARCHITECTURE.md
@@ -41,6 +42,7 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 
 - **Memory system** — SQLite-backed with daily logs, MEMORY.md sync, systems inventory, session digest, and local semantic search (fastembed)
 - **Ticket tracker** — JIRA-like issue tracking (configurable PREFIX-<MACHINE>-NNN IDs) with CLI tools; per-project databases routed via `projects.yaml`
+- **Subconscious** — Reasoning-philosophy pieces injected into context only when the prompt topically matches (keyword + embedding triggers via a UserPromptSubmit hook); library lives in a project's `subconscious/` dir, mined and grown from real conversations
 - **Conversation history** — Verbatim transcript storage from AI assistant JSONL transcripts; cron-ingested; FTS5 search
 - **Git wrapper** — Structured git operations scoped to framework files
 - **Session digest** — Focused context loader (< 200 lines): open tickets, decisions, systems, git
@@ -79,6 +81,7 @@ crontab -e
 5. Register your project in `projects.yaml`:
 ```yaml
 machine: L1  # this machine's ticket-ID segment (e.g. L1 = laptop 1, D1 = desktop 1)
+subconscious: my-project  # optional: project whose subconscious/ dir holds reasoning-philosophy pieces
 projects:
   my-project:
     path: ~/projects/my-project
@@ -147,10 +150,14 @@ src/utils/agent_skills/
 │   ├── ticket_read.py       # CLI: read ticket
 │   ├── ticket_update.py     # CLI: update ticket
 │   └── ticket_migrate.py    # Historical: one-time shared→per-project migration
-└── conversation/
-    ├── conversation_db.py    # SQLite + FTS5 CRUD
-    ├── conversation_ingest.py # JSONL parser (multi-source)
-    └── conversation_read.py  # CLI: search, list, read
+├── conversation/
+│   ├── conversation_db.py    # SQLite + FTS5 CRUD
+│   ├── conversation_ingest.py # JSONL parser (multi-source)
+│   └── conversation_read.py  # CLI: search, list, read
+└── subconscious/
+    ├── subconscious_index.py  # embed library pieces → retrieval index
+    ├── subconscious_recall.py # UserPromptSubmit hook: inject matching pieces
+    └── subconscious_mine.py   # mine conversation history for triggers
 ```
 
 ## Usage
@@ -177,6 +184,14 @@ python3 src/utils/agent_skills/tickets/ticket_list.py --status open
 python3 src/utils/agent_skills/tickets/ticket_read.py --id PROJ-L1-001
 python3 src/utils/agent_skills/tickets/ticket_update.py --id PROJ-L1-001 --status done
 ```
+
+### Subconscious
+```bash
+python3 src/utils/agent_skills/subconscious/subconscious_index.py          # rebuild after editing pieces
+python3 src/utils/agent_skills/subconscious/subconscious_index.py --list   # inspect
+python3 src/utils/agent_skills/subconscious/subconscious_mine.py           # mine history for new triggers
+```
+The recall hook (`subconscious_recall.py`) runs automatically per prompt via `.claude/settings.json` — no manual invocation. See the Subconscious section of `CLAUDE.md` / `AGENT_PROTOCOL.md` for how pieces and triggers work.
 
 ### Conversation History
 ```bash
