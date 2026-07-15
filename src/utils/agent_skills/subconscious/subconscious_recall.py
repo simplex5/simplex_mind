@@ -42,14 +42,29 @@ PREAMBLE = (
 )
 
 
-def keyword_hits(prompt_lower: str, keywords: list) -> int:
+def normalize(text: str) -> str:
+    """Punctuation/hyphen/case-proof canonical form for matching: lowercase,
+    -_/ become spaces (so "double-check" == "double check", "re-verify" ->
+    "re verify"), other punctuation stripped, whitespace collapsed."""
+    text = text.lower()
+    text = re.sub(r"[-_/]", " ", text)
+    text = re.sub(r"[^a-z0-9\s]", "", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def keyword_hits(prompt_norm: str, keywords: list) -> int:
+    """Count keyword matches against a normalize()d prompt. Single words match
+    as word-prefixes ("verify" catches "verifying"); phrases as substrings of
+    the normalized text ("double check" catches "double-checking")."""
     hits = 0
     for kw in keywords:
-        kw = kw.lower()
+        kw = normalize(kw)
+        if not kw:
+            continue
         if " " in kw:
-            if kw in prompt_lower:
+            if kw in prompt_norm:
                 hits += 1
-        elif re.search(rf"\b{re.escape(kw)}\w*", prompt_lower):
+        elif re.search(rf"\b{re.escape(kw)}\w*", prompt_norm):
             hits += 1
     return hits
 
@@ -84,9 +99,9 @@ def main() -> int:
     if not candidates:
         return 0
 
-    prompt_lower = prompt.lower()
+    prompt_norm = normalize(prompt)
     scored = []
-    kw_scores = {p["name"]: keyword_hits(prompt_lower, p["keywords"]) for p in candidates}
+    kw_scores = {p["name"]: keyword_hits(prompt_norm, p["keywords"]) for p in candidates}
 
     # Embed the prompt only if it could change the outcome; keyword hits alone
     # can select, but cosine both ranks them and rescues synonym phrasings.
