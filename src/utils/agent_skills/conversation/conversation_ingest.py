@@ -31,7 +31,7 @@ import yaml
 
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
-from conversation_db import get_connection, upsert_session, insert_message, get_ingest_state, set_ingest_state, get_stats
+from conversation_db import get_connection, upsert_session, insert_message, insert_usage, get_ingest_state, set_ingest_state, get_stats
 
 # Root of the simplex_mind repo (four levels up from this file)
 _REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -141,7 +141,8 @@ def parse_jsonl_file(filepath: str, start_offset: int = 0) -> tuple:
         'slug': None,
         'source_file': os.path.basename(filepath),
         'git_branch': None,
-        'messages': []
+        'messages': [],
+        'usage': []
     })
 
     with open(filepath, 'rb') as f:
@@ -198,6 +199,22 @@ def parse_jsonl_file(filepath: str, start_offset: int = 0) -> tuple:
         message = obj.get('message', {})
         content_raw = message.get('content', '') if isinstance(message, dict) else ''
 
+        # Token usage (SIMP-040) — captured BEFORE the no-text skip below:
+        # tool-call-only assistant responses have no extractable text but still
+        # carry usage, and they are the majority in agentic sessions.
+        if msg_type == 'assistant' and isinstance(message, dict):
+            usage = message.get('usage')
+            if isinstance(usage, dict):
+                sessions[session_id]['usage'].append({
+                    'uuid': uuid,
+                    'timestamp': obj.get('timestamp', ''),
+                    'model': message.get('model'),
+                    'input_tokens': usage.get('input_tokens', 0) or 0,
+                    'output_tokens': usage.get('output_tokens', 0) or 0,
+                    'cache_creation_tokens': usage.get('cache_creation_input_tokens', 0) or 0,
+                    'cache_read_tokens': usage.get('cache_read_input_tokens', 0) or 0,
+                })
+
         # Also check for planContent on user messages (plan mode)
         if not content_raw and msg_type == 'user':
             content_raw = obj.get('planContent', '')
@@ -240,7 +257,7 @@ def ingest_file(conn, filepath: str, force: bool = False, dry_run: bool = False)
         state = get_ingest_state(conn, fname)
         if state:
             if state['file_size'] == file_size and abs(state['file_mtime'] - file_mtime) < 0.01:
-                return {'skipped': True, 'sessions': 0, 'messages_new': 0, 'messages_total': 0, 'lines': 0}
+                return {'skipped': True, 'sessions': 0, 'messages_new': 0, 'messages_total': 0, 'usage_new': 0, 'lines': 0}
             prev_offset = state['byte_offset'] if 'byte_offset' in state.keys() else 0
             if prev_offset and 0 < prev_offset <= file_size and file_size >= (state['file_size'] or 0):
                 start_offset = prev_offset
@@ -254,12 +271,31 @@ def ingest_file(conn, filepath: str, force: bool = False, dry_run: bool = False)
     if dry_run:
         total_msgs = sum(len(s['messages']) for s in sessions_data.values())
         return {'skipped': False, 'sessions': len(sessions_data), 'messages_new': total_msgs,
-                'messages_total': total_msgs, 'lines': lines_read}
+                'messages_total': total_msgs,
+                'usage_new': sum(len(s['usage']) for s in sessions_data.values()),
+                'lines': lines_read}
 
     messages_new = 0
     messages_total = 0
+    usage_new = 0
 
     for session_id, sdata in sessions_data.items():
+        # Usage rows go in before the no-messages skip: a chunk can be all
+        # tool-call responses (no text) yet still carry token usage (SIMP-040).
+        for urow in sdata['usage']:
+            if insert_usage(
+                conn,
+                uuid=urow['uuid'],
+                session_id=session_id,
+                timestamp=urow['timestamp'],
+                model=urow['model'],
+                input_tokens=urow['input_tokens'],
+                output_tokens=urow['output_tokens'],
+                cache_creation_tokens=urow['cache_creation_tokens'],
+                cache_read_tokens=urow['cache_read_tokens'],
+            ):
+                usage_new += 1
+
         msgs = sdata['messages']
         if not msgs:
             continue
@@ -320,7 +356,7 @@ def ingest_file(conn, filepath: str, force: bool = False, dry_run: bool = False)
     conn.commit()
 
     return {'skipped': False, 'sessions': len(sessions_data), 'messages_new': messages_new,
-            'messages_total': messages_total, 'lines': lines_read}
+            'messages_total': messages_total, 'usage_new': usage_new, 'lines': lines_read}
 
 
 def run_ingestion(force: bool = False, dry_run: bool = False,
@@ -353,6 +389,7 @@ def run_ingestion(force: bool = False, dry_run: bool = False,
         'sessions_total': 0,
         'messages_new': 0,
         'messages_total': 0,
+        'usage_new': 0,
         'lines_total': 0,
     }
 
@@ -366,6 +403,7 @@ def run_ingestion(force: bool = False, dry_run: bool = False,
             totals['sessions_total'] += result['sessions']
             totals['messages_new'] += result['messages_new']
             totals['messages_total'] += result['messages_total']
+            totals['usage_new'] += result.get('usage_new', 0)
             totals['lines_total'] += result['lines']
 
     if not dry_run:
@@ -389,6 +427,10 @@ def show_stats():
     print(f"Files ingested:     {stats['files_ingested']}")
     print(f"Earliest session:   {stats['earliest_session']}")
     print(f"Latest session:     {stats['latest_session']}")
+    tu = stats.get('token_usage', {})
+    if tu.get('responses'):
+        print(f"Token usage:        {tu['total_tokens']:,} total / {tu['output_tokens']:,} output "
+              f"across {tu['responses']:,} responses ({tu['earliest']} -> {tu['latest']})")
     print(f"DB size:            {stats.get('db_size_mb', '?')} MB")
 
 
@@ -427,6 +469,7 @@ def main():
     print(f"\nFiles:    {result['files_processed']} processed, {result['files_skipped']} skipped (of {result['files_total']})")
     print(f"Sessions: {result['sessions_total']}")
     print(f"Messages: {result['messages_new']} new (of {result['messages_total']} seen)")
+    print(f"Usage:    {result['usage_new']} new token-usage rows")
     print(f"Lines:    {result['lines_total']}")
 
     if not args.dry_run and result['files_processed'] > 0:

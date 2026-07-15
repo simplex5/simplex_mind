@@ -99,6 +99,23 @@ def get_connection():
         END
     ''')
 
+    # Token usage per assistant API response (SIMP-040). Separate from messages:
+    # tool-call-only responses carry usage but have no extractable text, so they
+    # never reach the messages table. Survives Claude Code's ~30-day JSONL cleanup.
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS message_usage (
+            uuid TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            model TEXT,
+            input_tokens INTEGER DEFAULT 0,
+            output_tokens INTEGER DEFAULT 0,
+            cache_creation_tokens INTEGER DEFAULT 0,
+            cache_read_tokens INTEGER DEFAULT 0,
+            ingested_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+        )
+    ''')
+
     # Ingest state tracking
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS ingest_state (
@@ -123,6 +140,8 @@ def get_connection():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_sequence ON messages(session_id, sequence_num)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_slug ON sessions(slug)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_first_msg ON sessions(first_message_at)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_usage_session ON message_usage(session_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_usage_timestamp ON message_usage(timestamp)')
 
     conn.commit()
     return conn
@@ -186,6 +205,31 @@ def insert_message(
         ''', (uuid, session_id, parent_uuid, role, content, timestamp, git_branch, sequence_num))
         # rowcount is per-statement; conn.total_changes is cumulative and
         # would report True for every ignored duplicate after the first insert
+        return cursor.rowcount > 0
+    except sqlite3.IntegrityError:
+        return False
+
+
+def insert_usage(
+    conn,
+    uuid: str,
+    session_id: str,
+    timestamp: str,
+    model: Optional[str] = None,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+    cache_creation_tokens: int = 0,
+    cache_read_tokens: int = 0
+) -> bool:
+    """Insert a token-usage row, ignoring duplicates. Returns True if inserted."""
+    try:
+        cursor = conn.execute('''
+            INSERT OR IGNORE INTO message_usage
+            (uuid, session_id, timestamp, model, input_tokens, output_tokens,
+             cache_creation_tokens, cache_read_tokens)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (uuid, session_id, timestamp, model, input_tokens, output_tokens,
+              cache_creation_tokens, cache_read_tokens))
         return cursor.rowcount > 0
     except sqlite3.IntegrityError:
         return False
@@ -343,6 +387,41 @@ def get_stats(conn) -> Dict[str, Any]:
 
     cursor = conn.execute('SELECT COUNT(*) as c FROM ingest_state')
     stats['files_ingested'] = cursor.fetchone()['c']
+
+    # Token usage (SIMP-040) — zeros when the table is empty
+    cursor = conn.execute('''
+        SELECT COUNT(*) as responses,
+               COALESCE(SUM(input_tokens), 0) as input_tokens,
+               COALESCE(SUM(output_tokens), 0) as output_tokens,
+               COALESCE(SUM(cache_creation_tokens), 0) as cache_creation_tokens,
+               COALESCE(SUM(cache_read_tokens), 0) as cache_read_tokens,
+               MIN(timestamp) as earliest,
+               MAX(timestamp) as latest
+        FROM message_usage
+    ''')
+    row = cursor.fetchone()
+    stats['token_usage'] = {
+        'responses': row['responses'],
+        'input_tokens': row['input_tokens'],
+        'output_tokens': row['output_tokens'],
+        'cache_creation_tokens': row['cache_creation_tokens'],
+        'cache_read_tokens': row['cache_read_tokens'],
+        'total_tokens': row['input_tokens'] + row['output_tokens']
+                        + row['cache_creation_tokens'] + row['cache_read_tokens'],
+        'earliest': row['earliest'],
+        'latest': row['latest'],
+    }
+
+    cursor = conn.execute('''
+        SELECT strftime('%Y-%m', timestamp) as month,
+               COUNT(*) as responses,
+               SUM(output_tokens) as output_tokens,
+               SUM(input_tokens + output_tokens + cache_creation_tokens + cache_read_tokens) as total_tokens
+        FROM message_usage
+        GROUP BY month
+        ORDER BY month
+    ''')
+    stats['token_usage_by_month'] = [row_to_dict(r) for r in cursor.fetchall()]
 
     # DB file size
     if DB_PATH.exists():
