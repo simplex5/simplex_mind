@@ -39,6 +39,8 @@ Creates:
 - `database/conversation_history.db` — SQLite: conversation transcripts + token usage
 - `logs/` and `.tmp/` — runtime directories
 
+Ticket IDs are machine-scoped: `PREFIX-<MACHINE>-NNN` (e.g. `SIMP-L1-042`), where MACHINE comes from the top-level `machine:` key in projects.yaml — each machine mints in its own namespace so IDs never collide across computers.
+
 Per-project ticket databases (`<project_path>/database/tickets.db`) are created automatically
 on first use, routed via `projects.yaml`.
 
@@ -59,7 +61,7 @@ No exceptions. Pure questions (using the `question:` prefix) are the only exempt
 **Routing:** Each registered project has its own ticket database at
 `<project_path>/database/tickets.db`. Commands auto-target the active project (derived from
 the current simplex_mind git branch); use `--target <name>` to override. Ticket ID prefix is
-auto-inferred for read/update operations (e.g. PROJ-122 → my-project). On `master` (no active
+auto-inferred for read/update operations (e.g. PROJ-L1-122 → my-project). On `master` (no active
 project), tickets fall through to simplex_mind's own `database/tickets.db` under prefix `SIMP`.
 
 **Commands:**
@@ -76,7 +78,7 @@ python src/utils/agent_skills/tickets/ticket_create.py \
     --type task --title "..." --target other-project
 
 # Read / list
-python src/utils/agent_skills/tickets/ticket_read.py --id PROJ-001
+python src/utils/agent_skills/tickets/ticket_read.py --id PROJ-L1-001
 python src/utils/agent_skills/tickets/ticket_list.py --status open
 python src/utils/agent_skills/tickets/ticket_list.py --all
 python src/utils/agent_skills/tickets/ticket_list.py --target other-project
@@ -84,9 +86,9 @@ python src/utils/agent_skills/tickets/ticket_list.py --all-projects
 
 # Update (auto-infers project from ticket ID prefix)
 python src/utils/agent_skills/tickets/ticket_update.py \
-    --id PROJ-001 --status <open|in_progress|blocked|done|wont_fix>
+    --id PROJ-L1-001 --status <open|in_progress|blocked|done|wont_fix>
 python src/utils/agent_skills/tickets/ticket_update.py \
-    --id PROJ-001 --priority high --note "Context note"
+    --id PROJ-L1-001 --priority high --note "Context note"
 ```
 
 **Also create a ticket immediately (without being asked) for:**
@@ -266,7 +268,7 @@ When a significant architectural or process decision is made, log it:
 ```bash
 python3 src/utils/agent_skills/memory/memory_write.py \
     --content "Decided to use FTS5 for conversation search" \
-    --type decision --importance 7 --ticket PROJ-087
+    --type decision --importance 7 --ticket PROJ-L1-087
 ```
 
 Decisions appear in the session digest and in MEMORY.md (via memory_sync.py).

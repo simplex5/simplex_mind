@@ -11,6 +11,8 @@ Functions:
     get_project(name)            -> config for a specific project
     get_ticket_db_path(target)   -> Path to <project_path>/database/tickets.db
     get_all_projects()           -> list of all project configs
+    get_machine_id()             -> this machine's ticket-ID segment (e.g. "L1")
+                                    from the top-level `machine:` key
     infer_project_from_prefix(ticket_id) -> project name matching the prefix
 
 The active project is derived from the current simplex_mind git branch, by
@@ -53,6 +55,7 @@ def _parse_yaml(text: str) -> dict:
 
     # Minimal fallback parser for the simple projects.yaml structure
     projects = {}
+    top_level = {}
     current_project = None
     for line in text.split("\n"):
         stripped = line.strip()
@@ -67,8 +70,12 @@ def _parse_yaml(text: str) -> dict:
         elif line.startswith("  ") and not line.startswith("    ") and stripped.endswith(":"):
             current_project = stripped[:-1].strip()
             projects[current_project] = {}
+        elif not line.startswith(" ") and ":" in stripped and not stripped.endswith(":"):
+            key, _, value = stripped.partition(":")
+            top_level[key.strip()] = value.split("#", 1)[0].strip().strip("'\"")
 
-    return {"projects": projects}
+    top_level["projects"] = projects
+    return top_level
 
 
 # Process-lifetime caches. CLI tools are one-shot processes, so staleness
@@ -102,6 +109,27 @@ def load_projects(refresh: bool = False) -> Dict[str, Dict[str, Any]]:
         }
     _projects_cache = result
     return result
+
+
+_machine_cache: Any = ...  # Ellipsis = "not yet resolved" (None is a valid result)
+
+
+def get_machine_id(refresh: bool = False) -> Optional[str]:
+    """Return this machine's ticket-ID segment (e.g. "L1") from the top-level
+    `machine:` key in projects.yaml, or None if unset. Per-machine local
+    config — this is what keeps ticket IDs unique across machines."""
+    global _machine_cache
+    if _machine_cache is not ... and not refresh:
+        return _machine_cache
+
+    machine = None
+    if _PROJECTS_YAML.exists():
+        data = _parse_yaml(_PROJECTS_YAML.read_text(encoding="utf-8"))
+        raw = data.get("machine")
+        if raw:
+            machine = str(raw).strip().upper() or None
+    _machine_cache = machine
+    return machine
 
 
 def get_all_projects() -> List[Dict[str, Any]]:

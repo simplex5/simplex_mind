@@ -40,7 +40,7 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 ## What's included
 
 - **Memory system** — SQLite-backed with daily logs, MEMORY.md sync, systems inventory, session digest, and local semantic search (fastembed)
-- **Ticket tracker** — JIRA-like issue tracking (configurable PREFIX-NNN IDs) with CLI tools; per-project databases routed via `projects.yaml`
+- **Ticket tracker** — JIRA-like issue tracking (configurable PREFIX-<MACHINE>-NNN IDs) with CLI tools; per-project databases routed via `projects.yaml`
 - **Conversation history** — Verbatim transcript storage from AI assistant JSONL transcripts; cron-ingested; FTS5 search
 - **Git wrapper** — Structured git operations scoped to framework files
 - **Session digest** — Focused context loader (< 200 lines): open tickets, decisions, systems, git
@@ -78,6 +78,7 @@ crontab -e
 
 5. Register your project in `projects.yaml`:
 ```yaml
+machine: L1  # this machine's ticket-ID segment (e.g. L1 = laptop 1, D1 = desktop 1)
 projects:
   my-project:
     path: ~/projects/my-project
@@ -106,7 +107,7 @@ The active project is derived from the current simplex_mind git branch (matching
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `ticket_prefix` | string | Prefix for ticket IDs (e.g. `PROJ` → `PROJ-001`) |
+| `ticket_prefix` | string | Prefix for ticket IDs (e.g. `PROJ` → `PROJ-L1-001`) |
 | `project_name` | string | Human-readable project name |
 | `project_description` | string | Short description |
 | `tech_stack` | string | Comma-separated tech stack |
@@ -173,8 +174,8 @@ python3 src/utils/agent_skills/memory/memory_sync.py
 ```bash
 python3 src/utils/agent_skills/tickets/ticket_create.py --type bug --title "..." --priority high
 python3 src/utils/agent_skills/tickets/ticket_list.py --status open
-python3 src/utils/agent_skills/tickets/ticket_read.py --id PROJ-001
-python3 src/utils/agent_skills/tickets/ticket_update.py --id PROJ-001 --status done
+python3 src/utils/agent_skills/tickets/ticket_read.py --id PROJ-L1-001
+python3 src/utils/agent_skills/tickets/ticket_update.py --id PROJ-L1-001 --status done
 ```
 
 ### Conversation History

@@ -41,6 +41,7 @@ All tools and reference files Claude invokes directly.
 | Ticket List | `tickets/ticket_list.py` | CLI: list/filter tickets by status, type, project, priority (--target, --all-projects) |
 | Ticket Read | `tickets/ticket_read.py` | CLI: get full detail for a single ticket by ID (--target or auto-infer from ID prefix) |
 | Ticket Migrate | `tickets/ticket_migrate.py` | One-time migration from shared tickets.db to per-project databases (historical; keep for reference) |
+| Ticket Renumber | `tickets/ticket_renumber.py` | One-time migration of legacy PREFIX-NNN ids to machine-scoped PREFIX-<MACHINE>-NNN across ticket DBs, memory.db, and daily logs (`--dry-run` to preview; run once per machine) |
 
 ---
 
