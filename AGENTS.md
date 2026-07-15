@@ -118,6 +118,26 @@ python3 src/utils/agent_skills/memory/memory_sync.py --dry-run # preview
 
 ---
 
+## Subconscious — Context-Triggered Reasoning Philosophy
+
+A library of reasoning-craft "pieces" is injected into context automatically when the
+user's prompt matches — philosophy costs context only when relevant.
+
+- **Library:** the `subconscious/` directory of the project named by the top-level
+  `subconscious:` key in projects.yaml (local config; unset = engine is a no-op).
+- **Engine:** a `UserPromptSubmit` hook runs `subconscious/subconscious_recall.py`,
+  which matches the prompt against `database/memory/subconscious_index.json`
+  (keywords primary, embedding-cosine >= 0.70 as rescue), injects at most 2 pieces,
+  each at most once per session, and always fails open.
+- **Piece format:** frontmatter (`name`, `summary`, `keywords` list) + prose body.
+- **Rebuild after editing pieces:** `python3 src/utils/agent_skills/subconscious/subconscious_index.py`
+
+**Growth loop:** when a session produces a durable reasoning lesson — a failure worth
+preventing or an approach worth repeating — write it as a new piece in the library
+and re-run the indexer. The library is meant to accumulate.
+
+---
+
 ## Ticket Protocol
 
 **Location:** Per-project: `<project_path>/database/tickets.db`
