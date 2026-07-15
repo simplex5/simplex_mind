@@ -80,7 +80,9 @@ def main() -> int:
     ap.add_argument("--db", default=str(DEFAULT_DB))
     ap.add_argument("--min-len", type=int, default=25)
     ap.add_argument("--since", default="2000-01-01")
-    ap.add_argument("--out", default=None, help="Report path (default: stdout)")
+    ap.add_argument("--out", default=None,
+                    help="Report path (default: stdout). Reports contain verbatim "
+                         "user prompts — keep them OUT of the repo / anywhere committed.")
     args = ap.parse_args()
 
     if not INDEX_PATH.exists():

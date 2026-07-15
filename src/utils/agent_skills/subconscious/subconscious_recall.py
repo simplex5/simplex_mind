@@ -79,7 +79,8 @@ def cosine(a: list, b: list) -> float:
 def main() -> int:
     data = json.load(sys.stdin)
     prompt = (data.get("user_input") or data.get("prompt") or "").strip()
-    session_id = data.get("session_id", "unknown")
+    # Claude Code sends a UUID; sanitize anyway since this lands in a file path.
+    session_id = re.sub(r"[^A-Za-z0-9_-]", "_", str(data.get("session_id", "unknown")))[:64]
 
     if not prompt or prompt.startswith("/") or len(prompt.split()) < MIN_PROMPT_WORDS:
         return 0
