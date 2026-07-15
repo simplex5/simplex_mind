@@ -374,6 +374,7 @@ use native git commands in the project directory — see [Working Directory](#wo
 - `projects.yaml` is local config (gitignored). Never commit it. The active project is derived from the current simplex_mind git branch — no flag to toggle. To switch projects, just `git checkout <branch>`.
 - Protocol changes to CLAUDE.md must go to master first, then merge into all project branches.
 - When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
+- `master` is the only branch pushed online and must stay project-free: never merge project branches into it, and never let project registrations (systems.md/MEMORY.md/config entries naming a project) land on it. Generic framework fixes reach master by cherry-pick or dedicated commit. User-preference config (e.g. the statusline script) lives outside the repo in `~/.claude/`.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
 
