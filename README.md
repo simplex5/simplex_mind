@@ -15,7 +15,7 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 │   ├── database/              ← all persistent data
 │   │   ├── memory/            ← memory.db, MEMORY.md, systems.md, logs/
 │   │   ├── tickets.db         ← simplex_mind's own (fallback) ticket DB
-│   │   ├── conversation_history.db  ← conversation transcripts
+│   │   ├── conversation_history.db  ← conversation transcripts + token usage
 │   │   └── ARCHITECTURE.md
 │   └── src/utils/agent_skills/ ← all tools
 │
@@ -184,6 +184,11 @@ python3 src/utils/agent_skills/conversation/conversation_read.py --action search
 python3 src/utils/agent_skills/conversation/conversation_read.py --action list-sessions
 python3 src/utils/agent_skills/conversation/conversation_read.py --action stats
 ```
+
+Ingestion also captures per-response API token usage into the `message_usage` table
+(input/output/cache counts — including tool-call-only responses), so token accounting
+survives Claude Code's ~30-day transcript cleanup. Lifetime totals + per-month breakdown
+are included in `--action stats`.
 
 ### Git
 ```bash

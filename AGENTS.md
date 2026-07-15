@@ -209,6 +209,11 @@ python3 src/utils/agent_skills/conversation/conversation_read.py \
 python3 src/utils/agent_skills/conversation/conversation_read.py --action stats
 ```
 
+Ingestion also captures per-response API token usage into the `message_usage` table
+(input/output/cache counts — including tool-call-only responses), so token accounting
+survives Claude Code's ~30-day transcript cleanup. Lifetime totals + per-month breakdown
+are included in `--action stats`.
+
 ---
 
 ## Input Prefixes — Intent Signals
@@ -337,7 +342,7 @@ simplex_mind/                          <- brain repo (agent launches here)
 |   |   |-- systems.md                 <- system inventory
 |   |   +-- logs/                      <- daily logs (YYYY-MM-DD.md)
 |   |-- tickets.db                     <- brain (SIMP) tickets — each project has its own <project>/database/tickets.db
-|   |-- conversation_history.db        <- conversation transcripts
+|   |-- conversation_history.db        <- conversation transcripts + token usage
 |   +-- ARCHITECTURE.md                <- database schema docs
 +-- src/utils/agent_skills/
     |-- memory/                        <- memory tools
