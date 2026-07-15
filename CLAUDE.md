@@ -184,6 +184,9 @@ user's prompt matches — philosophy costs context only when relevant.
 preventing or an approach worth repeating — write it as a new piece in the library
 and re-run the indexer. The library is meant to accumulate.
 
+Periodically run `subconscious/subconscious_mine.py` against conversation history to
+surface new trigger phrasings and candidate groups from real usage.
+
 ---
 
 ## Ticket Protocol

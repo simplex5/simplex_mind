@@ -51,6 +51,7 @@ All tools and reference files Claude invokes directly.
 |------|------|-------------|
 | Subconscious Indexer | `subconscious/subconscious_index.py` | Embeds keyword-tagged philosophy pieces from the library project (projects.yaml `subconscious:` key) into `database/memory/subconscious_index.json`; re-run after adding/editing pieces (`--list` to inspect) |
 | Subconscious Recall | `subconscious/subconscious_recall.py` | UserPromptSubmit hook: matches each prompt against the index (keywords primary, cosine ≥0.70 rescue), injects ≤2 matching pieces as context, once per session each; always fail-open |
+| Subconscious Miner | `subconscious/subconscious_mine.py` | Mines conversation_history.db user prompts against the index: coverage, keyword gaps, new-group candidate clusters, uncovered n-grams; markdown report for curation (`--db`, `--since`, `--out`) |
 
 ---
 
