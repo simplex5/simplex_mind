@@ -100,18 +100,26 @@ simplex_mind's own `database/tickets.db` is the fallback used on `master` / no a
 active project (git branch) → brain DB. `ticket_migrate.py` is the historical one-time script
 that split the original shared DB into per-project databases; it is kept for reference only.
 
+**Machine-scoped IDs:** ticket DBs and counters are per-machine, so IDs embed the machine's
+identifier (`<PREFIX>-<MACHINE>-NNN`, e.g. `SIMP-L1-042` — `L1` = laptop 1, `D1` = desktop 1)
+to stay globally unique. The identifier comes from the top-level `machine:` key in the
+gitignored `projects.yaml`; minting fails loudly if it is unset. Legacy `PREFIX-NNN` IDs on a
+not-yet-migrated machine are converted in place (DBs, memory tags, daily logs) by the one-time
+`tickets/ticket_renumber.py` (`--dry-run` to preview). Legacy IDs in already-pushed git history
+are historical records and are not rewritten.
+
 ### Tables (identical schema in every ticket DB)
 
 | Table | Purpose |
 |-------|---------|
 | `tickets` | Bug/feature/task/improvement/documentation tracking |
-| `ticket_counter` | Auto-increment counter for PROJ-NNN IDs |
+| `ticket_counter` | Auto-increment counter for the numeric segment of ticket IDs |
 
 ### `tickets` columns
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `id` | TEXT PK | Format: `<PREFIX>-NNN` (prefix from projects.yaml) |
+| `id` | TEXT PK | Format: `<PREFIX>-<MACHINE>-NNN` (e.g. `SIMP-L1-042`; prefix + machine id from projects.yaml) |
 | `ticket_type` | TEXT | `bug`, `feature`, `task`, `improvement`, `documentation` |
 | `status` | TEXT | `open`, `in_progress`, `blocked`, `done`, `wont_fix` |
 | `priority` | TEXT | `low`, `medium`, `high`, `critical` |
