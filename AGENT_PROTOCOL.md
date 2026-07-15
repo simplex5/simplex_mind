@@ -36,7 +36,7 @@ Creates:
 - `database/memory/logs/` — daily log directory
 - `database/memory/memory.db` — SQLite: facts, insights, daily logs
 - `database/tickets.db` — SQLite: simplex_mind's own (fallback) issue tracker
-- `database/conversation_history.db` — SQLite: conversation transcripts
+- `database/conversation_history.db` — SQLite: conversation transcripts + token usage
 - `logs/` and `.tmp/` — runtime directories
 
 Per-project ticket databases (`<project_path>/database/tickets.db`) are created automatically
@@ -239,6 +239,11 @@ python3 src/utils/agent_skills/conversation/conversation_read.py \
 ```bash
 python3 src/utils/agent_skills/conversation/conversation_ingest.py
 ```
+
+Ingestion also captures per-response API token usage into the `message_usage` table
+(input/output/cache counts — including tool-call-only responses), so token accounting
+survives Claude Code's ~30-day transcript cleanup. Lifetime totals + per-month breakdown:
+`conversation_read.py --action stats`.
 
 ---
 
