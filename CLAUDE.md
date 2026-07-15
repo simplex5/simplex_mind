@@ -55,6 +55,7 @@ At the start of every new session:
 
 ```yaml
 # projects.yaml — maps project names to paths
+machine: L1  # this machine's ticket-ID segment (e.g. L1 = laptop 1, D1 = desktop 1)
 projects:
   my-project:
     path: ~/projects/my-project
@@ -82,9 +83,9 @@ simplex_mind is the launch directory, but most work happens in the active projec
   ```bash
   cd ~/projects/my-project  # or whatever projects.yaml says
   git add <files>
-  git commit -m "type: description (PROJ-NNN)"
+  git commit -m "type: description (PROJ-L1-NNN)"
   # Only when isolation is needed (see Branching Workflow):
-  git checkout -b feature/PROJ-NNN-slug
+  git checkout -b feature/PROJ-L1-NNN-slug
   ```
 - **Git operations on simplex_mind itself:** Use `git_commit.py` (rare — only when editing brain tools)
 - **File edits:** Use absolute paths to the project directory (from projects.yaml)
@@ -121,7 +122,7 @@ python3 src/utils/agent_skills/memory/memory_write.py \
 **Write with ticket cross-reference:**
 ```bash
 python3 src/utils/agent_skills/memory/memory_write.py \
-    --content "..." --type decision --ticket PROJ-042
+    --content "..." --type decision --ticket PROJ-L1-042
 ```
 
 **Search memory:**
@@ -165,8 +166,9 @@ python3 src/utils/agent_skills/memory/memory_sync.py --dry-run # preview
 ## Ticket Protocol
 
 **Location:** Per-project: `<project_path>/database/tickets.db`
+Ticket IDs are machine-scoped: `PREFIX-<MACHINE>-NNN` (e.g. `SIMP-L1-042`), where MACHINE comes from the top-level `machine:` key in projects.yaml — each machine mints in its own namespace so IDs never collide across computers.
 Tickets auto-target the active project. Use `--target <name>` to override.
-Ticket ID prefix is auto-inferred for read/update operations (e.g. PROJ-122 → my-project).
+Ticket ID prefix is auto-inferred for read/update operations (e.g. PROJ-L1-122 → my-project).
 On `master` (no active project), tickets fall through to simplex_mind's own `database/tickets.db` under prefix `SIMP` — that DB is the brain's, all others live in their project's directory.
 
 **Commands:**
@@ -183,7 +185,7 @@ python3 src/utils/agent_skills/tickets/ticket_create.py \
     --type task --title "..." --target other-project
 
 # Read / list
-python3 src/utils/agent_skills/tickets/ticket_read.py --id PROJ-001
+python3 src/utils/agent_skills/tickets/ticket_read.py --id PROJ-L1-001
 python3 src/utils/agent_skills/tickets/ticket_list.py --status open
 python3 src/utils/agent_skills/tickets/ticket_list.py --all
 python3 src/utils/agent_skills/tickets/ticket_list.py --target other-project
@@ -191,9 +193,9 @@ python3 src/utils/agent_skills/tickets/ticket_list.py --all-projects
 
 # Update (auto-infers project from ticket ID prefix)
 python3 src/utils/agent_skills/tickets/ticket_update.py \
-    --id PROJ-001 --status <open|in_progress|blocked|done|wont_fix>
+    --id PROJ-L1-001 --status <open|in_progress|blocked|done|wont_fix>
 python3 src/utils/agent_skills/tickets/ticket_update.py \
-    --id PROJ-001 --priority high --note "Context note"
+    --id PROJ-L1-001 --priority high --note "Context note"
 ```
 
 ### Ambiguous ticket queries
@@ -292,7 +294,7 @@ After **every** response that makes changes, append:
 
 ```
 ---
-**Branch:** on `develop` / created `feature/PROJ-NNN`
+**Branch:** on `develop` / created `feature/PROJ-L1-NNN`
 **Commit:** `<message>` / no commit — <reason>
 **Ticket:** created <ID> / updated <ID> / no ticket — <reason>
 **DB:** wrote memory / updated ticket db / no db write — <reason>

@@ -77,8 +77,9 @@ def init_db(conn: sqlite3.Connection) -> None:
 
 
 def get_ticket_num(ticket_id: str) -> int:
-    """Extract numeric part from ticket ID."""
-    return int(ticket_id.split("-", 1)[1])
+    """Extract numeric part from ticket ID.
+    Handles both PREFIX-NNN and PREFIX-<MACHINE>-NNN (number is the last segment)."""
+    return int(ticket_id.split("-")[-1])
 
 
 def read_shared_db() -> list:
@@ -103,9 +104,11 @@ def route_ticket(ticket: dict, targets: dict) -> str:
 
 
 def needs_re_id(ticket: dict, target_name: str, targets: dict) -> bool:
-    """Check if a ticket needs its ID changed to match the target prefix."""
+    """Check if a ticket needs its ID changed to match the target prefix.
+    Only the leading project prefix is compared — a machine segment
+    (PREFIX-<MACHINE>-NNN) does not by itself require a re-ID."""
     expected_prefix = targets[target_name]["prefix"]
-    current_prefix = ticket["id"].split("-", 1)[0]
+    current_prefix = ticket["id"].split("-")[0]
     return current_prefix != expected_prefix
 
 

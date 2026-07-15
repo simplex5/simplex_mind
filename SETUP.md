@@ -53,6 +53,18 @@ Ask the user for:
 Ask for a ticket prefix: 3–5 uppercase letters (e.g., `CORN`, `FLUX`, `EGG`).
 Validate: must be 3–5 characters, uppercase letters only.
 
+**Step 2b — Machine identifier** (skip if projects.yaml already has a `machine:` key)
+Ask for this machine's identifier: a letter for the machine type plus an index
+(e.g., `L1` = first laptop, `D1` = first desktop, `L2` = second laptop).
+Write it as a top-level key in `projects.yaml`:
+```yaml
+machine: L1
+```
+Ticket IDs embed it (`PREFIX-<MACHINE>-NNN`, e.g. `SIMP-L1-042`) so that ticket
+databases on different machines can never mint colliding IDs. projects.yaml is
+gitignored, so each machine keeps its own identifier. Ticket creation refuses
+to run until this key is set.
+
 **Step 3 — Project goals**
 Ask for top 1–3 project goals (one sentence each).
 
@@ -136,7 +148,7 @@ See [`AGENT_PROTOCOL.md`](AGENT_PROTOCOL.md) for the full specification. Key too
 After **every** response that makes changes, append:
 
 ---
-**Branch:** on `develop` / created `feature/PREFIX-NNN`
+**Branch:** on `develop` / created `feature/PREFIX-<MACHINE>-NNN`
 **Commit:** `<message>` / no commit — <reason>
 **Ticket:** created <ID> / updated <ID> / no ticket — <reason>
 **DB:** wrote memory / updated ticket db / no db write — <reason>

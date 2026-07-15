@@ -3,9 +3,14 @@ Tool: Ticket Database Manager
 Purpose: SQLite CRUD operations for persistent ticket tracking (JIRA-like)
 
 Schema:
-- tickets: id (PREFIX-NNN), type, status, priority, title, description, project,
-           how_discovered, created_at, updated_at, resolved_at, notes
+- tickets: id (PREFIX-<MACHINE>-NNN, e.g. SIMP-L1-042), type, status, priority,
+           title, description, project, how_discovered, created_at, updated_at,
+           resolved_at, notes
 - ticket_counter: auto-increment counter for ID generation
+
+The MACHINE segment (top-level `machine:` key in projects.yaml, e.g. L1/D1)
+keeps IDs unique across machines — each machine has its own local ticket DBs
+and counter, so without it two machines mint colliding IDs.
 
 Per-project databases: each project gets its own tickets.db at
 <project_path>/database/tickets.db with its own prefix and counter.
@@ -28,6 +33,7 @@ try:
         get_all_projects,
         get_active_project,
         infer_project_from_prefix,
+        get_machine_id,
     )
 except ImportError:
     import sys
@@ -38,6 +44,7 @@ except ImportError:
         get_all_projects,
         get_active_project,
         infer_project_from_prefix,
+        get_machine_id,
     )
 
 VALID_TYPES = ['bug', 'feature', 'task', 'improvement', 'documentation']
@@ -103,11 +110,18 @@ def init_db(conn: sqlite3.Connection) -> None:
 
 
 def _next_id(cursor: sqlite3.Cursor, prefix: str) -> str:
-    """Atomically increment counter and return PREFIX-NNN id."""
+    """Atomically increment counter and return PREFIX-<MACHINE>-NNN id."""
+    machine = get_machine_id()
+    if not machine:
+        raise RuntimeError(
+            "No machine id configured — add a top-level `machine: <ID>` key to "
+            "projects.yaml (e.g. `machine: L1` for laptop 1, `machine: D1` for "
+            "desktop 1). Ticket IDs embed it so machines never mint colliding IDs."
+        )
     cursor.execute('UPDATE ticket_counter SET next_num = next_num + 1 WHERE id = 1')
     cursor.execute('SELECT next_num - 1 AS num FROM ticket_counter WHERE id = 1')
     num = cursor.fetchone()['num']
-    return f"{prefix}-{num:03d}"
+    return f"{prefix}-{machine}-{num:03d}"
 
 
 def row_to_dict(row) -> Optional[Dict]:
