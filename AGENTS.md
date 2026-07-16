@@ -42,7 +42,6 @@ At the start of every new session:
 ```yaml
 # projects.yaml — maps project names to paths
 machine: L1  # this machine's ticket-ID segment (e.g. L1 = laptop 1, D1 = desktop 1)
-subconscious: my-project  # optional: project whose subconscious/ dir holds reasoning-philosophy pieces
 projects:
   my-project:
     path: ~/projects/my-project
@@ -124,8 +123,8 @@ python3 src/utils/agent_skills/memory/memory_sync.py --dry-run # preview
 A library of reasoning-craft "pieces" is injected into context automatically when the
 user's prompt matches — philosophy costs context only when relevant.
 
-- **Library:** the `subconscious/` directory of the project named by the top-level
-  `subconscious:` key in projects.yaml (local config; unset = engine is a no-op).
+- **Library:** this repo's own `subconscious/` directory — committed, canonical,
+  no configuration needed. Works across all projects and machines out of the box.
 - **Engine:** a `UserPromptSubmit` hook runs `subconscious/subconscious_recall.py`,
   which matches the prompt against `database/memory/subconscious_index.json`
   (keywords primary, embedding-cosine >= 0.70 as rescue), injects at most 2 pieces,
@@ -360,6 +359,7 @@ simplex_mind/                          <- brain repo (agent launches here)
 |-- CLAUDE.md                          <- Claude Code instructions
 |-- AGENTS.md                          <- this file — Codex/Cursor/Windsurf instructions
 |-- projects.yaml                      <- maps project names -> paths (local, gitignored)
+|-- subconscious/                      <- reasoning-philosophy piece library (canonical, committed)
 |-- database/
 |   |-- memory/
 |   |   |-- memory.db                  <- structured memory (SQLite)
