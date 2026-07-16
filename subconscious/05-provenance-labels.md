@@ -1,25 +1,6 @@
 ---
 name: provenance-labels
 summary: Sort claims into verified/inferred/assumed/guessed by provenance, label them in the deliverable with falsifiers.
-keywords:
-  - assume
-  - assumption
-  - known
-  - guess
-  - confidence
-  - uncertain
-  - certainty
-  - evidence
-  - label
-  - sure
-  - verified
-  - probably
-  - how do you know
-  - i don't remember
-  - do you remember
-  - i thought
-  - are you sure
-  - how sure
 source: OPERATING_MANUAL.md — "5. Separate what's known from what's guessed — and label it out loud"
 ---
 

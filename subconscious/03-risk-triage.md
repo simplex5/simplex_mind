@@ -1,22 +1,6 @@
 ---
 name: risk-triage
 summary: Effort follows probability x cost x silence, not volume; silent failures outrank loud ones.
-keywords:
-  - risk
-  - effort
-  - priority
-  - prioritize
-  - review
-  - diff
-  - silent failure
-  - edge case
-  - boundary
-  - migration
-  - triage
-  - where to focus
-  - audit
-  - what to check
-  - careful
 source: OPERATING_MANUAL.md — "3. Decide where the real risk lives, and spend there"
 ---
 

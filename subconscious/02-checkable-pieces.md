@@ -1,25 +1,6 @@
 ---
 name: checkable-pieces
 summary: Decompose into independently checkable claims so failures localize; fix interfaces first.
-keywords:
-  - decompose
-  - break down
-  - plan
-  - debug
-  - debugging
-  - isolate
-  - localize
-  - investigation
-  - pipeline
-  - checkable
-  - claims
-  - root cause
-  - systematic
-  - failing
-  - fails
-  - broken
-  - not working
-  - diagnose
 source: OPERATING_MANUAL.md — "2. Break the problem into independently checkable pieces"
 ---
 
