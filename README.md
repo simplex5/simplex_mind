@@ -43,7 +43,7 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 
 - **Memory system** — SQLite-backed with daily logs, MEMORY.md sync, systems inventory, session digest, and local semantic search (fastembed)
 - **Ticket tracker** — JIRA-like issue tracking (configurable PREFIX-<MACHINE>-NNN IDs) with CLI tools; per-project databases routed via `projects.yaml`
-- **Subconscious** — Reasoning-philosophy pieces injected into context only when the prompt topically matches (keyword + embedding triggers via a UserPromptSubmit hook); library ships in this repo's `subconscious/` dir, while trigger keywords stay local and personal (gitignored overlay), mined from each user's own conversations
+- **Subconscious** — Reasoning-philosophy pieces injected into context only when the prompt topically matches (keyword + embedding triggers via a UserPromptSubmit hook); library and generic default keywords ship in this repo's `subconscious/` dir, personal trigger phrasing layers on top locally (gitignored overlay), mined from each user's own conversations
 - **Conversation history** — Verbatim transcript storage from AI assistant JSONL transcripts; cron-ingested; FTS5 search
 - **Git wrapper** — Structured git operations scoped to framework files
 - **Session digest** — Focused context loader (< 200 lines): open tickets, decisions, systems, git

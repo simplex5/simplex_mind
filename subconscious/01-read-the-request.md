@@ -1,6 +1,26 @@
 ---
 name: read-the-request
 summary: Extract deliverable, motive, and silent constraints; classify do/explain/decide before starting any work.
+keywords:
+  - request
+  - asking
+  - intent
+  - deliverable
+  - motive
+  - scope
+  - ambiguous
+  - requirements
+  - what the user wants
+  - misread
+  - literal
+  - question behind the question
+  - interpret
+  - what do you think i mean
+  - forget that
+  - never mind
+  - no i meant
+  - i didn't say
+  - that's not what
 source: OPERATING_MANUAL.md — "1. Read what the request is actually asking for"
 ---
 

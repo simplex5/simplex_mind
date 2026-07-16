@@ -1,6 +1,19 @@
 ---
 name: answer-reasoning-risk
 summary: Order the message answer -> reasoning -> risk; first sentence answers the actual question, risks stay in.
+keywords:
+  - communicate
+  - summary
+  - summarize
+  - report
+  - answer
+  - explain
+  - writeup
+  - tldr
+  - findings
+  - present
+  - deliver
+  - risk paragraph
 source: OPERATING_MANUAL.md — "7. Communicate the answer, then the reasoning, then the risk"
 ---
 

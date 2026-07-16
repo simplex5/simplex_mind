@@ -26,12 +26,13 @@ need `--scan-all` — the ComfyUI transcripts were rescued this way.
 triggered reasoning-philosophy injection. Piece library (markdown, no keywords) lives
 canonically in the repo root `subconscious/` directory — migrated in-repo 2026-07-16
 (SIMP-L1-019); the projects.yaml `subconscious:` key and `get_subconscious_source()` were
-removed. Trigger keywords are personal per machine/user — local gitignored overlay
-`database/memory/subconscious_keywords.json`, merged at index build, bootstrapped by mining
-one's own conversation history (SIMP-D1-045, 2026-07-16). Indexer embeds pieces + merged
-keywords into `database/memory/subconscious_index.json` (derived, gitignored — rebuild once
-per machine and after piece/keyword edits); `subconscious_recall.py` runs as a
-UserPromptSubmit hook, injects ≤2 matching pieces once per session, fails open.
+removed. Trigger keywords are two layers (SIMP-D1-045/046, 2026-07-16): generic defaults in
+piece frontmatter (committed — works out of the box) + personal phrasing in the local
+gitignored overlay `database/memory/subconscious_keywords.json`, merged at index build and
+tuned by mining one's own conversation history. Indexer embeds pieces + merged keywords
+into `database/memory/subconscious_index.json` (derived, gitignored — rebuild once per
+machine and after piece/keyword edits); `subconscious_recall.py` runs as a UserPromptSubmit
+hook, injects ≤2 matching pieces once per session, fails open.
 
 ---
 

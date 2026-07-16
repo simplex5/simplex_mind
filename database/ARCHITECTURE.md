@@ -203,9 +203,10 @@ orchestrator run
 ## 5. `database/memory/subconscious_index.json` — subconscious retrieval index
 
 Derived, machine-local, gitignored. Built by `subconscious/subconscious_index.py` from the
-philosophy pieces in the repo's own `subconscious/` directory, merged with this machine's
-personal trigger keywords from `database/memory/subconscious_keywords.json` (local,
-gitignored — keywords encode one user's phrasing and are never committed). Self-contained:
+philosophy pieces in the repo's own `subconscious/` directory (whose frontmatter carries the
+committed generic default keywords), merged with this machine's personal trigger keywords
+from `database/memory/subconscious_keywords.json` (local, gitignored — personal phrasing is
+never committed). Self-contained:
 embeds full piece text, so prompt-time recall (`subconscious_recall.py`, UserPromptSubmit
 hook) only ever reads this index.
 
