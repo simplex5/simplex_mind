@@ -132,20 +132,6 @@ def get_machine_id(refresh: bool = False) -> Optional[str]:
     return machine
 
 
-def get_subconscious_source() -> Optional[Dict[str, Any]]:
-    """Return the project config that hosts the subconscious library (its
-    `subconscious/` directory of philosophy pieces), from the top-level
-    `subconscious:` key in projects.yaml. None if unset — the subconscious
-    engine is a no-op without it."""
-    if not _PROJECTS_YAML.exists():
-        return None
-    data = _parse_yaml(_PROJECTS_YAML.read_text(encoding="utf-8"))
-    name = data.get("subconscious")
-    if not name:
-        return None
-    return get_project(str(name).strip())
-
-
 def get_all_projects() -> List[Dict[str, Any]]:
     """Return all registered projects including implicit simplex_mind entry."""
     projects = load_projects()

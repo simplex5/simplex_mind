@@ -22,6 +22,14 @@ breakdown in `conversation_read.py --action stats`. Caveat: default source dirs 
 `projects.yaml` paths; sessions launched from unregistered subdirs (e.g. ~/projects/comfy/ComfyUI)
 need `--scan-all` — the ComfyUI transcripts were rescued this way.
 
+**Subconscious** (`src/utils/agent_skills/subconscious/` + `subconscious/` library): context-
+triggered reasoning-philosophy injection. Piece library (keyword-tagged markdown) lives
+canonically in the repo root `subconscious/` directory — migrated in-repo 2026-07-16
+(SIMP-L1-019); the projects.yaml `subconscious:` key and `get_subconscious_source()` were
+removed. Indexer embeds pieces into `database/memory/subconscious_index.json` (derived,
+gitignored — rebuild once per machine and after piece edits); `subconscious_recall.py` runs
+as a UserPromptSubmit hook, injects ≤2 matching pieces once per session, fails open.
+
 ---
 
 ## Retired Systems

@@ -12,6 +12,7 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 │   ├── CLAUDE.md              ← instructions for Claude Code
 │   ├── AGENTS.md              ← instructions for Codex / Cursor / Windsurf
 │   ├── projects.yaml          ← maps project names → paths
+│   ├── subconscious/          ← reasoning-philosophy piece library (canonical)
 │   ├── database/              ← all persistent data
 │   │   ├── memory/            ← memory.db, MEMORY.md, systems.md, logs/,
 │   │   │                            subconscious_index.json (derived, gitignored)
@@ -42,7 +43,7 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 
 - **Memory system** — SQLite-backed with daily logs, MEMORY.md sync, systems inventory, session digest, and local semantic search (fastembed)
 - **Ticket tracker** — JIRA-like issue tracking (configurable PREFIX-<MACHINE>-NNN IDs) with CLI tools; per-project databases routed via `projects.yaml`
-- **Subconscious** — Reasoning-philosophy pieces injected into context only when the prompt topically matches (keyword + embedding triggers via a UserPromptSubmit hook); library lives in a project's `subconscious/` dir, mined and grown from real conversations
+- **Subconscious** — Reasoning-philosophy pieces injected into context only when the prompt topically matches (keyword + embedding triggers via a UserPromptSubmit hook); library ships in this repo's `subconscious/` dir, mined and grown from real conversations
 - **Conversation history** — Verbatim transcript storage from AI assistant JSONL transcripts; cron-ingested; FTS5 search
 - **Git wrapper** — Structured git operations scoped to framework files
 - **Session digest** — Focused context loader (< 200 lines): open tickets, decisions, systems, git
@@ -81,7 +82,6 @@ crontab -e
 5. Register your project in `projects.yaml`:
 ```yaml
 machine: L1  # this machine's ticket-ID segment (e.g. L1 = laptop 1, D1 = desktop 1)
-subconscious: my-project  # optional: project whose subconscious/ dir holds reasoning-philosophy pieces
 projects:
   my-project:
     path: ~/projects/my-project

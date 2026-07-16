@@ -3,14 +3,13 @@
 Tool: Subconscious Indexer
 Purpose: Build the retrieval index for the subconscious — the context-triggered
          reasoning-philosophy layer. Reads keyword-tagged philosophy pieces from
-         the library project's subconscious/ directory (project named by the
-         top-level `subconscious:` key in projects.yaml), embeds each piece, and
-         writes database/memory/subconscious_index.json.
+         the repo's own subconscious/ directory, embeds each piece, and writes
+         database/memory/subconscious_index.json.
 
-The index is self-contained (embeds full piece text), so recall at prompt time
-never touches the library project. Re-run after adding or editing pieces.
+The index is self-contained (embeds full piece text). Re-run after adding or
+editing pieces.
 
-Piece format (<library>/subconscious/*.md):
+Piece format (subconscious/*.md):
     ---
     name: <slug>
     summary: <one line>
@@ -32,10 +31,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from project_resolver import get_subconscious_source  # noqa: E402
-
 _REPO_ROOT = Path(__file__).resolve().parents[4]
+LIB_PATH = _REPO_ROOT / "subconscious"
 INDEX_PATH = _REPO_ROOT / "database" / "memory" / "subconscious_index.json"
 
 
@@ -69,16 +66,12 @@ def parse_piece(path: Path) -> dict:
 
 
 def build_index() -> int:
-    source = get_subconscious_source()
-    if not source:
-        print("No `subconscious:` key in projects.yaml — nothing to index.")
-        return 1
-    lib = Path(source["path"]) / "subconscious"
+    lib = LIB_PATH
     if not lib.is_dir():
         print(f"Library directory not found: {lib}")
         return 1
 
-    pieces = [parse_piece(p) for p in sorted(lib.glob("*.md"))]
+    pieces = [parse_piece(p) for p in sorted(lib.glob("*.md")) if p.name != "README.md"]
     if not pieces:
         print(f"No pieces in {lib}")
         return 1
