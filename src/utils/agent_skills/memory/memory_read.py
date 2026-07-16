@@ -27,7 +27,6 @@ Output:
 """
 
 import logging
-import os
 import sys
 import json
 import argparse
@@ -274,8 +273,8 @@ def load_all_memory(
     if include_logs:
         logs = read_recent_logs(days=log_days)
         result["daily_logs"] = logs
-        result["summary"]["logs_loaded"] = len([l for l in logs if l.get('success')])
-        result["summary"]["log_dates"] = [l.get('date') for l in logs if l.get('success')]
+        result["summary"]["logs_loaded"] = len([log for log in logs if log.get('success')])
+        result["summary"]["log_dates"] = [log.get('date') for log in logs if log.get('success')]
 
     # Load DB entries
     if include_db:

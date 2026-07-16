@@ -13,7 +13,6 @@ Dependencies:
     - conversation_db.py (local)
 """
 
-import json
 import sys
 import argparse
 from datetime import datetime, timedelta, timezone

@@ -25,14 +25,12 @@ Output:
     and the response says so explicitly (method + semantic_error fields).
 """
 
-import os
 import sys
 import json
 import argparse
 import re
 import math
-from pathlib import Path
-from typing import Optional, List, Dict, Any, Set
+from typing import Optional, List, Dict, Any
 from collections import Counter
 
 # Optional .env loading — never a hard dependency
@@ -45,10 +43,10 @@ except ImportError:
 # Import from sibling modules
 try:
     from .semantic_search import semantic_search
-    from .memory_db import get_connection, search_entries
+    from .memory_db import get_connection
 except ImportError:
     from semantic_search import semantic_search
-    from memory_db import get_connection, search_entries
+    from memory_db import get_connection
 
 # Try to import rank_bm25, fall back to simple implementation
 try:

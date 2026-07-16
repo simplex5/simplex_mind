@@ -25,14 +25,11 @@ Output:
     JSON with ranked results and similarity scores
 """
 
-import os
 import sys
 import json
 import argparse
-import struct
 import math
-from pathlib import Path
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any
 
 # Optional .env loading — never a hard dependency
 try:
@@ -43,10 +40,10 @@ except ImportError:
 
 # Import from sibling modules
 try:
-    from .embed_memory import generate_embedding, bytes_to_embedding, get_openai_client
+    from .embed_memory import generate_embedding, bytes_to_embedding
     from .memory_db import get_connection
 except ImportError:
-    from embed_memory import generate_embedding, bytes_to_embedding, get_openai_client
+    from embed_memory import generate_embedding, bytes_to_embedding
     from memory_db import get_connection
 
 

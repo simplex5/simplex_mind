@@ -33,7 +33,7 @@ import json
 import argparse
 import struct
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 
 # Embedding backends are installed in the repo venv, but callers invoke these
 # tools with system python3 (Stop hook) as well as venv/bin/python (cron).
@@ -71,14 +71,12 @@ try:
     from .memory_db import (
         get_entries_without_embeddings,
         store_embedding,
-        get_entry,
         get_connection
     )
 except ImportError:
     from memory_db import (
         get_entries_without_embeddings,
         store_embedding,
-        get_entry,
         get_connection
     )
 

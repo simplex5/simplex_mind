@@ -24,7 +24,6 @@ Output:
     JSON result with success status
 """
 
-import os
 import sys
 import json
 import argparse

@@ -25,7 +25,6 @@ Output:
     JSON result with success status and data
 """
 
-import os
 import sys
 import json
 import sqlite3

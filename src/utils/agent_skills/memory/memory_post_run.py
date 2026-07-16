@@ -204,8 +204,6 @@ def _upsert_model_performance(summary: dict) -> Dict[str, Any]:
     new_best  = min(values)
     new_worst = max(values)
 
-    tag_string = json.dumps(["model-performance", model, project])
-
     # Search for an existing entry by tag content match
     search_result = search_entries(
         query=f"Model {model} on {project}",
