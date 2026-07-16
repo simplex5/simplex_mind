@@ -174,8 +174,12 @@ user's prompt matches — philosophy costs context only when relevant.
   which matches the prompt against `database/memory/subconscious_index.json`
   (keywords primary, embedding-cosine ≥ 0.70 as rescue), injects at most 2 pieces,
   each at most once per session, and always fails open.
-- **Piece format:** frontmatter (`name`, `summary`, `keywords` list) + prose body.
-- **Rebuild after editing pieces:**
+- **Piece format:** frontmatter (`name`, `summary`, `source`) + prose body — no keywords.
+- **Trigger keywords are personal, never committed:** they live in the local, gitignored
+  overlay `database/memory/subconscious_keywords.json` (`{"<piece-name>": ["phrase", ...]}`),
+  merged in at index build. Bootstrap them on a new machine by running the miner over that
+  machine's own history. Keyword-less pieces still match semantic-only.
+- **Rebuild after editing pieces or the keyword overlay:**
   ```bash
   python3 src/utils/agent_skills/subconscious/subconscious_index.py
   ```

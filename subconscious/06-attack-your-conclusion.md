@@ -1,24 +1,6 @@
 ---
 name: attack-your-conclusion
 summary: Switch roles and try to break your own answer: counterexamples, alternative causes, assumption inversion.
-keywords:
-  - conclusion
-  - counterexample
-  - edge case
-  - double-check
-  - self-review
-  - bias
-  - diagnosis
-  - alternative cause
-  - before shipping
-  - sanity check
-  - devil's advocate
-  - refute
-  - what do you think of
-  - critique
-  - poke holes
-  - review my logic
-  - this logic
 source: OPERATING_MANUAL.md — "6. Attack your own conclusion before handing it over"
 ---
 
