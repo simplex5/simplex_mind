@@ -28,6 +28,7 @@ FRAMEWORK_DIRS = [
     "src/",
     "goals/",
     "args/",
+    "subconscious/",
 ]
 
 # Individual root files that are framework source
@@ -36,10 +37,13 @@ FRAMEWORK_FILES = [
     "CLAUDE.md.ref",
     "AGENTS.md",
     "AGENTS.md.ref",
+    "AGENT_PROTOCOL.md",
+    "SETUP.md",
     "requirements.txt",
     "requirements.base.txt",
     ".gitignore",
     "README.md",
+    "database/ARCHITECTURE.md",
     "database/memory/MEMORY.md",
     "database/memory/systems.md",
     "database/config.json",

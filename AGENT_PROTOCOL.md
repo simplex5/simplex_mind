@@ -186,8 +186,8 @@ Valid "no db write" reasons: read-only task, pure conversation.
 A library of reasoning-craft "pieces" is injected into context automatically when the
 user's prompt matches — philosophy costs context only when relevant.
 
-- **Library:** the `subconscious/` directory of the project named by the top-level
-  `subconscious:` key in projects.yaml (local config; unset = engine is a no-op).
+- **Library:** this repo's own `subconscious/` directory — committed, canonical,
+  no configuration needed. Works across all projects and machines out of the box.
 - **Engine:** a `UserPromptSubmit` hook runs `subconscious/subconscious_recall.py`,
   which matches the prompt against `database/memory/subconscious_index.json`
   (keywords primary, embedding-cosine >= 0.70 as rescue), injects at most 2 pieces,

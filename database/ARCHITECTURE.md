@@ -203,10 +203,9 @@ orchestrator run
 ## 5. `database/memory/subconscious_index.json` — subconscious retrieval index
 
 Derived, machine-local, gitignored. Built by `subconscious/subconscious_index.py` from the
-keyword-tagged philosophy pieces in the library project's `subconscious/` directory (project
-named by the top-level `subconscious:` key in projects.yaml). Self-contained: embeds full
-piece text, so prompt-time recall (`subconscious_recall.py`, UserPromptSubmit hook) never
-reads the library project.
+keyword-tagged philosophy pieces in the repo's own `subconscious/` directory. Self-contained:
+embeds full piece text, so prompt-time recall (`subconscious_recall.py`, UserPromptSubmit
+hook) only ever reads this index.
 
 Shape: `{model, built_at, library, pieces: [{name, file, summary, keywords[], source, text,
 embedding[384]}]}`. Rebuild after adding or editing pieces.
