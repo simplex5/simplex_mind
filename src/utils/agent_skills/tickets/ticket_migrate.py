@@ -25,7 +25,7 @@ from pathlib import Path
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(_PROJECT_ROOT / "src" / "utils" / "agent_skills"))
 
-from project_resolver import get_all_projects
+from project_resolver import get_all_projects  # noqa: E402 — needs sys.path insert above
 
 SHARED_DB = _PROJECT_ROOT / "database" / "tickets.db"
 

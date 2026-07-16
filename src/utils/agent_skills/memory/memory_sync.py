@@ -31,7 +31,7 @@ import json
 import argparse
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 # Paths
 MEMORY_DIR = (Path(__file__).parent.parent.parent.parent.parent / "database" / "memory").resolve()

@@ -7,11 +7,11 @@ Creates project-specific runtime directories — never overwrites existing files
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 # Allow importing memory_db from same package
 sys_path_entry = str(Path(__file__).parent)
-import sys
 if sys_path_entry not in sys.path:
     sys.path.insert(0, sys_path_entry)
 
@@ -64,7 +64,7 @@ def _write_config(args: argparse.Namespace) -> None:
     # Only write if we have values to set
     if any(getattr(args, k) for k in ("prefix", "project_name", "project_description", "tech_stack")):
         config_path.write_text(json.dumps(existing, indent=2) + "\n")
-        print(f"  write  database/config.json")
+        print("  write  database/config.json")
 
 
 def main():
@@ -132,9 +132,9 @@ def _init_databases():
         from memory.memory_db import get_connection
         conn = get_connection()
         conn.close()
-        print(f"  create database/memory/memory.db")
+        print("  create database/memory/memory.db")
     else:
-        print(f"  skip   database/memory/memory.db")
+        print("  skip   database/memory/memory.db")
 
     # Per-project ticket DBs are created via project_resolver routing.
     # For simplex_mind's own brain ticket DB:
@@ -144,18 +144,18 @@ def _init_databases():
         from tickets.ticket_db import get_connection as get_ticket_conn
         conn = get_ticket_conn(db_path=tickets_db)
         conn.close()
-        print(f"  create database/tickets.db")
+        print("  create database/tickets.db")
     else:
-        print(f"  skip   database/tickets.db")
+        print("  skip   database/tickets.db")
 
     conv_db = ROOT / "database" / "conversation_history.db"
     if not conv_db.exists():
         from conversation.conversation_db import get_connection as get_conv_conn
         conn = get_conv_conn()
         conn.close()
-        print(f"  create database/conversation_history.db")
+        print("  create database/conversation_history.db")
     else:
-        print(f"  skip   database/conversation_history.db")
+        print("  skip   database/conversation_history.db")
 
 
 if __name__ == "__main__":

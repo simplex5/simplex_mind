@@ -26,7 +26,7 @@ import json
 import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 # Paths
 PROJECT_ROOT = (Path(__file__).parent.parent.parent.parent.parent).resolve()
