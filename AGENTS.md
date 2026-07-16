@@ -125,7 +125,7 @@ user's prompt matches — philosophy costs context only when relevant.
 
 - **Library:** this repo's own `subconscious/` directory — committed, canonical,
   no configuration needed. Works across all projects and machines out of the box.
-- **Engine:** a `UserPromptSubmit` hook runs `subconscious/subconscious_recall.py`,
+- **Engine:** a `UserPromptSubmit` hook runs `src/utils/agent_skills/subconscious/subconscious_recall.py`,
   which matches the prompt against `database/memory/subconscious_index.json`
   (keywords primary, embedding-cosine >= 0.70 as rescue), injects at most 2 pieces,
   each at most once per session, and always fails open.
@@ -136,7 +136,7 @@ user's prompt matches — philosophy costs context only when relevant.
 preventing or an approach worth repeating — write it as a new piece in the library
 and re-run the indexer. The library is meant to accumulate.
 
-Periodically run `subconscious/subconscious_mine.py` against conversation history to
+Periodically run `src/utils/agent_skills/subconscious/subconscious_mine.py` against conversation history to
 surface new trigger phrasings and candidate groups from real usage.
 
 ---
