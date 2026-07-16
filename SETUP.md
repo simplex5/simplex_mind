@@ -195,7 +195,7 @@ Rules:
 - Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
 - When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
 - `projects.yaml` is local config (gitignored). Never commit it. The active project is derived from the current simplex_mind git branch — to switch projects, just `git checkout <branch>`.
-- Protocol changes to shared instruction files go to master first, then merge into all project branches.
+- Protocol changes to shared instruction files land on develop and merge to master once verified; project branches then merge from master.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
 ```

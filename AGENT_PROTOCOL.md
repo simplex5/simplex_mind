@@ -61,8 +61,8 @@ No exceptions. Pure questions (using the `question:` prefix) are the only exempt
 **Routing:** Each registered project has its own ticket database at
 `<project_path>/database/tickets.db`. Commands auto-target the active project (derived from
 the current simplex_mind git branch); use `--target <name>` to override. Ticket ID prefix is
-auto-inferred for read/update operations (e.g. PROJ-L1-122 → my-project). On `master` (no active
-project), tickets fall through to simplex_mind's own `database/tickets.db` under prefix `SIMP`.
+auto-inferred for read/update operations (e.g. PROJ-L1-122 → my-project). On `master` or `develop`
+(no active project), tickets fall through to simplex_mind's own `database/tickets.db` under prefix `SIMP`.
 
 **Commands:**
 ```bash

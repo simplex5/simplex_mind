@@ -44,7 +44,7 @@ At the start of every new session:
    Read `projects.yaml` in this repo root. Find the project whose `branch:` matches the current simplex_mind git branch (`git branch --show-current`).
    Expand `path` (e.g., `~/projects/my-project`) and read `<path>/<ref_file>` (e.g., `CLAUDE.md.ref`).
    Follow the project-specific instructions in that file for the remainder of the session.
-   **On `master`:** no project is active — report that and proceed with simplex_mind brain tools only (SIMP tickets).
+   **On `master` or `develop`:** no project is active — report that and proceed with simplex_mind brain tools only (SIMP tickets).
 
 3. **Report readiness:**
    Report the open ticket count, any critical/high items, and confirm which project is active (or that you're on master with no active project).
@@ -67,7 +67,7 @@ projects:
 - `projects.yaml` is a **local config file** (gitignored, never committed). It is identical everywhere — not per-branch.
 - The active project is **derived** from the current simplex_mind git branch: whichever project's `branch:` matches. No flag to toggle, no state to drift.
 - Each project has a dedicated `branch` in simplex_mind for project-specific work.
-- **To switch projects:** `git checkout <branch>` in simplex_mind. That's the whole operation. On `master`, no project is active.
+- **To switch projects:** `git checkout <branch>` in simplex_mind. That's the whole operation. On `master` or `develop`, no project is active.
 - To add a project: add an entry with `path`, `ref_file`, `ticket_prefix`, and `branch`.
 - New project branches are always created from `master`.
 - CLAUDE.md protocols are shared — commit protocol changes to master first, then merge into project branches.
@@ -205,7 +205,7 @@ keyword candidates — nothing is applied without user approval. When the sessio
 Ticket IDs are machine-scoped: `PREFIX-<MACHINE>-NNN` (e.g. `SIMP-L1-042`), where MACHINE comes from the top-level `machine:` key in projects.yaml — each machine mints in its own namespace so IDs never collide across computers.
 Tickets auto-target the active project. Use `--target <name>` to override.
 Ticket ID prefix is auto-inferred for read/update operations (e.g. PROJ-L1-122 → my-project).
-On `master` (no active project), tickets fall through to simplex_mind's own `database/tickets.db` under prefix `SIMP` — that DB is the brain's, all others live in their project's directory.
+On `master` or `develop` (no active project), tickets fall through to simplex_mind's own `database/tickets.db` under prefix `SIMP` — that DB is the brain's, all others live in their project's directory.
 
 **Commands:**
 ```bash
@@ -355,6 +355,10 @@ Rules:
 - **`develop`** — Default working branch. Most work is committed here directly.
 - **Feature/fix branches** — For work that needs isolation. Named `<type>/<ticket-id>-<slug>`.
 
+This applies to the brain repo too: simplex_mind framework work (SIMP tickets) commits to
+`develop` and merges to `master` only once verified working. `master` is what fresh machines
+clone — it must always be stable.
+
 Commits always happen. The only decision is whether to create a new branch first.
 
 **Branch when:**
@@ -410,9 +414,9 @@ use native git commands in the project directory — see [Working Directory](#wo
 - Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
 - Never assume the user is following along during multi-step execution. Present one step at a time, explain what success/failure looks like, and wait for confirmation before proceeding.
 - `projects.yaml` is local config (gitignored). Never commit it. The active project is derived from the current simplex_mind git branch — no flag to toggle. To switch projects, just `git checkout <branch>`.
-- Protocol changes to CLAUDE.md must go to master first, then merge into all project branches.
+- Protocol changes to CLAUDE.md land on develop and merge to master once verified; project branches then merge from master.
 - When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
-- `master` is the only branch pushed online and must stay project-free: never merge project branches into it, and never let project registrations (systems.md/MEMORY.md/config entries naming a project) land on it. Generic framework fixes reach master by cherry-pick or dedicated commit. User-preference config (e.g. the statusline script) lives outside the repo in `~/.claude/`.
+- `master` and `develop` are the only branches pushed online and both must stay project-free: never merge project branches into them, and never let project registrations (systems.md/MEMORY.md/config entries naming a project) land on them. Framework work reaches master by merging develop once verified. User-preference config (e.g. the statusline script) lives outside the repo in `~/.claude/`.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
 
