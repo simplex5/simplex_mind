@@ -26,8 +26,6 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 # Directories that are framework source
 FRAMEWORK_DIRS = [
     "src/",
-    "goals/",
-    "args/",
     "subconscious/",
 ]
 
