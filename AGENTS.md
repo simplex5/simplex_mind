@@ -30,7 +30,7 @@ At the start of every new session:
    Read `projects.yaml` in this repo root. Find the project whose `branch:` matches the current simplex_mind git branch (`git branch --show-current`).
    Expand `path` (e.g., `~/projects/my-project`) and read `<path>/<ref_file>` (e.g., the project reference file).
    Follow the project-specific instructions in that file for the remainder of the session.
-   **On `master`:** no project is active — report that and proceed with simplex_mind brain tools only (SIMP tickets).
+   **On `master` or `develop`:** no project is active — report that and proceed with simplex_mind brain tools only (SIMP tickets).
 
 3. **Report readiness:**
    Report the open ticket count, any critical/high items, and confirm which project is active (or that you're on master with no active project).
@@ -51,7 +51,7 @@ projects:
 ```
 
 - The active project is **derived** from the current simplex_mind git branch: whichever project's `branch:` matches. No flag to toggle.
-- **To switch projects:** `git checkout <branch>` in simplex_mind. On `master`, no project is active.
+- **To switch projects:** `git checkout <branch>` in simplex_mind. On `master` or `develop`, no project is active.
 - To add a project: add an entry with `path`, `ref_file`, `ticket_prefix`, and `branch`.
 
 ---
@@ -156,7 +156,7 @@ keyword candidates — nothing is applied without user approval. When the sessio
 Ticket IDs are machine-scoped: `PREFIX-<MACHINE>-NNN` (e.g. `SIMP-L1-042`), where MACHINE comes from the top-level `machine:` key in projects.yaml — each machine mints in its own namespace so IDs never collide across computers.
 Tickets auto-target the active project. Use `--target <name>` to override.
 Ticket ID prefix is auto-inferred for read/update operations (e.g. PROJ-L1-122 → my-project).
-On `master` (no active project), tickets fall through to simplex_mind's own `database/tickets.db` under prefix `SIMP`.
+On `master` or `develop` (no active project), tickets fall through to simplex_mind's own `database/tickets.db` under prefix `SIMP`.
 
 **Commands:**
 ```bash
@@ -300,6 +300,10 @@ Rules:
 - **`main`** / **`master`** — Stable. Never commit directly.
 - **`develop`** — Default working branch. Most work is committed here directly.
 - **Feature/fix branches** — For work that needs isolation. Named `<type>/<ticket-id>-<slug>`.
+
+This applies to the brain repo too: simplex_mind framework work (SIMP tickets) commits to
+`develop` and merges to `master` only once verified working. `master` is what fresh machines
+clone — it must always be stable.
 
 Commits always happen. The only decision is whether to create a new branch first.
 
