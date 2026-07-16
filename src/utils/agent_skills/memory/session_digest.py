@@ -179,6 +179,28 @@ def _get_current_branch() -> str:
     return "unknown"
 
 
+def _get_subconscious_status() -> List[str]:
+    """Autotune state summary. Empty list (section omitted) when the state
+    file doesn't exist or there's nothing pending and no recent run info."""
+    state_path = (Path(__file__).resolve().parents[4]
+                  / 'database' / 'memory' / 'subconscious_autotune_state.json')
+    try:
+        if not state_path.exists():
+            return []
+        state = json.loads(state_path.read_text(encoding='utf-8'))
+    except Exception:
+        return []
+    lines = []
+    if state.get('last_run'):
+        lines.append(f"Autotune last run: {state['last_run'][:10]} — "
+                     f"{state.get('last_run_summary', '')}")
+    pending = state.get('pending', [])
+    if pending:
+        lines.append(f"PENDING KEYWORD CANDIDATES: {len(pending)} — propose them to the "
+                     f"user (subconscious_autotune.py --review, then --approve/--reject)")
+    return lines
+
+
 def generate_digest() -> str:
     """Generate the session digest."""
     parts = []
@@ -228,6 +250,14 @@ def generate_digest() -> str:
         parts.append("## Recent Commits")
         for c in commits:
             parts.append(f"- {c}")
+        parts.append("")
+
+    # 5. Subconscious autotune — only when there is something to act on
+    sub = _get_subconscious_status()
+    if sub:
+        parts.append("## Subconscious")
+        for line in sub:
+            parts.append(line)
         parts.append("")
 
     return '\n'.join(parts)

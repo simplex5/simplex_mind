@@ -212,3 +212,8 @@ hook) only ever reads this index.
 
 Shape: `{model, built_at, library, pieces: [{name, file, summary, keywords[], source, text,
 embedding[384]}]}`. Rebuild after adding or editing pieces or the keyword overlay.
+
+Sibling state file `subconscious_autotune_state.json` (also local, gitignored): the weekly
+autotune cron's memory — last run, pending keyword candidates awaiting user review, and the
+applied/rejected history that guarantees a phrase is proposed at most once. Journal of all
+autotune actions: `logs/subconscious_autotune.log`.

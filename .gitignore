@@ -51,3 +51,4 @@ LTX-2/
 database/memory/subconscious_index.json
 # Personal trigger keywords — how one user phrases things; never shared
 database/memory/subconscious_keywords.json
+database/memory/subconscious_autotune_state.json

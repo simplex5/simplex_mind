@@ -66,3 +66,17 @@ indexer, and commit. The library is meant to accumulate.
 
 Periodically run `subconscious_mine.py` against conversation history to surface
 new trigger phrasings and candidate groups from real usage.
+
+**Automated tuning:** `subconscious_autotune.py` (weekly cron) re-mines history
+and queues candidate phrases passing strict admission gates (support ≥ 3
+prompts across ≥ 2 sessions, precision ≥ 0.6 against the piece's semantic
+neighborhood, global fire rate < 5%, queue capped at 10) for in-session review
+(`--review` / `--approve` / `--reject`). **Nothing is applied without
+approval** — statistics can't tell an intentful phrase from a content fragment
+or typo; the gates only keep the queue worth reviewing. State + journal are
+machine-local and gitignored; the session digest surfaces pending candidates.
+Cron entry:
+
+```
+0 4 * * 0 <repo>/venv/bin/python <repo>/src/utils/agent_skills/subconscious/subconscious_autotune.py >> <repo>/logs/subconscious_autotune.log 2>&1
+```

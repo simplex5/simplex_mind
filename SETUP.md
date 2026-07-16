@@ -102,14 +102,19 @@ Update `database/memory/MEMORY.md` with project info.
 **Step 8 — Mark onboarding complete**
 Write `"onboarding_complete": true` to `database/config.json`.
 
-**Step 9 — Set up cron** (conversation history auto-ingestion)
+**Step 9 — Set up cron** (conversation history auto-ingestion + weekly keyword autotune)
 ```bash
 crontab -e
 # Add:
 */5 * * * * ~/projects/simplex_mind/venv/bin/python \
   ~/projects/simplex_mind/src/utils/agent_skills/conversation/conversation_ingest.py \
   >> ~/projects/simplex_mind/logs/conversation_ingest.log 2>&1
+0 4 * * 0 ~/projects/simplex_mind/venv/bin/python \
+  ~/projects/simplex_mind/src/utils/agent_skills/subconscious/subconscious_autotune.py \
+  >> ~/projects/simplex_mind/logs/subconscious_autotune.log 2>&1
 ```
+The second entry mines this machine's own conversations weekly for personal subconscious
+keyword candidates (gated pending queue — applied only after in-session user approval).
 
 **Step 10 — Create project CLAUDE.md.ref**
 Create `CLAUDE.md.ref` in the project root with project-specific instructions. Register it in `projects.yaml`.

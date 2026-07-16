@@ -206,6 +206,11 @@ and re-run the indexer. The library is meant to accumulate.
 Periodically run `src/utils/agent_skills/subconscious/subconscious_mine.py` against conversation history to
 surface new trigger phrasings and candidate groups from real usage.
 
+**Autotune (weekly cron):** `subconscious/subconscious_autotune.py` mines and queues gated
+keyword candidates — nothing is applied without user approval. When the session digest shows
+`PENDING KEYWORD CANDIDATES`, run `--review` and propose them to the user, then resolve with
+`--approve`/`--reject piece:"phrase"`.
+
 ## 5. Input Prefixes
 
 Prefix messages to lock in the ticket type and skip inference:
