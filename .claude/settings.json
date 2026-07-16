@@ -8,7 +8,7 @@
           {
             "type": "command",
             "command": "python3 \"${CLAUDE_PROJECT_DIR}\"/src/utils/agent_skills/subconscious/subconscious_recall.py",
-            "timeout": 5000
+            "timeout": 10
           }
         ]
       }
@@ -19,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}\"/src/utils/agent_skills/conversation/conversation_ingest.py --quiet >> ${CLAUDE_PROJECT_DIR}/logs/conversation_ingest.log 2>&1 || true",
+            "command": "python3 \"${CLAUDE_PROJECT_DIR}\"/src/utils/agent_skills/conversation/conversation_ingest.py --quiet >> \"${CLAUDE_PROJECT_DIR}\"/logs/conversation_ingest.log 2>&1 || true",
             "timeout": 30
           }
         ]
