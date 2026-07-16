@@ -127,7 +127,12 @@ def main() -> int:
     chosen = [p for _, _, p in scored[:MAX_PIECES]]
 
     context = PREAMBLE + "\n\n---\n\n".join(p["text"] for p in chosen) + "\n</subconscious>"
-    print(json.dumps({"additionalContext": context}))
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "UserPromptSubmit",
+            "additionalContext": context,
+        }
+    }))
 
     try:
         state_path.write_text(json.dumps(sorted(injected | {p["name"] for p in chosen})))
