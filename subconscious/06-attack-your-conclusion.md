@@ -19,7 +19,7 @@ keywords:
   - poke holes
   - review my logic
   - this logic
-source: OPERATING_MANUAL.md — "6. Attack your own conclusion before handing it over"
+source: retired OPERATING_MANUAL.md — "6. Attack your own conclusion before handing it over"
 ---
 
 ## 6. Attack your own conclusion before handing it over

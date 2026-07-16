@@ -15,7 +15,7 @@ keywords:
   - theater
   - laundering
   - seems right but
-source: OPERATING_MANUAL.md — "8. The mistakes that look like competence and aren't"
+source: retired OPERATING_MANUAL.md — "8. The mistakes that look like competence and aren't"
 ---
 
 ## 8. The mistakes that look like competence and aren't

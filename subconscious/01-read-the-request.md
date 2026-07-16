@@ -21,7 +21,7 @@ keywords:
   - no i meant
   - i didn't say
   - that's not what
-source: OPERATING_MANUAL.md — "1. Read what the request is actually asking for"
+source: retired OPERATING_MANUAL.md — "1. Read what the request is actually asking for"
 ---
 
 ## 1. Read what the request is actually asking for

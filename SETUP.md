@@ -93,16 +93,13 @@ python3 src/utils/agent_skills/init.py \
 python3 src/utils/agent_skills/git_commit.py init
 ```
 
-**Step 6 — Write goals/vision.md**
-Create `goals/vision.md` in the project repo containing project name, description, goals, tech stack.
+**Step 6 — Seed MEMORY.md**
+Update `database/memory/MEMORY.md` with project info: name, description, goals, tech stack.
 
-**Step 7 — Seed MEMORY.md**
-Update `database/memory/MEMORY.md` with project info.
-
-**Step 8 — Mark onboarding complete**
+**Step 7 — Mark onboarding complete**
 Write `"onboarding_complete": true` to `database/config.json`.
 
-**Step 9 — Set up cron** (conversation history auto-ingestion + weekly keyword autotune)
+**Step 8 — Set up cron** (conversation history auto-ingestion + weekly keyword autotune)
 ```bash
 crontab -e
 # Add:
@@ -116,10 +113,10 @@ crontab -e
 The second entry mines this machine's own conversations weekly for personal subconscious
 keyword candidates (gated pending queue — applied only after in-session user approval).
 
-**Step 10 — Create project CLAUDE.md.ref**
+**Step 9 — Create project CLAUDE.md.ref**
 Create `CLAUDE.md.ref` in the project root with project-specific instructions. Register it in `projects.yaml`.
 
-**Step 11 — Commit onboarding artifacts**
+**Step 10 — Commit onboarding artifacts**
 ```bash
 python3 src/utils/agent_skills/git_commit.py commit -m "onboarding: initialize project with simplex_mind"
 ```
