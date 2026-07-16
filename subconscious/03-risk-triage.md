@@ -17,7 +17,7 @@ keywords:
   - audit
   - what to check
   - careful
-source: OPERATING_MANUAL.md — "3. Decide where the real risk lives, and spend there"
+source: retired OPERATING_MANUAL.md — "3. Decide where the real risk lives, and spend there"
 ---
 
 ## 3. Decide where the real risk lives, and spend there

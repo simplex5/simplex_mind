@@ -14,7 +14,7 @@ keywords:
   - present
   - deliver
   - risk paragraph
-source: OPERATING_MANUAL.md — "7. Communicate the answer, then the reasoning, then the risk"
+source: retired OPERATING_MANUAL.md — "7. Communicate the answer, then the reasoning, then the risk"
 ---
 
 ## 7. Communicate the answer, then the reasoning, then the risk

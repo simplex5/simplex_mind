@@ -7,8 +7,6 @@
 
 ## Active Systems
 
-*No systems registered yet. Systems will be added as you build.*
-
 ### simplex_mind brain (prefix SIMP)
 **Conversation history preservation** (`src/utils/agent_skills/conversation/`): Stop hook +
 5-min cron ingest Claude Code JSONL transcripts into `database/conversation_history.db`

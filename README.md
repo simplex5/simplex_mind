@@ -24,7 +24,7 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 ├── my-project/               ← project workspace (branches freely)
 │   ├── CLAUDE.md.ref          ← project-specific instructions
 │   ├── database/tickets.db    ← this project's tickets (each project has its own)
-│   ├── src/, goals/, args/    ← project code
+│   ├── src/                   ← project code
 │   └── ...
 │
 └── (future projects)/
@@ -157,7 +157,8 @@ src/utils/agent_skills/
 └── subconscious/
     ├── subconscious_index.py  # embed library pieces → retrieval index
     ├── subconscious_recall.py # UserPromptSubmit hook: inject matching pieces
-    └── subconscious_mine.py   # mine conversation history for triggers
+    ├── subconscious_mine.py   # mine conversation history for triggers
+    └── subconscious_autotune.py # weekly cron: queue gated keyword candidates
 ```
 
 ## Usage

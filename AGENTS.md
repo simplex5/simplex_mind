@@ -143,7 +143,7 @@ and re-run the indexer. The library is meant to accumulate.
 Periodically run `src/utils/agent_skills/subconscious/subconscious_mine.py` against conversation history to
 surface new trigger phrasings and candidate groups from real usage.
 
-**Autotune (weekly cron):** `subconscious/subconscious_autotune.py` mines and queues gated
+**Autotune (weekly cron):** `src/utils/agent_skills/subconscious/subconscious_autotune.py` mines and queues gated
 keyword candidates — nothing is applied without user approval. When the session digest shows
 `PENDING KEYWORD CANDIDATES`, run `--review` and propose them to the user, then resolve with
 `--approve`/`--reject piece:"phrase"`.
@@ -376,7 +376,6 @@ simplex_mind/                          <- brain repo (agent launches here)
 |-- database/
 |   |-- memory/
 |   |   |-- memory.db                  <- structured memory (SQLite)
-|   |   |-- activity.db                <- audit trail
 |   |   |-- MEMORY.md                  <- curated persistent memory
 |   |   |-- systems.md                 <- system inventory
 |   |   +-- logs/                      <- daily logs (YYYY-MM-DD.md)
@@ -387,7 +386,7 @@ simplex_mind/                          <- brain repo (agent launches here)
     |-- memory/                        <- memory tools
     |-- tickets/                       <- ticket tools
     |-- conversation/                  <- conversation history tools
-    |-- subconscious/                  <- context-triggered philosophy: index, recall hook, miner
+    |-- subconscious/                  <- context-triggered philosophy: index, recall hook, miner, autotune
     |-- git_commit.py                  <- git operations
     |-- init.py                        <- project bootstrapper
     |-- project_resolver.py            <- branch -> project resolution, ticket DB routing

@@ -22,7 +22,7 @@ keywords:
   - is it working
   - is this right
   - is that correct
-source: OPERATING_MANUAL.md — "4. Verify a claim by re-deriving it, never by how it sounds"
+source: retired OPERATING_MANUAL.md — "4. Verify a claim by re-deriving it, never by how it sounds"
 ---
 
 ## 4. Verify a claim by re-deriving it, never by how it sounds

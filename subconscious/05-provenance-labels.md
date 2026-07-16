@@ -20,7 +20,7 @@ keywords:
   - i thought
   - are you sure
   - how sure
-source: OPERATING_MANUAL.md — "5. Separate what's known from what's guessed — and label it out loud"
+source: retired OPERATING_MANUAL.md — "5. Separate what's known from what's guessed — and label it out loud"
 ---
 
 ## 5. Separate what's known from what's guessed — and label it out loud

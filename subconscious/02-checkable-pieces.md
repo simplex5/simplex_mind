@@ -20,7 +20,7 @@ keywords:
   - broken
   - not working
   - diagnose
-source: OPERATING_MANUAL.md — "2. Break the problem into independently checkable pieces"
+source: retired OPERATING_MANUAL.md — "2. Break the problem into independently checkable pieces"
 ---
 
 ## 2. Break the problem into independently checkable pieces

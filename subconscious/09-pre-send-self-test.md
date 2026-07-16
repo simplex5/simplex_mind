@@ -12,7 +12,7 @@ keywords:
   - is it done
   - all done
   - ready to ship
-source: OPERATING_MANUAL.md — "The pre-send self-test"
+source: retired OPERATING_MANUAL.md — "The pre-send self-test"
 ---
 
 ## The pre-send self-test
