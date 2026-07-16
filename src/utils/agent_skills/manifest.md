@@ -52,6 +52,7 @@ All tools and reference files Claude invokes directly.
 | Subconscious Indexer | `subconscious/subconscious_index.py` | Embeds philosophy pieces from the repo's `subconscious/` directory (frontmatter = generic default keywords), merged with the local personal keyword overlay (`database/memory/subconscious_keywords.json`, gitignored), into `database/memory/subconscious_index.json`; re-run after editing pieces or keywords (`--list` to inspect) |
 | Subconscious Recall | `subconscious/subconscious_recall.py` | UserPromptSubmit hook: matches each prompt against the index (keywords primary, cosine ≥0.70 rescue), injects ≤2 matching pieces as context, once per session each; always fail-open |
 | Subconscious Miner | `subconscious/subconscious_mine.py` | Mines conversation_history.db user prompts against the index: coverage, keyword gaps, new-group candidate clusters, uncovered n-grams; markdown report for curation (`--db`, `--since`, `--out`) |
+| Subconscious Autotune | `subconscious/subconscious_autotune.py` | Weekly cron: mines gated keyword candidates (support/precision/fire-rate admission gates) into a pending queue for in-session review — nothing applied without approval (`--review`, `--approve`, `--reject`, `--dry-run`); state + journal machine-local |
 
 ---
 

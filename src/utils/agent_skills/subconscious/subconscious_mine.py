@@ -49,22 +49,24 @@ your can't dont don't i'm im it's lets let's""".split())
 
 
 def load_prompts(db_path: Path, min_len: int, since: str):
+    """Returns (content, timestamp, session_id) tuples. session_id feeds
+    autotune's multi-session support gate; the miner itself ignores it."""
     import sqlite3
     conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     try:
         rows = conn.execute(
-            "SELECT content, timestamp FROM messages WHERE role='user' "
+            "SELECT content, timestamp, session_id FROM messages WHERE role='user' "
             "AND timestamp >= ? ORDER BY timestamp", (since,)).fetchall()
     finally:
         conn.close()
     prompts = []
-    for content, ts in rows:
+    for content, ts, sid in rows:
         c = (content or "").strip()
         if len(c) < min_len or len(c) > 2000:
             continue
         if c.startswith(("/", "<", "[", "{", "Caveat:")) or "\n```" in c:
             continue
-        prompts.append((c, ts))
+        prompts.append((c, ts, sid))
     return prompts
 
 
@@ -99,7 +101,7 @@ def main() -> int:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "memory"))
     import embed_memory
     model = embed_memory._get_local_model()
-    embs = [e.tolist() for e in model.embed([p for p, _ in prompts])]
+    embs = [e.tolist() for e in model.embed([p for p, *_ in prompts])]
 
     all_keywords = {normalize(kw) for p in pieces for kw in p["keywords"]}
     trigger_counts = Counter()
@@ -107,7 +109,7 @@ def main() -> int:
     far = []
     triggered = 0
 
-    for (text, ts), emb in zip(prompts, embs):
+    for (text, ts, _sid), emb in zip(prompts, embs):
         norm = normalize(text)
         kw = {p["name"]: keyword_hits(norm, p["keywords"]) for p in pieces}
         sims = {p["name"]: cosine(emb, p["embedding"]) for p in pieces}
@@ -140,7 +142,7 @@ def main() -> int:
 
     # Frequent uncovered n-grams
     counts = Counter()
-    for (text, _) in prompts:
+    for (text, *_) in prompts:
         counts.update(set(ngrams(normalize(text))))
     uncovered = [(g, c) for g, c in counts.most_common(200)
                  if c >= 3 and g not in all_keywords

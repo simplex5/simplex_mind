@@ -32,7 +32,9 @@ gitignored overlay `database/memory/subconscious_keywords.json`, merged at index
 tuned by mining one's own conversation history. Indexer embeds pieces + merged keywords
 into `database/memory/subconscious_index.json` (derived, gitignored — rebuild once per
 machine and after piece/keyword edits); `subconscious_recall.py` runs as a UserPromptSubmit
-hook, injects ≤2 matching pieces once per session, fails open.
+hook, injects ≤2 matching pieces once per session, fails open. Weekly autotune cron
+(`subconscious_autotune.py`, Sun 4am, SIMP-D1-047): mines gated keyword candidates into a
+pending queue surfaced by session_digest; applied only after in-session user approval.
 
 ---
 
