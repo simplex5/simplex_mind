@@ -23,40 +23,40 @@ machine after one index rebuild.
 ---
 name: <slug>
 summary: <one line>
+keywords:
+  - <generic trigger phrase>
 source: <provenance note>
 ---
 
 <prose body — the philosophy itself>
 ```
 
-`name` is required. Note there are **no keywords in the piece files** — see below.
+`name` is required; `keywords` is the generic default layer — see below.
 
-## Trigger keywords are personal — they never live in this repo
+## Keywords are two layers: generic defaults here, personal phrasing local
 
-How a prompt is phrased is specific to one user; committing trigger phrases
-would bake one person's speech patterns into everyone's setup. Keywords
-therefore live in a local, gitignored overlay (like `projects.yaml`):
+- **Frontmatter `keywords:` (committed)** — generic starter triggers anyone
+  would say ("verify", "double check", "root cause"). They make the feature
+  work at a basic level on any fresh machine, out of the box. Keep them
+  universal: one person's speech patterns do not belong in this repo.
+- **Local overlay (gitignored, like `projects.yaml`)** — personal phrasing
+  mined from one user's own history, merged on top at index build:
 
-```
-database/memory/subconscious_keywords.json
-{"<piece-name>": ["trigger phrase", ...], ...}
-```
+  ```
+  database/memory/subconscious_keywords.json
+  {"<piece-name>": ["trigger phrase", ...], ...}
+  ```
 
-The indexer merges the overlay at build time. Keywords match as word-prefixes
-(single words) or normalized substrings (phrases); hyphens/underscores are
-equivalent to spaces. A piece with no keywords still works — it matches on
-embedding similarity alone (cosine ≥ 0.70), just less eagerly.
+Keywords match as word-prefixes (single words) or normalized substrings
+(phrases); hyphens/underscores are equivalent to spaces. A piece with no
+keywords at all still works — it matches on embedding similarity alone
+(cosine ≥ 0.70), just less eagerly.
 
-**Bootstrapping on a new machine/user:** run
+**Tuning to a new machine/user:** run
 `src/utils/agent_skills/subconscious/subconscious_mine.py` against that
 machine's own conversation history, curate the report's suggestions into the
-overlay file, and rebuild the index. Mining reports quote verbatim prompts —
+local overlay, and rebuild the index. Mining reports quote verbatim prompts —
 keep them out of anything committed (`logs/` is gitignored).
-
-**Migration note (pre-2026-07-16 setups):** keywords used to live in piece
-frontmatter. If your index build warns about keyword-less pieces, recover your
-old lists from git history (`git show <old-commit>:subconscious/<piece>.md`)
-into your local overlay file, then rebuild.
 
 ## Growth loop
 

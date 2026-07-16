@@ -7,16 +7,18 @@ Purpose: Build the retrieval index for the subconscious — the context-triggere
          keywords, embeds each piece, and writes
          database/memory/subconscious_index.json.
 
-Trigger keywords are PERSONAL — they encode how one specific user phrases
-things, so they live in a local, gitignored overlay (like projects.yaml), never
-in the committed piece files:
+Trigger keywords are TWO LAYERS, merged at build time:
+- Piece frontmatter `keywords:` (committed) — generic defaults anyone would
+  say, so the feature works out of the box on a fresh machine.
+- Local overlay (gitignored, like projects.yaml) — personal phrasing that
+  encodes how one specific user talks; never committed:
 
     database/memory/subconscious_keywords.json
     {"<piece-name>": ["phrase", ...], ...}
 
-Bootstrap keywords for a new machine/user by running subconscious_mine.py over
-that machine's own conversation history. A piece with no keywords still works —
-it matches on embedding similarity only.
+Tune keywords for a new machine/user by running subconscious_mine.py over that
+machine's own conversation history and curating into the overlay. A piece with
+no keywords still works — it matches on embedding similarity only.
 
 The index is self-contained (embeds full piece text + merged keywords). Re-run
 after adding or editing pieces or the keyword overlay.
@@ -25,6 +27,8 @@ Piece format (subconscious/*.md):
     ---
     name: <slug>
     summary: <one line>
+    keywords:
+      - <generic phrase>
     source: <provenance note>
     ---
     <prose body>

@@ -1,6 +1,17 @@
 ---
 name: pre-send-self-test
 summary: Five questions to run on every answer before sending; a no on any of them is a stop.
+keywords:
+  - before sending
+  - final check
+  - self-test
+  - ship
+  - wrap up
+  - last check
+  - are we done
+  - is it done
+  - all done
+  - ready to ship
 source: OPERATING_MANUAL.md — "The pre-send self-test"
 ---
 

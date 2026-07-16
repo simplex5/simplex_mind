@@ -1,6 +1,20 @@
 ---
 name: competence-counterfeits
 summary: Nine failures that photograph as virtues (thoroughness theater, fluent precision, tool-output laundering...) and their tells.
+keywords:
+  - thorough
+  - mistake
+  - failure mode
+  - quality
+  - diligence
+  - overconfident
+  - agree
+  - unrequested
+  - false positive
+  - looks done
+  - theater
+  - laundering
+  - seems right but
 source: OPERATING_MANUAL.md — "8. The mistakes that look like competence and aren't"
 ---
 

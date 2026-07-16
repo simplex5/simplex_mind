@@ -1,6 +1,27 @@
 ---
 name: verify-by-rederivation
 summary: Check claims by producing them again via an independent route; plausibility is not verification.
+keywords:
+  - verify
+  - verification
+  - check
+  - confirm
+  - correct
+  - test
+  - re-derive
+  - hallucination
+  - plausible
+  - estimate
+  - numbers
+  - actually works
+  - prove
+  - sounds right
+  - make sure
+  - double check
+  - did it work
+  - is it working
+  - is this right
+  - is that correct
 source: OPERATING_MANUAL.md — "4. Verify a claim by re-deriving it, never by how it sounds"
 ---
 
