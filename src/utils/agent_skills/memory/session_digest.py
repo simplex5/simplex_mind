@@ -23,10 +23,13 @@ Output:
 
 import sys
 import json
+import logging
 import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, Any, List
+
+log = logging.getLogger(__name__)
 
 # Paths
 try:
@@ -94,7 +97,8 @@ def _get_open_tickets() -> Dict[str, Any]:
             "high": high,
             "in_progress": ip_tickets
         }
-    except Exception:
+    except Exception as e:
+        log.warning("digest: ticket section unavailable (%s)", e)
         return {"count": 0, "critical": [], "high": [], "in_progress": []}
 
 
@@ -111,7 +115,8 @@ def _get_recent_decisions(days: int = 14) -> List[Dict[str, Any]]:
             e for e in result.get('entries', [])
             if e.get('created_at', '') >= cutoff
         ]
-    except Exception:
+    except Exception as e:
+        log.warning("digest: recent-decisions section unavailable (%s)", e)
         return []
 
 
@@ -164,8 +169,8 @@ def _get_recent_git(count: int = 5) -> List[str]:
         )
         if result.returncode == 0:
             return [line.strip() for line in result.stdout.strip().split('\n') if line.strip()]
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("digest: git log unavailable (%s)", e)
     return []
 
 
@@ -179,21 +184,21 @@ def _get_current_branch() -> str:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("digest: git branch unavailable (%s)", e)
     return "unknown"
 
 
 def _get_subconscious_status() -> List[str]:
     """Autotune state summary. Empty list (section omitted) when the state
     file doesn't exist or there's nothing pending and no recent run info."""
-    state_path = (Path(__file__).resolve().parents[4]
-                  / 'database' / 'memory' / 'subconscious_autotune_state.json')
+    state_path = PROJECT_ROOT / 'database' / 'memory' / 'subconscious_autotune_state.json'
     try:
         if not state_path.exists():
             return []
         state = json.loads(state_path.read_text(encoding='utf-8'))
-    except Exception:
+    except Exception as e:
+        log.warning("digest: autotune state unreadable (%s)", e)
         return []
     lines = []
     if state.get('last_run'):

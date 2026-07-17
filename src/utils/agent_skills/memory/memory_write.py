@@ -413,6 +413,7 @@ def main():
                 result["ticket_note"] = note_result
             except Exception as e:
                 result["ticket_note_error"] = str(e)
+                print(f"WARNING ticket cross-reference to {args.ticket} failed: {e}", file=sys.stderr)
 
     if result:
         cli_finish(result, ok=result.get('message') or 'Memory written successfully')
