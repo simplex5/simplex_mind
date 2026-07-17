@@ -29,6 +29,7 @@ except ImportError:
 FRAMEWORK_DIRS = [
     "src/",
     "subconscious/",
+    "tests/",
 ]
 
 # Individual root files that are framework source
@@ -41,6 +42,9 @@ FRAMEWORK_FILES = [
     "SETUP.md",
     "requirements.txt",
     "requirements.base.txt",
+    "requirements-dev.txt",
+    "pyproject.toml",
+    ".claude/settings.json",
     ".gitignore",
     "README.md",
     "database/ARCHITECTURE.md",
