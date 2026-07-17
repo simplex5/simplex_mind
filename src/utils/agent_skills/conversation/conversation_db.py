@@ -21,8 +21,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
+try:
+    from .._common import DATABASE_DIR, row_to_dict
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import DATABASE_DIR, row_to_dict
+
 # Database path
-DB_PATH = (Path(__file__).parent.parent.parent.parent.parent / "database" / "conversation_history.db").resolve()
+DB_PATH = DATABASE_DIR / "conversation_history.db"
 
 
 def get_connection():
@@ -144,13 +151,6 @@ def get_connection():
 
     conn.commit()
     return conn
-
-
-def row_to_dict(row) -> Optional[Dict]:
-    """Convert sqlite3.Row to dictionary."""
-    if row is None:
-        return None
-    return dict(row)
 
 
 def upsert_session(

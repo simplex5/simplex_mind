@@ -35,11 +35,17 @@ import struct
 from pathlib import Path
 from typing import List, Dict, Any
 
+try:
+    from .._common import REPO_ROOT as _REPO_ROOT
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import REPO_ROOT as _REPO_ROOT
+
 # Embedding backends are installed in the repo venv, but callers invoke these
 # tools with system python3 (Stop hook) as well as venv/bin/python (cron).
 # Expose the venv's site-packages to system python so both paths work.
 _VENV_SITE = (
-    Path(__file__).resolve().parents[4] / "venv" / "lib"
+    _REPO_ROOT / "venv" / "lib"
     / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
 )
 if sys.prefix == sys.base_prefix and _VENV_SITE.is_dir() and str(_VENV_SITE) not in sys.path:
@@ -47,10 +53,13 @@ if sys.prefix == sys.base_prefix and _VENV_SITE.is_dir() and str(_VENV_SITE) not
 
 # Optional .env loading — never a hard dependency
 try:
-    from dotenv import load_dotenv
-    load_dotenv()
+    from .._common import load_dotenv_if_available
 except ImportError:
-    pass
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import load_dotenv_if_available
+load_dotenv_if_available()
 
 # Local embedding backend (preferred)
 try:

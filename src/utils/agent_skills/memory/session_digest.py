@@ -29,7 +29,12 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 # Paths
-PROJECT_ROOT = (Path(__file__).parent.parent.parent.parent.parent).resolve()
+try:
+    from .._common import REPO_ROOT as PROJECT_ROOT
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import REPO_ROOT as PROJECT_ROOT
 MEMORY_DIR = PROJECT_ROOT / "database" / "memory"
 SYSTEMS_FILE = MEMORY_DIR / "systems.md"
 

@@ -31,7 +31,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from project_resolver import get_all_projects, get_machine_id  # noqa: E402
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+try:
+    from .._common import REPO_ROOT as _REPO_ROOT
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import REPO_ROOT as _REPO_ROOT
 _MEMORY_DB = _REPO_ROOT / "database" / "memory" / "memory.db"
 _LOGS_DIR = _REPO_ROOT / "database" / "memory" / "logs"
 

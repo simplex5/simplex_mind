@@ -15,7 +15,10 @@ sys_path_entry = str(Path(__file__).parent)
 if sys_path_entry not in sys.path:
     sys.path.insert(0, sys_path_entry)
 
-ROOT = Path(__file__).parent.parent.parent.parent
+try:
+    from ._common import REPO_ROOT as ROOT
+except ImportError:
+    from _common import REPO_ROOT as ROOT
 
 
 def write_if_missing(path: Path, content: str):

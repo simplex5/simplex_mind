@@ -34,7 +34,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 from conversation_db import get_connection, upsert_session, insert_message, insert_usage, get_ingest_state, set_ingest_state, get_stats
 
 # Root of the simplex_mind repo (four levels up from this file)
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+try:
+    from .._common import REPO_ROOT as _REPO_ROOT
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import REPO_ROOT as _REPO_ROOT
 
 
 def _path_to_claude_slug(project_path: Path) -> Path:

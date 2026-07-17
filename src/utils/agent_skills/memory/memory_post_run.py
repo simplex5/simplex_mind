@@ -28,7 +28,12 @@ from typing import Any, Dict, List, Optional
 
 # ── Path bootstrap ─────────────────────────────────────────────────────────────
 _SCRIPT_DIR   = Path(__file__).parent
-_PROJECT_ROOT = _SCRIPT_DIR.parent.parent.parent.parent.parent
+try:
+    from .._common import REPO_ROOT as _PROJECT_ROOT
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import REPO_ROOT as _PROJECT_ROOT
 
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))

@@ -45,7 +45,12 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+try:
+    from .._common import REPO_ROOT as _REPO_ROOT
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import REPO_ROOT as _REPO_ROOT
 LIB_PATH = _REPO_ROOT / "subconscious"
 INDEX_PATH = _REPO_ROOT / "database" / "memory" / "subconscious_index.json"
 KEYWORDS_PATH = _REPO_ROOT / "database" / "memory" / "subconscious_keywords.json"
