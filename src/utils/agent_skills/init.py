@@ -91,7 +91,7 @@ def main():
 
 ## Learned Behaviors
 
-- Always check src/utils/manifest.md before creating new scripts
+- Always check src/utils/agent_skills/manifest.md before creating new scripts
 
 ## Git Integration
 

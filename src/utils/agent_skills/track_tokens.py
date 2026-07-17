@@ -220,7 +220,10 @@ def main() -> None:
         )
 
     elif args.direct:
-        model_id = args.model or "flash"
+        if not args.model:
+            print("ERROR --direct requires --model (no default model is assumed)")
+            sys.exit(1)
+        model_id = args.model
 
 
         if args.tokens_prompt == 0:
