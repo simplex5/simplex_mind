@@ -279,21 +279,49 @@ def embed_all_pending(batch_size: int = 50, client=None) -> Dict[str, Any]:
         "entries": []
     }
 
-    for entry in entries:
-        entry_id = entry['id']
-        result = embed_entry(entry_id, client)
+    # Fast path (SIMP-L1-035): one batched model call + one DB connection for
+    # the whole batch, instead of a model call + 2 connections per entry.
+    batched = False
+    if HAS_FASTEMBED:
+        try:
+            model = _get_local_model()
+            vectors = list(model.embed([e['content'] for e in entries]))
+            conn = get_connection()
+            cursor = conn.cursor()
+            for entry, vec in zip(entries, vectors):
+                emb_bytes = embedding_to_bytes([float(x) for x in vec])
+                cursor.execute('''
+                    UPDATE memory_entries
+                    SET embedding = ?, embedding_model = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ''', (emb_bytes, LOCAL_EMBEDDING_MODEL, entry['id']))
+                results['processed'] += 1
+                results['entries'].append({"id": entry['id'], "success": True, "error": None})
+            conn.commit()
+            conn.close()
+            batched = True
+        except Exception as e:
+            # Fall back to the per-entry path below
+            results = {"success": True, "processed": 0, "failed": 0,
+                       "total_tokens": 0, "entries": [],
+                       "batch_fallback": f"batched embed failed: {e}"}
 
-        if result.get('success'):
-            results['processed'] += 1
-            results['total_tokens'] += result.get('tokens_used', 0)
-        else:
-            results['failed'] += 1
+    if not batched:
+        for entry in entries:
+            entry_id = entry['id']
+            result = embed_entry(entry_id, client)
 
-        results['entries'].append({
-            "id": entry_id,
-            "success": result.get('success', False),
-            "error": result.get('error')
-        })
+            if result.get('success'):
+                results['processed'] += 1
+                results['total_tokens'] += result.get('tokens_used', 0)
+            else:
+                results['failed'] += 1
+
+            results['entries'].append({
+                "id": entry_id,
+                "success": result.get('success', False),
+                "error": result.get('error')
+            })
 
     # Calculate cost (~$0.02 per 1M tokens)
     results['estimated_cost'] = f"${results['total_tokens'] * 0.00002:.6f}"
