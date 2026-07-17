@@ -69,6 +69,8 @@ MIN_SESSIONS = 2        # distinct sessions among those prompts
 MIN_PRECISION = 0.6     # near-piece fraction of phrase-containing prompts
 MAX_FIRE_RATE = 0.05    # phrase in more than this fraction of ALL prompts = spam
 MAX_PENDING = 10        # queue size cap
+PENDING_TTL_DAYS = 28   # unreviewed candidates expire so the queue can't
+                        # permanently clog discovery (SIMP-L1-029)
 
 
 def _now() -> str:
@@ -111,7 +113,8 @@ def apply_to_overlay(items: list) -> None:
 def _known_phrases(state: dict) -> set:
     """Normalized (piece, phrase) pairs already applied/pending/rejected."""
     return {(it["piece"], normalize(it["phrase"]))
-            for key in ("pending", "applied", "rejected") for it in state[key]}
+            for key in ("pending", "applied", "rejected", "expired")
+            for it in state.get(key, [])}
 
 
 def _covered(phrase_norm: str, existing_norm: list) -> bool:
@@ -178,9 +181,35 @@ def mine_candidates(state: dict):
     return queued[:max(0, MAX_PENDING - len(state["pending"]))], len(prompts)
 
 
+def _expire_pending(state: dict) -> int:
+    """Drop pending candidates older than PENDING_TTL_DAYS. Legacy items with
+    no queued_at get stamped now and start aging from today. Expired items are
+    journaled and moved to state['expired'] (kept so they never re-queue)."""
+    from datetime import timedelta
+    cutoff = datetime.now(timezone.utc) - timedelta(days=PENDING_TTL_DAYS)
+    kept, expired = [], []
+    for c in state["pending"]:
+        if not c.get("queued_at"):
+            c["queued_at"] = _now()
+        ts = datetime.fromisoformat(c["queued_at"])
+        (expired if ts < cutoff else kept).append(c)
+    if expired:
+        for c in expired:
+            c["expired_at"] = _now()
+            journal(f"EXPIRE {c['piece']}: \"{c['phrase']}\" (queued {c['queued_at']})")
+        state.setdefault("expired", []).extend(expired)
+        state["pending"] = kept
+    return len(expired)
+
+
 def run(dry_run: bool = False) -> int:
     state = load_state()
+    n_expired = _expire_pending(state)
+    if n_expired:
+        print(f"EXPIRED {n_expired} stale pending candidate(s) (> {PENDING_TTL_DAYS}d unreviewed)")
     queued, n = mine_candidates(state)
+    for c in queued:
+        c["queued_at"] = _now()
     for c in queued:
         print(f"QUEUE {c['piece']}: \"{c['phrase']}\" "
               f"(support={c['support']}, sessions={c['sessions']}, "
@@ -197,6 +226,7 @@ def run(dry_run: bool = False) -> int:
     state["pending"].extend(queued)
     state["last_run"] = _now()
     state["last_run_summary"] = summary
+    state["last_run_error"] = None
     save_state(state)
     return 0
 
@@ -263,4 +293,13 @@ if __name__ == "__main__":
         sys.exit(run(dry_run=args.dry_run))
     except Exception as e:  # cron half is fail-open, like recall
         print(f"ERROR (fail-open): {e}", file=sys.stderr)
+        if not (args.approve or args.reject or args.review):
+            # Record the cron failure so session_digest surfaces it instead of
+            # it dying silently in the cron log (SIMP-L1-029).
+            try:
+                state = load_state()
+                state["last_run_error"] = {"at": _now(), "error": str(e)[:300]}
+                save_state(state)
+            except Exception:
+                pass
         sys.exit(0 if not (args.approve or args.reject) else 1)

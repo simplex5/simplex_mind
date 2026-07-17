@@ -197,6 +197,10 @@ def _get_subconscious_status() -> List[str]:
     try:
         if state_path.exists():
             state = json.loads(state_path.read_text(encoding='utf-8'))
+            err = state.get('last_run_error')
+            if err:
+                lines.append(f"AUTOTUNE CRON FAILED [{str(err.get('at', ''))[:10]}]: "
+                             f"{err.get('error', 'unknown')} — check logs/subconscious_autotune.log")
             if state.get('last_run'):
                 lines.append(f"Autotune last run: {state['last_run'][:10]} — "
                              f"{state.get('last_run_summary', '')}")
