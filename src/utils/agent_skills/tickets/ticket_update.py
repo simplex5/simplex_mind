@@ -14,10 +14,13 @@ Output:
 """
 
 import argparse
-import json
 import sys
 
 from ticket_db import update_ticket, append_note, get_ticket, VALID_STATUSES, VALID_PRIORITIES
+try:
+    from .._common import cli_finish
+except ImportError:
+    from _common import cli_finish  # ticket_db import above put agent_skills on sys.path
 
 
 def main():
@@ -65,12 +68,8 @@ def main():
         sys.exit(1)
 
     if result.get('success'):
-        print(f"OK {ticket_id} updated")
-    else:
-        print(f"ERROR {result.get('error')}")
-        sys.exit(1)
-
-    print(json.dumps(result, indent=2, default=str))
+        pass
+    cli_finish(result, ok=f"{ticket_id} updated")
 
 
 if __name__ == '__main__':

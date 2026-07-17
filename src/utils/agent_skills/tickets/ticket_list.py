@@ -21,9 +21,6 @@ import sys
 
 from ticket_db import list_tickets, list_tickets_all, VALID_STATUSES, VALID_TYPES, VALID_PRIORITIES
 
-# Priority sort order for display
-PRIORITY_ORDER = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
-
 
 def format_table(tickets: list) -> str:
     if not tickets:

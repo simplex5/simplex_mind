@@ -18,10 +18,12 @@ Output:
 """
 
 import argparse
-import json
-import sys
 
 from ticket_db import create_ticket, VALID_TYPES, VALID_PRIORITIES
+try:
+    from .._common import cli_finish
+except ImportError:
+    from _common import cli_finish  # ticket_db import above put agent_skills on sys.path
 
 
 def main():
@@ -54,13 +56,7 @@ def main():
         target=args.target,
     )
 
-    if result.get('success'):
-        print(f"OK {result['id']} created")
-    else:
-        print(f"ERROR {result.get('error')}")
-        sys.exit(1)
-
-    print(json.dumps(result, indent=2, default=str))
+    cli_finish(result, ok=f"{result.get('id')} created" if result.get('success') else "")
 
 
 if __name__ == '__main__':

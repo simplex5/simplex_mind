@@ -11,6 +11,7 @@ All tools and reference files Claude invokes directly.
 | Token Tracker | `track_tokens.py` | Appends call objects to metrics JSON (optional — consumed by a user-side statusline script outside this repo) |
 | Git Operations | `git_commit.py` | Init, status, commit, diff for framework files |
 | Initializer | `init.py` | Creates full project scaffold (idempotent) |
+| Shared Helpers | `_common.py` | Single source for repo paths (REPO_ROOT/DATABASE_DIR/MEMORY_DIR), row_to_dict, ticket priority ordering, standard CLI epilogue (cli_finish), optional dotenv loading |
 | Project Resolver | `project_resolver.py` | Shared utility for resolving project config from projects.yaml; routes ticket operations to per-project databases |
 
 ---

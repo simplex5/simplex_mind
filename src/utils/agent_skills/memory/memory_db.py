@@ -34,8 +34,15 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
+try:
+    from .._common import MEMORY_DIR, row_to_dict as _base_row_to_dict
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import MEMORY_DIR, row_to_dict as _base_row_to_dict
+
 # Database path
-DB_PATH = (Path(__file__).parent.parent.parent.parent.parent / "database" / "memory" / "memory.db").resolve()
+DB_PATH = MEMORY_DIR / "memory.db"
 
 # Valid memory types
 VALID_TYPES = ['fact', 'preference', 'event', 'insight', 'task', 'relationship', 'decision']
@@ -171,12 +178,11 @@ def get_connection():
 
 
 def row_to_dict(row) -> Optional[Dict]:
-    """Convert sqlite3.Row to dictionary."""
-    if row is None:
-        return None
-    d = dict(row)
-    # Don't include raw embedding blob in output
-    if 'embedding' in d and d['embedding']:
+    """Convert sqlite3.Row to dictionary. Unlike the shared base helper, this
+    one strips the raw embedding blob from output — memory rows are shown to
+    humans/agents and a multi-KB binary field would drown the useful columns."""
+    d = _base_row_to_dict(row)
+    if d and d.get('embedding'):
         d['has_embedding'] = True
         del d['embedding']
     return d

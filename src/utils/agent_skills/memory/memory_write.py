@@ -25,14 +25,19 @@ Output:
 """
 
 import sys
-import json
 import argparse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 # Paths
-MEMORY_DIR = (Path(__file__).parent.parent.parent.parent.parent / "database" / "memory").resolve()
+try:
+    from .._common import REPO_ROOT as _REPO_ROOT, cli_finish
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import REPO_ROOT as _REPO_ROOT, cli_finish
+MEMORY_DIR = _REPO_ROOT / "database" / "memory"
 MEMORY_FILE = MEMORY_DIR / "MEMORY.md"
 LOGS_DIR = MEMORY_DIR / "logs"
 
@@ -410,13 +415,7 @@ def main():
                 result["ticket_note_error"] = str(e)
 
     if result:
-        if result.get('success'):
-            print(f"OK {result.get('message', 'Memory written successfully')}")
-        else:
-            print(f"ERROR {result.get('error', 'Unknown error')}")
-            sys.exit(1)
-
-        print(json.dumps(result, indent=2, default=str))
+        cli_finish(result, ok=result.get('message') or 'Memory written successfully')
 
 
 if __name__ == "__main__":

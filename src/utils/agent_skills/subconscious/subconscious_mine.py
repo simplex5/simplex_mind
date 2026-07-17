@@ -34,7 +34,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from subconscious_recall import normalize, keyword_hits, cosine, INDEX_PATH  # noqa: E402
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+try:
+    from .._common import REPO_ROOT as _REPO_ROOT
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import REPO_ROOT as _REPO_ROOT
 DEFAULT_DB = _REPO_ROOT / "database" / "conversation_history.db"
 
 GAP_SIM = 0.63      # "near a piece" — keyword-gap candidates

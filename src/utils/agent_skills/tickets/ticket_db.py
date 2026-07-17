@@ -35,6 +35,7 @@ try:
         infer_project_from_prefix,
         get_machine_id,
     )
+    from .._common import row_to_dict, PRIORITY_ORDER, PRIORITY_SQL_CASE
 except ImportError:
     import sys
     sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -46,6 +47,7 @@ except ImportError:
         infer_project_from_prefix,
         get_machine_id,
     )
+    from _common import row_to_dict, PRIORITY_ORDER, PRIORITY_SQL_CASE
 
 VALID_TYPES = ['bug', 'feature', 'task', 'improvement', 'documentation']
 VALID_STATUSES = ['open', 'in_progress', 'blocked', 'done', 'wont_fix']
@@ -122,13 +124,6 @@ def _next_id(cursor: sqlite3.Cursor, prefix: str) -> str:
     cursor.execute('SELECT next_num - 1 AS num FROM ticket_counter WHERE id = 1')
     num = cursor.fetchone()['num']
     return f"{prefix}-{machine}-{num:03d}"
-
-
-def row_to_dict(row) -> Optional[Dict]:
-    """Convert sqlite3.Row to plain dict."""
-    if row is None:
-        return None
-    return dict(row)
 
 
 def _resolve_target_for_id(ticket_id: str, target: str = None) -> str:
@@ -345,12 +340,11 @@ def list_tickets(
         params.append(priority)
 
     where = ' AND '.join(conditions) if conditions else '1=1'
-    priority_order = "CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 END"
 
     cursor.execute(f'''
         SELECT * FROM tickets
         WHERE {where}
-        ORDER BY {priority_order}, created_at ASC
+        ORDER BY {PRIORITY_SQL_CASE}, created_at ASC
         LIMIT ?
     ''', params + [limit])
 
@@ -395,9 +389,8 @@ def list_tickets_all(
             total += result.get("total", 0)
 
     # Sort merged results by priority then date
-    priority_map = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
     all_tickets.sort(key=lambda t: (
-        priority_map.get(t.get('priority', 'low'), 4),
+        PRIORITY_ORDER.get(t.get('priority', 'low'), 4),
         t.get('created_at', ''),
     ))
 

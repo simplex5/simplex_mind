@@ -35,10 +35,13 @@ from collections import Counter
 
 # Optional .env loading — never a hard dependency
 try:
-    from dotenv import load_dotenv
-    load_dotenv()
+    from .._common import load_dotenv_if_available
 except ImportError:
-    pass
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import load_dotenv_if_available
+load_dotenv_if_available()
 
 # Import from sibling modules
 try:

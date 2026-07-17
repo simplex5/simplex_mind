@@ -34,7 +34,13 @@ from pathlib import Path
 from typing import Dict, Any
 
 # Paths
-MEMORY_DIR = (Path(__file__).parent.parent.parent.parent.parent / "database" / "memory").resolve()
+try:
+    from .._common import REPO_ROOT as _REPO_ROOT
+except ImportError:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import REPO_ROOT as _REPO_ROOT
+MEMORY_DIR = _REPO_ROOT / "database" / "memory"
 MEMORY_FILE = MEMORY_DIR / "MEMORY.md"
 
 # Auto-sync block markers — everything between them belongs to this tool

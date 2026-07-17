@@ -19,9 +19,11 @@ Usage:
 import argparse
 import subprocess
 import sys
-from pathlib import Path
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+try:
+    from ._common import REPO_ROOT as _PROJECT_ROOT
+except ImportError:
+    from _common import REPO_ROOT as _PROJECT_ROOT
 
 # Directories that are framework source
 FRAMEWORK_DIRS = [
