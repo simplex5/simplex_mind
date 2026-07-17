@@ -360,6 +360,7 @@ use native git commands in the project directory — see [Working Directory](#wo
 - Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
 - When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
 - `projects.yaml` is local config (gitignored). Never commit it. The active project is derived from the current simplex_mind git branch — to switch projects, just `git checkout <branch>`.
+- **MANDATORY after every git pull that brings major changes into master:** immediately offer to update project branches, and ALWAYS ask the user which projects should receive the update (`git merge master` per selected branch). Never merge into project branches unprompted, and never skip the ask.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
 
