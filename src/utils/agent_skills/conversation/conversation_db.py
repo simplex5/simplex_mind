@@ -17,16 +17,15 @@ Dependencies:
 """
 
 import sqlite3
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 try:
-    from .._common import DATABASE_DIR, row_to_dict
+    from .._common import DATABASE_DIR, row_to_dict, utc_now_iso_z
 except ImportError:
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from _common import DATABASE_DIR, row_to_dict
+    from _common import DATABASE_DIR, row_to_dict, utc_now_iso_z
 
 # Database path
 DB_PATH = DATABASE_DIR / "conversation_history.db"
@@ -164,7 +163,7 @@ def upsert_session(
     message_count: int = 0
 ):
     """Insert or update session metadata."""
-    now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    now = utc_now_iso_z()
     conn.execute('''
         INSERT INTO sessions (session_id, slug, source_file, git_branch,
                               first_message_at, last_message_at, message_count,
@@ -349,7 +348,7 @@ def get_ingest_state(conn, file_name: str) -> Optional[Dict]:
 def set_ingest_state(conn, file_name: str, file_size: int, file_mtime: float,
                      lines_processed: int, byte_offset: int = 0):
     """Update ingestion state for a file."""
-    now = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    now = utc_now_iso_z()
     conn.execute('''
         INSERT INTO ingest_state (file_name, file_size, file_mtime, lines_processed,
                                   byte_offset, last_ingested_at)

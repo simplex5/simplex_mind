@@ -21,7 +21,6 @@ Usage (via CLI tools — not called directly):
 """
 
 import sqlite3
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -35,7 +34,7 @@ try:
         infer_project_from_prefix,
         get_machine_id,
     )
-    from .._common import row_to_dict, PRIORITY_ORDER, PRIORITY_SQL_CASE
+    from .._common import row_to_dict, PRIORITY_ORDER, PRIORITY_SQL_CASE, utc_now_db
 except ImportError:
     import sys
     sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -47,7 +46,7 @@ except ImportError:
         infer_project_from_prefix,
         get_machine_id,
     )
-    from _common import row_to_dict, PRIORITY_ORDER, PRIORITY_SQL_CASE
+    from _common import row_to_dict, PRIORITY_ORDER, PRIORITY_SQL_CASE, utc_now_db
 
 VALID_TYPES = ['bug', 'feature', 'task', 'improvement', 'documentation']
 VALID_STATUSES = ['open', 'in_progress', 'blocked', 'done', 'wont_fix']
@@ -236,13 +235,13 @@ def update_ticket(ticket_id: str, target: str = None, **fields) -> Dict[str, Any
         return {"success": False, "error": "No valid fields to update"}
 
     updates.append('updated_at = ?')
-    values.append(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
+    values.append(utc_now_db())
 
     # Set resolved_at when closing; clear it when reopening
     new_status = fields.get('status')
     if new_status in ('done', 'wont_fix'):
         updates.append('resolved_at = ?')
-        values.append(datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'))
+        values.append(utc_now_db())
     elif new_status in ('open', 'in_progress', 'blocked'):
         updates.append('resolved_at = NULL')
 
@@ -420,7 +419,7 @@ def append_note(ticket_id: str, note: str, target: str = None) -> Dict[str, Any]
         conn.close()
         return {"success": False, "error": f"Ticket {ticket_id} not found"}
 
-    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    timestamp = utc_now_db()
     existing = row['notes'] or ''
     separator = '\n\n' if existing else ''
     new_notes = f"{existing}{separator}[{timestamp}] {note}"
