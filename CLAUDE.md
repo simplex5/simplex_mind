@@ -414,9 +414,10 @@ use native git commands in the project directory — see [Working Directory](#wo
 - Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
 - Never assume the user is following along during multi-step execution. Present one step at a time, explain what success/failure looks like, and wait for confirmation before proceeding.
 - `projects.yaml` is local config (gitignored). Never commit it. The active project is derived from the current simplex_mind git branch — no flag to toggle. To switch projects, just `git checkout <branch>`.
-- Protocol changes to CLAUDE.md land on develop and merge to master once verified; project branches then merge from master.
+- Protocol changes to CLAUDE.md land on develop and merge to master once verified; project branches then merge from master (ask the user which — see the post-pull guardrail below).
 - When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
 - `master` and `develop` are the only branches pushed online and both must stay project-free: never merge project branches into them, and never let project registrations (systems.md/MEMORY.md/config entries naming a project) land on them. Framework work reaches master by merging develop once verified. User-preference config (e.g. the statusline script) lives outside the repo in `~/.claude/`.
+- **MANDATORY after every git pull that brings major changes into master:** immediately offer to update project branches, and ALWAYS ask the user which projects should receive the update (`git merge master` per selected branch). Never merge into project branches unprompted, and never skip the ask.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
 
