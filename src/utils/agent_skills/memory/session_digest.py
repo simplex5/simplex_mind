@@ -190,25 +190,49 @@ def _get_current_branch() -> str:
 
 
 def _get_subconscious_status() -> List[str]:
-    """Autotune state summary. Empty list (section omitted) when the state
-    file doesn't exist or there's nothing pending and no recent run info."""
+    """Autotune state summary + index staleness. Empty list = section omitted.
+    The staleness check runs even when no autotune state file exists yet."""
+    lines = []
     state_path = PROJECT_ROOT / 'database' / 'memory' / 'subconscious_autotune_state.json'
     try:
-        if not state_path.exists():
-            return []
-        state = json.loads(state_path.read_text(encoding='utf-8'))
+        if state_path.exists():
+            state = json.loads(state_path.read_text(encoding='utf-8'))
+            if state.get('last_run'):
+                lines.append(f"Autotune last run: {state['last_run'][:10]} — "
+                             f"{state.get('last_run_summary', '')}")
+            pending = state.get('pending', [])
+            if pending:
+                lines.append(f"PENDING KEYWORD CANDIDATES: {len(pending)} — propose them to the "
+                             f"user (subconscious_autotune.py --review, then --approve/--reject)")
     except Exception as e:
         log.warning("digest: autotune state unreadable (%s)", e)
-        return []
-    lines = []
-    if state.get('last_run'):
-        lines.append(f"Autotune last run: {state['last_run'][:10]} — "
-                     f"{state.get('last_run_summary', '')}")
-    pending = state.get('pending', [])
-    if pending:
-        lines.append(f"PENDING KEYWORD CANDIDATES: {len(pending)} — propose them to the "
-                     f"user (subconscious_autotune.py --review, then --approve/--reject)")
+    lines.extend(_check_subconscious_index_staleness())
     return lines
+
+
+def _check_subconscious_index_staleness() -> List[str]:
+    """Warn when pieces/keyword-overlay were edited after the index was built —
+    the recall hook would silently serve stale text (SIMP-L1-028)."""
+    index_path = PROJECT_ROOT / 'database' / 'memory' / 'subconscious_index.json'
+    pieces_dir = PROJECT_ROOT / 'subconscious'
+    overlay = PROJECT_ROOT / 'database' / 'memory' / 'subconscious_keywords.json'
+    try:
+        if not index_path.exists():
+            if pieces_dir.exists() and any(pieces_dir.glob('*.md')):
+                return ["SUBCONSCIOUS INDEX MISSING — run subconscious_index.py to build it"]
+            return []
+        built_at = json.loads(index_path.read_text(encoding='utf-8')).get('built_at', '')
+        built = datetime.fromisoformat(built_at).timestamp()
+        sources = list(pieces_dir.glob('*.md')) if pieces_dir.exists() else []
+        if overlay.exists():
+            sources.append(overlay)
+        newest = max((f.stat().st_mtime for f in sources), default=0)
+        if newest > built:
+            return ["SUBCONSCIOUS INDEX STALE — pieces/keywords edited after last build; "
+                    "run subconscious_index.py to refresh"]
+    except Exception as e:
+        log.warning("digest: subconscious staleness check failed (%s)", e)
+    return []
 
 
 def generate_digest() -> str:

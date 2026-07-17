@@ -25,8 +25,14 @@ import sys
 import tempfile
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+try:
+    from .._common import REPO_ROOT as _REPO_ROOT
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from _common import REPO_ROOT as _REPO_ROOT
 INDEX_PATH = _REPO_ROOT / "database" / "memory" / "subconscious_index.json"
+PIECES_DIR = _REPO_ROOT / "subconscious"
+KEYWORD_OVERLAY = _REPO_ROOT / "database" / "memory" / "subconscious_keywords.json"
 
 SEMANTIC_THRESHOLD = 0.70   # cosine floor for embedding-only matches.
 # Calibrated 2026-07-15 against bge-small's narrow range: unrelated prompts
@@ -76,6 +82,24 @@ def cosine(a: list, b: list) -> float:
     return dot / (na * nb) if na and nb else 0.0
 
 
+def _staleness_note(index) -> str:
+    """One-line rebuild reminder when pieces/overlay changed after the index build.
+    Fail-open: any error means no note (SIMP-L1-028)."""
+    try:
+        from datetime import datetime
+        built = datetime.fromisoformat(index.get("built_at", "")).timestamp()
+        sources = list(PIECES_DIR.glob("*.md"))
+        if KEYWORD_OVERLAY.exists():
+            sources.append(KEYWORD_OVERLAY)
+        newest = max((f.stat().st_mtime for f in sources), default=0)
+        if newest > built:
+            return ("\n\n[note: subconscious index is older than the latest piece/keyword "
+                    "edits — text above may be stale; run subconscious_index.py]")
+    except Exception:
+        pass
+    return ""
+
+
 def main() -> int:
     data = json.load(sys.stdin)
     prompt = (data.get("user_input") or data.get("prompt") or "").strip()
@@ -87,6 +111,7 @@ def main() -> int:
     if not INDEX_PATH.exists():
         return 0
     index = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
+    stale_note = _staleness_note(index)
 
     state_path = Path(tempfile.gettempdir()) / f"subconscious_{session_id}.json"
     injected = set()
@@ -126,7 +151,8 @@ def main() -> int:
     scored.sort(key=lambda t: (t[0], t[1]), reverse=True)
     chosen = [p for _, _, p in scored[:MAX_PIECES]]
 
-    context = PREAMBLE + "\n\n---\n\n".join(p["text"] for p in chosen) + "\n</subconscious>"
+    context = (PREAMBLE + "\n\n---\n\n".join(p["text"] for p in chosen)
+               + stale_note + "\n</subconscious>")
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",
