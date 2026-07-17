@@ -93,6 +93,11 @@ except ImportError:
 LOCAL_EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"   # 384-dim, ~130MB, fully local
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"  # 1536-dim, remote
 
+# Persistent model cache — fastembed's default lands under /tmp, which is wiped
+# on reboot and forces a ~130MB re-download that stalls the first recall-hook
+# call after boot (SIMP-L1-027).
+FASTEMBED_CACHE_DIR = Path.home() / ".cache" / "simplex_mind" / "fastembed"
+
 # Lazy-initialized local model (first call downloads the ONNX model to cache)
 _local_model = None
 
@@ -100,7 +105,11 @@ _local_model = None
 def _get_local_model():
     global _local_model
     if _local_model is None:
-        _local_model = TextEmbedding(model_name=LOCAL_EMBEDDING_MODEL)
+        FASTEMBED_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        _local_model = TextEmbedding(
+            model_name=LOCAL_EMBEDDING_MODEL,
+            cache_dir=str(FASTEMBED_CACHE_DIR),
+        )
     return _local_model
 
 
