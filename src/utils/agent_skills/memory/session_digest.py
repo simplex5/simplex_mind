@@ -239,6 +239,44 @@ def _check_subconscious_index_staleness() -> List[str]:
     return []
 
 
+def _check_venv_drift() -> List[str]:
+    """Compare requirements.txt pins against packages actually installed in the
+    repo venv. SIMP-L1-006's root cause: fastembed was added to requirements
+    but never installed, and nothing noticed for 10 days (SIMP-L1-007)."""
+    issues = []
+    try:
+        req = PROJECT_ROOT / 'requirements.txt'
+        venv_lib = PROJECT_ROOT / 'venv' / 'lib'
+        if not req.exists() or not venv_lib.exists():
+            return []
+        site = next(venv_lib.glob('python*/site-packages'), None)
+        if site is None:
+            return []
+        import importlib.metadata as md
+        installed = {}
+        for dist in md.distributions(path=[str(site)]):
+            name = (dist.metadata.get('Name') or '').lower().replace('_', '-')
+            if name:
+                installed[name] = dist.version
+        for line in req.read_text().splitlines():
+            line = line.split('#')[0].strip()
+            if not line:
+                continue
+            if '==' in line:
+                raw_name, want = (s.strip() for s in line.split('==', 1))
+            else:
+                raw_name, want = line, None
+            key = raw_name.lower().replace('_', '-')
+            have = installed.get(key)
+            if have is None:
+                issues.append(f"DEP MISSING in venv: {raw_name} — run venv/bin/pip install -r requirements.txt")
+            elif want and have != want:
+                issues.append(f"DEP DRIFT: {key} installed {have}, requirements.txt pins {want}")
+    except Exception as e:
+        log.warning("digest: venv drift check failed (%s)", e)
+    return issues
+
+
 def generate_digest() -> str:
     """Generate the session digest."""
     parts = []
@@ -295,6 +333,13 @@ def generate_digest() -> str:
     if sub:
         parts.append("## Subconscious")
         for line in sub:
+            parts.append(line)
+        parts.append("")
+
+    drift = _check_venv_drift()
+    if drift:
+        parts.append("## Environment")
+        for line in drift:
             parts.append(line)
         parts.append("")
 
