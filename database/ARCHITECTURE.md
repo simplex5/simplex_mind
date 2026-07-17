@@ -3,6 +3,12 @@
 Four SQLite databases power simplex_mind's persistence layer: `memory.db`, `activity.db`,
 `tickets.db` (one per project + a brain fallback), and `conversation_history.db`.
 
+**Schema versioning (SIMP-L1-031):** every DB module declares an ordered `MIGRATIONS`
+list applied by `_common.run_migrations()`, gated by SQLite's `PRAGMA user_version`.
+Migration 1 is always the idempotent base schema, so pre-versioning databases replay it
+as a no-op and then advance. To evolve a schema: append `(N+1, migration_fn)` to the
+module's `MIGRATIONS` — never edit an existing migration that has shipped.
+
 ---
 
 ## 1. `database/memory/memory.db`

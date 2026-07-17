@@ -75,6 +75,29 @@ def cli_finish(result: Dict[str, Any], ok: str = "") -> None:
     print(json.dumps(result, indent=2, default=str))
 
 
+def run_migrations(conn, migrations) -> int:
+    """Ordered schema migrations gated by SQLite's PRAGMA user_version.
+
+    migrations: iterable of (version, callable(conn)) in ascending version
+    order. Each callable runs at most once per database file; user_version
+    advances after it succeeds, so a crash mid-migration re-runs that step
+    next time (write migrations idempotently: IF NOT EXISTS / OR IGNORE /
+    guarded ALTERs). Returns the final schema version.
+
+    Pre-versioning databases report user_version 0 and replay migration 1,
+    which is the idempotent base schema — a no-op on an existing DB.
+    """
+    current = conn.execute("PRAGMA user_version").fetchone()[0]
+    for version, migrate in migrations:
+        if version <= current:
+            continue
+        migrate(conn)
+        conn.execute(f"PRAGMA user_version = {int(version)}")
+        conn.commit()
+        current = version
+    return current
+
+
 def load_dotenv_if_available() -> None:
     """Load .env from the repo root when python-dotenv is installed; no-op otherwise."""
     try:

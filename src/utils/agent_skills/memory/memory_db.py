@@ -35,11 +35,11 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 try:
-    from .._common import MEMORY_DIR, row_to_dict as _base_row_to_dict
+    from .._common import MEMORY_DIR, row_to_dict as _base_row_to_dict, run_migrations
 except ImportError:
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from _common import MEMORY_DIR, row_to_dict as _base_row_to_dict
+    from _common import MEMORY_DIR, row_to_dict as _base_row_to_dict, run_migrations
 
 # Database path
 DB_PATH = MEMORY_DIR / "memory.db"
@@ -52,7 +52,8 @@ VALID_SOURCES = ['user', 'inferred', 'session', 'external', 'system']
 
 
 def _migrate_type_constraint(conn):
-    """Migrate memory_entries table to include 'decision' in type CHECK constraint."""
+    """v2: rebuild memory_entries so the type CHECK constraint includes 'decision'.
+    Internally guarded — no-op when the table is absent or already migrated."""
     cursor = conn.cursor()
     cursor.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='memory_entries'")
     row = cursor.fetchone()
@@ -99,7 +100,7 @@ _schema_ready = False
 
 
 def get_connection():
-    """Get database connection, creating tables if needed."""
+    """Get database connection, applying versioned migrations if needed."""
     global _schema_ready
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH))
@@ -108,10 +109,14 @@ def get_connection():
     if _schema_ready:
         return conn
 
-    cursor = conn.cursor()
+    run_migrations(conn, MIGRATIONS)
+    _schema_ready = True
+    return conn
 
-    # Migrate existing DB if type constraint is outdated
-    _migrate_type_constraint(conn)
+
+def _migration_1_base_schema(conn):
+    """v1: base schema. Idempotent — pre-versioning DBs replay this as a no-op."""
+    cursor = conn.cursor()
 
     # Main memory entries table
     valid_types_sql = "'" + "', '".join(VALID_TYPES) + "'"
@@ -173,8 +178,12 @@ def get_connection():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_logs_date ON daily_logs(date)')
 
     conn.commit()
-    _schema_ready = True
-    return conn
+
+
+MIGRATIONS = [
+    (1, _migration_1_base_schema),
+    (2, _migrate_type_constraint),
+]
 
 
 def row_to_dict(row) -> Optional[Dict]:
