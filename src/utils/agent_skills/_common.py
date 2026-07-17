@@ -20,6 +20,7 @@ From a same-directory tool (project_resolver, git_commit, init):
 """
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -35,6 +36,27 @@ PRIORITY_SQL_CASE = (
     + " ".join(f"WHEN '{name}' THEN {rank}" for name, rank in PRIORITY_ORDER.items())
     + " END"
 )
+
+
+# ── Timestamp convention (SIMP-L1-034) ──────────────────────────────────────
+# All stored timestamps are UTC. Two formats exist, one per database family,
+# and they must not be mixed WITHIN a database (string comparisons rely on it):
+#   - tickets.db / memory.db columns default to SQLite CURRENT_TIMESTAMP
+#     ('YYYY-MM-DD HH:MM:SS') → write with utc_now_db()
+#   - conversation_history.db stores ISO-8601 Z ('YYYY-MM-DDTHH:MM:SSZ')
+#     → write with utc_now_iso_z()
+DB_TS_FMT = "%Y-%m-%d %H:%M:%S"
+ISO_Z_FMT = "%Y-%m-%dT%H:%M:%SZ"
+
+
+def utc_now_db() -> str:
+    """UTC now in SQLite CURRENT_TIMESTAMP format (tickets.db, memory.db)."""
+    return datetime.now(timezone.utc).strftime(DB_TS_FMT)
+
+
+def utc_now_iso_z() -> str:
+    """UTC now in ISO-8601 Z format (conversation_history.db, index metadata)."""
+    return datetime.now(timezone.utc).strftime(ISO_Z_FMT)
 
 
 def row_to_dict(row) -> Optional[Dict]:
