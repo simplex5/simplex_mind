@@ -220,10 +220,17 @@ def add_entry(
         dict with success status and entry data
     """
     if entry_type not in VALID_TYPES:
-        return {"success": False, "error": f"Invalid type. Must be one of: {VALID_TYPES}"}
+        hint = " ('note' entries are log-only — use memory_write.py)" if entry_type == 'note' else ""
+        return {"success": False, "error": f"Invalid type. Must be one of: {VALID_TYPES}{hint}"}
 
     if source not in VALID_SOURCES:
         return {"success": False, "error": f"Invalid source. Must be one of: {VALID_SOURCES}"}
+
+    if not isinstance(importance, int) or not 1 <= importance <= 10:
+        return {"success": False, "error": f"Invalid importance {importance!r} — must be an integer 1-10"}
+
+    if not isinstance(confidence, (int, float)) or not 0 <= confidence <= 1:
+        return {"success": False, "error": f"Invalid confidence {confidence!r} — must be a number 0-1"}
 
     content_hash = compute_content_hash(content)
 
