@@ -52,8 +52,8 @@ def _write_config(args: argparse.Namespace) -> None:
     if config_path.exists():
         try:
             existing = json.loads(config_path.read_text())
-        except (json.JSONDecodeError, OSError):
-            pass
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"WARNING existing config.json unreadable ({e}) — rewriting it from CLI args", file=sys.stderr)
 
     if args.prefix:
         existing["ticket_prefix"] = args.prefix

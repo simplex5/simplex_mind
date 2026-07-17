@@ -77,8 +77,11 @@ def _load_source_dirs_from_config() -> list[Path]:
                 slug_dir = _path_to_claude_slug(project_path)
                 if slug_dir not in dirs:
                     dirs.append(slug_dir)
-        except Exception:
-            pass  # fall back to simplex_mind only
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "projects.yaml unreadable (%s) — ingesting simplex_mind transcripts ONLY; "
+                "other projects' conversations are NOT being captured", e)
 
     return dirs
 
