@@ -21,24 +21,29 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 
 try:
-    from .._common import DATABASE_DIR, row_to_dict, utc_now_iso_z
+    from .._common import DATABASE_DIR, row_to_dict, utc_now_iso_z, run_migrations
 except ImportError:
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from _common import DATABASE_DIR, row_to_dict, utc_now_iso_z
+    from _common import DATABASE_DIR, row_to_dict, utc_now_iso_z, run_migrations
 
 # Database path
 DB_PATH = DATABASE_DIR / "conversation_history.db"
 
 
 def get_connection():
-    """Get database connection, creating tables if needed."""
+    """Get database connection, applying versioned migrations if needed."""
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    run_migrations(conn, MIGRATIONS)
+    return conn
 
+
+def _migration_1_base_schema(conn):
+    """v1: base schema. Idempotent — pre-versioning DBs replay this as a no-op."""
     cursor = conn.cursor()
 
     # Sessions table
@@ -132,12 +137,6 @@ def get_connection():
         )
     ''')
 
-    # byte_offset enables incremental ingest (parse only appended bytes)
-    try:
-        cursor.execute('ALTER TABLE ingest_state ADD COLUMN byte_offset INTEGER DEFAULT 0')
-    except sqlite3.OperationalError:
-        pass  # column already exists
-
     # Indexes
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_messages_role ON messages(role)')
@@ -149,7 +148,21 @@ def get_connection():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_usage_timestamp ON message_usage(timestamp)')
 
     conn.commit()
-    return conn
+
+
+def _migration_2_byte_offset(conn):
+    """v2: byte_offset column enables incremental ingest (parse only appended bytes)."""
+    try:
+        conn.execute('ALTER TABLE ingest_state ADD COLUMN byte_offset INTEGER DEFAULT 0')
+    except sqlite3.OperationalError:
+        pass  # column already exists (pre-versioning DB)
+    conn.commit()
+
+
+MIGRATIONS = [
+    (1, _migration_1_base_schema),
+    (2, _migration_2_byte_offset),
+]
 
 
 def upsert_session(

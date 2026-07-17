@@ -34,7 +34,7 @@ try:
         infer_project_from_prefix,
         get_machine_id,
     )
-    from .._common import row_to_dict, PRIORITY_ORDER, PRIORITY_SQL_CASE, utc_now_db
+    from .._common import row_to_dict, PRIORITY_ORDER, PRIORITY_SQL_CASE, utc_now_db, run_migrations
 except ImportError:
     import sys
     sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -46,7 +46,7 @@ except ImportError:
         infer_project_from_prefix,
         get_machine_id,
     )
-    from _common import row_to_dict, PRIORITY_ORDER, PRIORITY_SQL_CASE, utc_now_db
+    from _common import row_to_dict, PRIORITY_ORDER, PRIORITY_SQL_CASE, utc_now_db, run_migrations
 
 VALID_TYPES = ['bug', 'feature', 'task', 'improvement', 'documentation']
 VALID_STATUSES = ['open', 'in_progress', 'blocked', 'done', 'wont_fix']
@@ -72,7 +72,12 @@ def get_connection(db_path: Path = None, target: str = None) -> sqlite3.Connecti
 
 
 def init_db(conn: sqlite3.Connection) -> None:
-    """Create tables and seed counter if they don't exist."""
+    """Apply ordered schema migrations (PRAGMA user_version gated)."""
+    run_migrations(conn, MIGRATIONS)
+
+
+def _migration_1_base_schema(conn: sqlite3.Connection) -> None:
+    """v1: base schema. Idempotent — pre-versioning DBs replay this as a no-op."""
     cursor = conn.cursor()
 
     cursor.execute('''
@@ -108,6 +113,11 @@ def init_db(conn: sqlite3.Connection) -> None:
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_tickets_priority ON tickets(priority)')
 
     conn.commit()
+
+
+MIGRATIONS = [
+    (1, _migration_1_base_schema),
+]
 
 
 def _next_id(cursor: sqlite3.Cursor, prefix: str) -> str:
