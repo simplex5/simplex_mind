@@ -141,7 +141,7 @@ def _load_source_dirs_from_config() -> list[Path]:
     config_path = _REPO_ROOT / "projects.yaml"
     if config_path.is_file():
         try:
-            with open(config_path, "r") as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 config = yaml.safe_load(f) or {}
             projects = config.get("projects", {})
             for name, info in projects.items():

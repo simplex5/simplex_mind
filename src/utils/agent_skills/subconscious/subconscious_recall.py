@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Tool: Subconscious Recall (UserPromptSubmit hook)
 Purpose: The trigger half of the subconscious. Claude Code pipes each user

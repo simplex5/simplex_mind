@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 git_commit.py — Git operations for project framework files.
 
@@ -30,6 +29,7 @@ FRAMEWORK_DIRS = [
     "src/",
     "subconscious/",
     "tests/",
+    "scripts/",
 ]
 
 # Individual root files that are framework source

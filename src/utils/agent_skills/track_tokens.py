@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 track_tokens.py — Count tokens for agent calls and append call objects to metrics JSON.
 
@@ -60,7 +59,7 @@ def read_session_counts(path: Path) -> dict:
     if not path.exists():
         return {"input": 0, "cache_creation": 0, "cache_read": 0, "output": 0,
                 "cost": 0.0, "model": ""}
-    raw = json.loads(path.read_text())
+    raw = json.loads(path.read_text(encoding="utf-8"))
     cw = raw.get("context_window", {}).get("current_usage", {})
     model_info = raw.get("model", {})
     model_id = model_info.get("id", "") if isinstance(model_info, dict) else str(model_info)
@@ -83,7 +82,7 @@ def read_lmstudio_log() -> tuple[int, int, str]:
               "Is the log stream running?", file=sys.stderr)
         sys.exit(1)
 
-    text = LMSTUDIO_LOG_PATH.read_text().strip()
+    text = LMSTUDIO_LOG_PATH.read_text(encoding="utf-8").strip()
     if not text:
         print(f"  [track_tokens] ERROR: {LMSTUDIO_LOG_PATH} is empty. "
               "No inference calls logged yet.", file=sys.stderr)
@@ -114,12 +113,12 @@ def read_lmstudio_log() -> tuple[int, int, str]:
 
 def load_metrics(path: Path) -> dict:
     if path.exists():
-        return json.loads(path.read_text())
+        return json.loads(path.read_text(encoding="utf-8"))
     return {"run_id": path.stem, "calls": [], "summary": {}}
 
 
 def save_metrics(path: Path, data: dict) -> None:
-    path.write_text(json.dumps(data, indent=2))
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
 def main() -> None:
@@ -166,7 +165,7 @@ def main() -> None:
         prompt_total = input_delta + cache_cr_delta + cache_rd_delta
 
         # Advance baseline for next delta
-        SESSION_PREV_PATH.write_text(SESSION_STATE_PATH.read_text())
+        SESSION_PREV_PATH.write_text(SESSION_STATE_PATH.read_text(encoding="utf-8"), encoding="utf-8")
 
         notes_parts = [
             f"input={input_delta} cache_cr={cache_cr_delta} cache_rd={cache_rd_delta}",

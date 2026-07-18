@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Tool: Ticket Renumber (one-off migration, kept for reference like ticket_migrate.py)
 Purpose: Migrate existing ticket IDs from the legacy PREFIX-NNN format to the

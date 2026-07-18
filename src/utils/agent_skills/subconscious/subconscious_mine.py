@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Tool: Subconscious Miner
 Purpose: Mine real user prompts from conversation_history.db to improve the

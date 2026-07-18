@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Tool: ticket_migrate.py
 Purpose: One-time migration from shared tickets.db to per-project ticket databases.
