@@ -2,6 +2,8 @@
 
 simplex_mind is the **brain repo** that sits alongside your project repos. It provides persistent memory, ticket tracking, conversation history, and a response summary protocol.
 
+> **On native Windows?** Follow this flow together with [SETUP-WINDOWS.md](SETUP-WINDOWS.md): it substitutes the Linux-only steps (`python3`, venv paths, cron).
+
 ---
 
 DO NOT PROCEED WITH INITIALIZING THE PROJECT WITHOUT DOING STEP 0 FIRST

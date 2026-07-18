@@ -68,6 +68,6 @@ cp .env.example .env
 
 ### Notes
 
-- Use `python3` (not `python`) to run all agent scripts
+- Run agent scripts with `python3` on Linux/macOS, or `py` on Windows (see SETUP-WINDOWS.md)
 - simplex_mind sits alongside your project repos as a sibling — it does not go inside them
 - Both CLAUDE.md and AGENTS.md can coexist; they reference the same tooling
