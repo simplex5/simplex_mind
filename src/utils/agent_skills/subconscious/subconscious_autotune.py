@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Tool: Subconscious Autotune (weekly cron + in-session review CLI)
 Purpose: Automatically grow the PERSONAL keyword overlay

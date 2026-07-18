@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 simplex_mind — Project Initializer
 Run once after installing: python src/utils/agent_skills/init.py
@@ -26,7 +25,7 @@ def write_if_missing(path: Path, content: str):
         print(f"  skip   {path.relative_to(ROOT)}")
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content)
+    path.write_text(content, encoding="utf-8")
     print(f"  create {path.relative_to(ROOT)}")
 
 
@@ -51,7 +50,7 @@ def _write_config(args: argparse.Namespace) -> None:
     existing = {}
     if config_path.exists():
         try:
-            existing = json.loads(config_path.read_text())
+            existing = json.loads(config_path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as e:
             print(f"WARNING existing config.json unreadable ({e}) — rewriting it from CLI args", file=sys.stderr)
 
@@ -66,7 +65,7 @@ def _write_config(args: argparse.Namespace) -> None:
 
     # Only write if we have values to set
     if any(getattr(args, k) for k in ("prefix", "project_name", "project_description", "tech_stack")):
-        config_path.write_text(json.dumps(existing, indent=2) + "\n")
+        config_path.write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
         print("  write  database/config.json")
 
 

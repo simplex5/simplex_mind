@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Tool: Subconscious Indexer
 Purpose: Build the retrieval index for the subconscious — the context-triggered
