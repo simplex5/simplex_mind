@@ -4,6 +4,8 @@
 
 The **brain repo** — a project-agnostic AI agent toolkit that provides persistent memory, ticket tracking, conversation history, structured git commits, and a response summary protocol. It sits alongside your project repos as a sibling, not inside them.
 
+> **On native Windows?** See [SETUP-WINDOWS.md](SETUP-WINDOWS.md) — use `py` instead of `python3`, and `scripts/setup_windows_tasks.ps1` instead of the cron lines below.
+
 ## Architecture
 
 ```

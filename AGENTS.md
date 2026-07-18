@@ -3,6 +3,10 @@
 > This file provides instructions for AI coding agents (Codex, Cursor, Windsurf, and similar).
 > It mirrors the protocols in CLAUDE.md but uses agent-agnostic language.
 
+> **Windows note:** command examples below are written for Linux/macOS. On native
+> Windows, run scripts with `py` instead of `python3` (see SETUP-WINDOWS.md);
+> cron jobs are replaced by Task Scheduler tasks (`scripts/setup_windows_tasks.ps1`).
+
 ## Your Behavior
 
 Do not assume the user is right. Think critically about every request. Keep descriptions short.

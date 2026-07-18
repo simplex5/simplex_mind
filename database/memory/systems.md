@@ -18,10 +18,13 @@ never reach `messages`. Backfilled 2026-07-15 (6,893 responses, 1.37B tokens, co
 2026-06-03; older usage unrecoverable — source files already cleaned). Totals + per-month
 breakdown in `conversation_read.py --action stats`. Caveat: default source dirs derive from
 `projects.yaml` paths; sessions launched from unregistered subdirs (e.g. ~/projects/comfy/ComfyUI)
-need `--scan-all` — the ComfyUI transcripts were rescued this way. **Windows (SIMP-D1-052):**
-framework runs on native Windows + Git Bash; transcript dirs are discovered by matching the
-JSONL `cwd` field (Windows slug encoding is undocumented), hooks auto-select `py` vs `python3`
-via uname, ingest is hook-only (no cron; autotune manual). Onboarding: SETUP-WINDOWS.md.
+need `--scan-all` — the ComfyUI transcripts were rescued this way. **Windows (SIMP-D1-052,
+SIMP-D2-002):** framework runs on native Windows + Git Bash; transcript dirs are discovered by
+matching the JSONL `cwd` field (Windows slug encoding is undocumented), hooks auto-select `py`
+vs `python3` via uname, settings.json forces PYTHONUTF8=1 (cp1252 mojibake fix).
+`scripts/setup_windows_tasks.ps1` registers Task Scheduler mirrors of the cron jobs
+(SimplexMind-Ingest 5-min safety net, SimplexMind-Autotune Sun 4am; venv pythonw, per-user).
+Onboarding: SETUP-WINDOWS.md.
 
 **Subconscious** (`src/utils/agent_skills/subconscious/` + `subconscious/` library): context-
 triggered reasoning-philosophy injection. Piece library (markdown, no keywords) lives
