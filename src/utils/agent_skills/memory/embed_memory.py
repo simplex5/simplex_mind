@@ -44,12 +44,16 @@ except ImportError:
 # Embedding backends are installed in the repo venv, but callers invoke these
 # tools with system python3 (Stop hook) as well as venv/bin/python (cron).
 # Expose the venv's site-packages to system python so both paths work.
-_VENV_SITE = (
+_VENV_SITE_CANDIDATES = (
     _REPO_ROOT / "venv" / "lib"
-    / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
+    / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages",
+    _REPO_ROOT / "venv" / "Lib" / "site-packages",  # Windows venv layout
 )
-if sys.prefix == sys.base_prefix and _VENV_SITE.is_dir() and str(_VENV_SITE) not in sys.path:
-    sys.path.insert(0, str(_VENV_SITE))
+if sys.prefix == sys.base_prefix:
+    for _venv_site in _VENV_SITE_CANDIDATES:
+        if _venv_site.is_dir() and str(_venv_site) not in sys.path:
+            sys.path.insert(0, str(_venv_site))
+            break
 
 # Optional .env loading — never a hard dependency
 try:
