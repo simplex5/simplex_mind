@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}\"/src/utils/agent_skills/subconscious/subconscious_recall.py",
+            "command": "case \"$(uname -s)\" in MINGW*|MSYS*|CYGWIN*) py \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/subconscious/subconscious_recall.py\" ;; *) python3 \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/subconscious/subconscious_recall.py\" ;; esac",
             "timeout": 10
           }
         ]
@@ -19,11 +19,14 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PROJECT_DIR}\"/src/utils/agent_skills/conversation/conversation_ingest.py --quiet >> \"${CLAUDE_PROJECT_DIR}\"/logs/conversation_ingest.log 2>&1 || true",
+            "command": "case \"$(uname -s)\" in MINGW*|MSYS*|CYGWIN*) py \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/conversation/conversation_ingest.py\" --quiet --log ;; *) python3 \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/conversation/conversation_ingest.py\" --quiet --log ;; esac",
             "timeout": 30
           }
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
   }
 }
