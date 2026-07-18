@@ -2,8 +2,10 @@
 Tool: Conversation History Ingester
 Purpose: Parse Claude Code JSONL transcripts and ingest verbatim user/assistant text into conversation_history.db
 
-Source directories are discovered dynamically from projects.yaml. Each registered project
-path is converted to Claude's slug format (~/.claude/projects/-home-simplex-projects-<name>/).
+Source directories are discovered dynamically from projects.yaml. On POSIX each registered
+project path is converted to Claude's slug format (~/.claude/projects/-home-simplex-projects-<name>/);
+on Windows the directories are discovered by matching the 'cwd' field inside the transcripts
+(the Windows slug encoding is undocumented; see SETUP-WINDOWS.md).
 simplex_mind itself is always included. Falls back to empty list if projects.yaml is missing.
 
 Usage:
@@ -42,15 +44,88 @@ except ImportError:
     from _common import REPO_ROOT as _REPO_ROOT
 
 
+_IS_WINDOWS = os.name == 'nt'
+
+
 def _path_to_claude_slug(project_path: Path) -> Path:
-    """Convert an absolute project path to Claude's JSONL directory slug.
+    """Convert an absolute POSIX project path to Claude's JSONL directory slug.
 
     Example: /home/user/projects/my-project
           -> ~/.claude/projects/-home-user-projects-my-project
+
+    POSIX only; Windows resolution goes through _transcript_dirs_for(),
+    which discovers directories instead of computing a slug.
     """
     resolved = project_path.expanduser().resolve()
     slug = str(resolved).replace("/", "-").replace("_", "-").lstrip("-")
     return Path.home() / ".claude" / "projects" / f"-{slug}"
+
+
+def _norm_path_key(p) -> str:
+    """Normalize a path for cross-platform equality: forward slashes, casefolded."""
+    s = str(Path(p).expanduser().resolve()).replace("\\", "/").rstrip("/")
+    return s.casefold()
+
+
+_DIR_CWD_CACHE: dict = None
+
+
+def _transcript_dir_cwds() -> dict:
+    """Map each ~/.claude/projects/<dir> to the normalized 'cwd' values found
+    in its most recent JSONL transcripts. Cached per run."""
+    global _DIR_CWD_CACHE
+    if _DIR_CWD_CACHE is not None:
+        return _DIR_CWD_CACHE
+    result = {}
+    base = Path.home() / ".claude" / "projects"
+    if base.is_dir():
+        for d in sorted(base.iterdir()):
+            if not d.is_dir():
+                continue
+            cwds = set()
+            try:
+                jsonls = sorted(d.glob("*.jsonl"), key=lambda f: f.stat().st_mtime, reverse=True)
+            except OSError:
+                continue
+            for f in jsonls[:3]:
+                try:
+                    with open(f, "r", encoding="utf-8") as fh:
+                        for _ in range(5):
+                            line = fh.readline()
+                            if not line:
+                                break
+                            try:
+                                cwd = json.loads(line).get("cwd")
+                            except (json.JSONDecodeError, AttributeError):
+                                continue
+                            if cwd:
+                                cwds.add(_norm_path_key(cwd))
+                                break
+                except OSError:
+                    continue
+            if cwds:
+                result[d] = cwds
+    _DIR_CWD_CACHE = result
+    return result
+
+
+def _transcript_dirs_for(project_path: Path) -> list:
+    """Return the Claude transcript directories for a project path.
+
+    POSIX: the deterministic slug (fast, verified format).
+    Windows: Claude Code's folder-name encoding for drive letters/backslashes
+    is undocumented, so guessing a slug could silently ingest nothing. Instead,
+    discover: read the 'cwd' field from each candidate directory's transcripts
+    and match it against the project path (exact or subdirectory). A project
+    with no matches simply has no recorded sessions yet.
+    """
+    if _IS_WINDOWS:
+        target = _norm_path_key(project_path)
+        return [
+            d for d, cwds in _transcript_dir_cwds().items()
+            if any(c == target or c.startswith(target + "/") for c in cwds)
+        ]
+    return [_path_to_claude_slug(project_path)]
 
 
 def _load_source_dirs_from_config() -> list[Path]:
@@ -61,7 +136,7 @@ def _load_source_dirs_from_config() -> list[Path]:
     dirs = []
 
     # Always include simplex_mind
-    dirs.append(_path_to_claude_slug(_REPO_ROOT))
+    dirs.extend(_transcript_dirs_for(_REPO_ROOT))
 
     config_path = _REPO_ROOT / "projects.yaml"
     if config_path.is_file():
@@ -74,9 +149,9 @@ def _load_source_dirs_from_config() -> list[Path]:
                 if not raw_path:
                     continue
                 project_path = Path(raw_path).expanduser().resolve()
-                slug_dir = _path_to_claude_slug(project_path)
-                if slug_dir not in dirs:
-                    dirs.append(slug_dir)
+                for slug_dir in _transcript_dirs_for(project_path):
+                    if slug_dir not in dirs:
+                        dirs.append(slug_dir)
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(
@@ -86,7 +161,16 @@ def _load_source_dirs_from_config() -> list[Path]:
     return dirs
 
 
-DEFAULT_SOURCE_DIRS = _load_source_dirs_from_config()
+_DEFAULT_SOURCE_DIRS: list = None
+
+
+def _default_source_dirs() -> list:
+    """Lazy accessor: resolving source dirs touches the filesystem (and on
+    Windows scans transcripts), so it must not run at import time."""
+    global _DEFAULT_SOURCE_DIRS
+    if _DEFAULT_SOURCE_DIRS is None:
+        _DEFAULT_SOURCE_DIRS = _load_source_dirs_from_config()
+    return _DEFAULT_SOURCE_DIRS
 
 
 def _discover_source_dirs(scan_all: bool = False, extra_dirs: list = None) -> list:
@@ -101,7 +185,7 @@ def _discover_source_dirs(scan_all: bool = False, extra_dirs: list = None) -> li
                 if d.is_dir() and any(d.glob("*.jsonl")):
                     dirs.append(d)
     else:
-        dirs = [d for d in DEFAULT_SOURCE_DIRS if d.is_dir()]
+        dirs = [d for d in _default_source_dirs() if d.is_dir()]
 
     if extra_dirs:
         for d in extra_dirs:
@@ -450,9 +534,36 @@ def main():
     parser.add_argument('--scan-all', action='store_true', help='Scan all ~/.claude/projects/*/ directories')
     parser.add_argument('--source-dirs', nargs='+', help='Additional JSONL source directories')
     parser.add_argument('--quiet', action='store_true',
-                        help='Suppress normal output (errors still printed) — for hook/cron use')
+                        help='Suppress normal output (errors still printed); for hook/cron use')
+    parser.add_argument('--log', action='store_true',
+                        help='Append a one-line result (or error) to logs/conversation_ingest.log '
+                             'and never exit nonzero; replaces shell redirection so hook commands '
+                             'stay portable across Linux and Windows (SIMP-D1-051)')
 
     args = parser.parse_args()
+
+    if args.log:
+        import datetime
+        import traceback
+        log_path = _REPO_ROOT / 'logs' / 'conversation_ingest.log'
+        stamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        try:
+            result = run_ingestion(force=args.force, dry_run=args.dry_run,
+                                   scan_all=args.scan_all, extra_dirs=args.source_dirs)
+            if 'error' in result:
+                line = f"{stamp} ERROR: {result['error']}"
+            else:
+                line = (f"{stamp} ok: {result['files_processed']} files, "
+                        f"{result['messages_new']} new messages, {result['usage_new']} usage rows")
+        except Exception:
+            line = f"{stamp} EXCEPTION:\n{traceback.format_exc()}"
+        try:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(log_path, 'a', encoding='utf-8') as f:
+                f.write(line + '\n')
+        except OSError:
+            pass  # a broken log file must never break the hook
+        return
 
     if args.stats:
         show_stats()
