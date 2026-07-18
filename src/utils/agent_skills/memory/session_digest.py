@@ -21,6 +21,7 @@ Output:
     Markdown digest to stdout (< 200 lines)
 """
 
+import os
 import sys
 import json
 import logging
@@ -246,12 +247,16 @@ def _check_venv_drift() -> List[str]:
     issues = []
     try:
         req = PROJECT_ROOT / 'requirements.txt'
-        venv_lib = PROJECT_ROOT / 'venv' / 'lib'
-        if not req.exists() or not venv_lib.exists():
+        if not req.exists():
             return []
-        site = next(venv_lib.glob('python*/site-packages'), None)
+        venv_lib = PROJECT_ROOT / 'venv' / 'lib'
+        site = next(venv_lib.glob('python*/site-packages'), None) if venv_lib.exists() else None
+        if site is None:
+            win_site = PROJECT_ROOT / 'venv' / 'Lib' / 'site-packages'  # Windows venv layout
+            site = win_site if win_site.is_dir() else None
         if site is None:
             return []
+        pip_hint = 'venv\\Scripts\\pip' if os.name == 'nt' else 'venv/bin/pip'
         import importlib.metadata as md
         installed = {}
         for dist in md.distributions(path=[str(site)]):
@@ -269,7 +274,7 @@ def _check_venv_drift() -> List[str]:
             key = raw_name.lower().replace('_', '-')
             have = installed.get(key)
             if have is None:
-                issues.append(f"DEP MISSING in venv: {raw_name} — run venv/bin/pip install -r requirements.txt")
+                issues.append(f"DEP MISSING in venv: {raw_name}; run {pip_hint} install -r requirements.txt")
             elif want and have != want:
                 issues.append(f"DEP DRIFT: {key} installed {have}, requirements.txt pins {want}")
     except Exception as e:

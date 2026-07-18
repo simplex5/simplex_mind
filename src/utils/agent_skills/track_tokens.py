@@ -46,11 +46,13 @@ NOTE: The --claude-delta mode depends on statusline.sh writing session state fil
 import argparse
 import json
 import sys
+import tempfile
 from pathlib import Path
 
-SESSION_STATE_PATH = Path("/tmp/claude_session_state.json")
-SESSION_PREV_PATH  = Path("/tmp/claude_session_prev_state.json")
-LMSTUDIO_LOG_PATH  = Path("/tmp/lmstudio_log_stream.jsonl")
+_TMP = Path(tempfile.gettempdir())
+SESSION_STATE_PATH = _TMP / "claude_session_state.json"
+SESSION_PREV_PATH  = _TMP / "claude_session_prev_state.json"
+LMSTUDIO_LOG_PATH  = _TMP / "lmstudio_log_stream.jsonl"
 
 
 def read_session_counts(path: Path) -> dict:
