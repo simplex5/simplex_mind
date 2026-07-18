@@ -52,13 +52,17 @@ Run SETUP.md's New Project Flow with these changes:
 
 - **Step 2b (Machine identifier):** use this machine's ID (e.g. `D2` for a second
   desktop) as the top-level `machine:` key in `projects.yaml`.
-- **Step 8 (cron): SKIP ENTIRELY.** Windows has no cron and none is needed:
-  - Conversation ingest runs via the **Stop hook** after every Claude response.
-    The 5-minute cron on Linux is only a crash-recovery safety net; on Windows,
-    a conversation missed by a crash is picked up at the next session's ingest.
-  - Weekly subconscious autotune does not run automatically on Windows. Run it
-    manually if ever wanted: `py src/utils/agent_skills/subconscious/subconscious_autotune.py`
-    (or set up Task Scheduler later; tracked as an optional follow-up, not part of setup).
+- **Step 8 (cron):** Windows has no cron. The Task Scheduler equivalents are set up
+  with one command (per-user, no admin, idempotent; requires the venv from above):
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File scripts\setup_windows_tasks.ps1
+  ```
+  This registers `SimplexMind-Ingest` (every 5 min — crash-recovery safety net; the
+  **Stop hook** remains the primary ingest path) and `SimplexMind-Autotune`
+  (Sunday 04:00 weekly keyword mining). Both run the venv's `pythonw.exe`
+  windowless and log to `logs/`. Skipping this is acceptable: ingest still works
+  via the Stop hook; autotune would then only run manually
+  (`py src/utils/agent_skills/subconscious/subconscious_autotune.py`).
 
 ## Verify the transcript ingest
 
@@ -79,6 +83,7 @@ field inside the transcripts themselves. Verify it works:
 
 ## Known Windows limitations
 
-- No cron: ingest is hook-only (see above); autotune is manual.
+- Scheduled tasks run only while the user is logged on (per-user tasks, interactive
+  token). Missed runs fire at next opportunity (`StartWhenAvailable`).
 - The statusline token tracker (`track_tokens.py --claude-delta`) depends on a
   user-side statusline script; state files live in `%TEMP%` instead of `/tmp`.

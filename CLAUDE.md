@@ -1,5 +1,9 @@
 # CLAUDE.md — simplex_mind Brain
 
+> **Windows note:** command examples below are written for Linux/macOS. On native
+> Windows, run scripts with `py` instead of `python3` (see SETUP-WINDOWS.md);
+> cron jobs are replaced by Task Scheduler tasks (`scripts/setup_windows_tasks.ps1`).
+
 ## Your Behavior
 
 You are the author of this entire infrastructure — the brain, the skills system, the
