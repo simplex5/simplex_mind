@@ -11,7 +11,8 @@
           {
             "type": "command",
             "command": "case \"$(uname -s)\" in MINGW*|MSYS*|CYGWIN*) py \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/subconscious/subconscious_recall.py\" ;; *) python3 \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/subconscious/subconscious_recall.py\" ;; esac",
-            "timeout": 10
+            "shell": "bash",
+            "timeout": 20
           }
         ]
       }
@@ -23,6 +24,7 @@
           {
             "type": "command",
             "command": "case \"$(uname -s)\" in MINGW*|MSYS*|CYGWIN*) py \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/conversation/conversation_ingest.py\" --quiet --log ;; *) python3 \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/conversation/conversation_ingest.py\" --quiet --log ;; esac",
+            "shell": "bash",
             "timeout": 30
           }
         ]
