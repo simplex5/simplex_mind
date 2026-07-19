@@ -100,7 +100,8 @@ def _staleness_note(index) -> str:
 
 
 def main() -> int:
-    data = json.load(sys.stdin)
+    # utf-8-sig: some Windows pipe paths prepend a BOM, which json.load rejects
+    data = json.loads(sys.stdin.buffer.read().decode("utf-8-sig"))
     prompt = (data.get("user_input") or data.get("prompt") or "").strip()
     # Claude Code sends a UUID; sanitize anyway since this lands in a file path.
     session_id = re.sub(r"[^A-Za-z0-9_-]", "_", str(data.get("session_id", "unknown")))[:64]
