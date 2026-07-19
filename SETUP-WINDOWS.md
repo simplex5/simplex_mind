@@ -13,6 +13,20 @@ commands and hooks on Windows, so one shell covers everything.
    Required. It provides Git Bash, which Claude Code uses as its shell and hook
    runner on Windows. Without it Claude Code falls back to PowerShell and the
    committed hooks will not work.
+   **If Git is installed anywhere other than `C:\Program Files\Git`** (custom
+   drive, portable install), Claude Code cannot find bash on its own — PATH is
+   not consulted — and every `"shell": "bash"` hook fails with
+   "requires bash but Git Bash was not found". Point it at bash explicitly in
+   your **user-level** `~/.claude/settings.json` (machine-specific — never in
+   the repo's committed settings):
+   ```json
+   {
+     "env": {
+       "CLAUDE_CODE_GIT_BASH_PATH": "F:\\Program Files\\Git\\bin\\bash.exe"
+     }
+   }
+   ```
+   Restart Claude Code afterwards; hook config is snapshotted at session start.
 2. **Python 3.11+ from python.org**: https://www.python.org/downloads/windows/
    Keep the **"py launcher"** component selected in the installer (it is on by
    default). The hooks and this guide invoke Python as `py` on Windows.
