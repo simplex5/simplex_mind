@@ -206,7 +206,7 @@ keyword candidates — nothing is applied without user approval. When the sessio
 ## Ticket Protocol
 
 **Location:** Per-project: `<project_path>/database/tickets.db`
-Ticket IDs are machine-scoped: `PREFIX-<MACHINE>-NNN` (e.g. `SIMP-L1-042`), where MACHINE comes from the top-level `machine:` key in projects.yaml — each machine mints in its own namespace so IDs never collide across computers.
+Ticket IDs are machine-scoped: `PREFIX-<MACHINE>-NNN` (e.g. `SIMP-L1-042`), where MACHINE comes from the top-level `machine:` key in projects.yaml — each machine mints in its own namespace so IDs never collide across computers. `NNN` is zero-padded to a 3-digit minimum and keeps counting past 999 (no cap).
 Tickets auto-target the active project. Use `--target <name>` to override.
 Ticket ID prefix is auto-inferred for read/update operations (e.g. PROJ-L1-122 → my-project).
 On `master` or `develop` (no active project), tickets fall through to simplex_mind's own `database/tickets.db` under prefix `SIMP` — that DB is the brain's, all others live in their project's directory.
