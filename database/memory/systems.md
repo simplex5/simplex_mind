@@ -40,6 +40,15 @@ hook, injects ≤2 matching pieces once per session, fails open. Weekly autotune
 (`subconscious_autotune.py`, Sun 4am, SIMP-D1-047): mines gated keyword candidates into a
 pending queue surfaced by session_digest; applied only after in-session user approval.
 
+**Subagent roster** (`.claude/agents/`, SIMP-D2-006, 2026-07-20): six generic game-dev
+subagent definitions with per-agent model tiers so the main session (Fable) delegates volume
+work to cheaper models. gameplay-implementer (sonnet, codes to spec, never commits),
+code-reviewer (opus, read-only diff review), playtest-verifier (sonnet, engine-side
+verification with evidence, never saves mutated scenes), scribe (haiku, tickets/memory/
+checklists via the CLI tools), game-designer (opus, read-only design proposals), researcher
+(haiku, sourced lookups). All project-agnostic per the framework guardrail; the orchestrator
+retains git and ticket authority. Replaced the removed `/agents` wizard workflow.
+
 ---
 
 ## Retired Systems
