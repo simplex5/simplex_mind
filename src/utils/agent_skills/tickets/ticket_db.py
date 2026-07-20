@@ -3,7 +3,8 @@ Tool: Ticket Database Manager
 Purpose: SQLite CRUD operations for persistent ticket tracking (JIRA-like)
 
 Schema:
-- tickets: id (PREFIX-<MACHINE>-NNN, e.g. SIMP-L1-042), type, status, priority,
+- tickets: id (PREFIX-<MACHINE>-NNN, e.g. SIMP-L1-042; NNN is zero-padded to a
+           3-digit minimum and keeps counting past 999), type, status, priority,
            title, description, project, how_discovered, created_at, updated_at,
            resolved_at, notes
 - ticket_counter: auto-increment counter for ID generation

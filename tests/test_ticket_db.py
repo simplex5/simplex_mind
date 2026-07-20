@@ -11,6 +11,23 @@ def test_create_ticket_id_format_and_counter(fake_projects):
     assert r1["ticket"]["status"] == "open"
 
 
+def test_id_number_grows_past_999(fake_projects):
+    # :03d is a minimum width, not a cap — 999 rolls over to a 4-digit id
+    conn = ticket_db.get_connection(target="alpha")
+    conn.execute("UPDATE ticket_counter SET next_num = 999 WHERE id = 1")
+    conn.commit()
+    conn.close()
+    r1 = ticket_db.create_ticket("task", "Last 3-digit", target="alpha")
+    r2 = ticket_db.create_ticket("task", "First 4-digit", target="alpha")
+    assert r1["id"] == "ALPH-T9-999"
+    assert r2["id"] == "ALPH-T9-1000"
+    # 4-digit id round-trips through prefix routing and updates
+    got = ticket_db.get_ticket("ALPH-T9-1000")
+    assert got["success"] and got["ticket"]["title"] == "First 4-digit"
+    done = ticket_db.update_ticket("ALPH-T9-1000", status="done")
+    assert done["success"] and done["ticket"]["resolved_at"] is not None
+
+
 def test_create_rejects_invalid_type_and_priority(fake_projects):
     assert not ticket_db.create_ticket("chore", "X", target="alpha")["success"]
     assert not ticket_db.create_ticket("task", "X", priority="urgent", target="alpha")["success"]

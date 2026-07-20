@@ -108,7 +108,8 @@ that split the original shared DB into per-project databases; it is kept for ref
 
 **Machine-scoped IDs:** ticket DBs and counters are per-machine, so IDs embed the machine's
 identifier (`<PREFIX>-<MACHINE>-NNN`, e.g. `SIMP-L1-042` — `L1` = laptop 1, `D1` = desktop 1)
-to stay globally unique. The identifier comes from the top-level `machine:` key in the
+to stay globally unique. `NNN` is zero-padded to a 3-digit minimum, not a fixed width — the
+counter keeps counting past 999 (`SIMP-L1-1000`), and all parsing is digit-count-agnostic. The identifier comes from the top-level `machine:` key in the
 gitignored `projects.yaml`; minting fails loudly if it is unset. Legacy `PREFIX-NNN` IDs on a
 not-yet-migrated machine are converted in place (DBs, memory tags, daily logs) by the one-time
 `tickets/ticket_renumber.py` (`--dry-run` to preview). Legacy IDs in already-pushed git history
@@ -125,7 +126,7 @@ are historical records and are not rewritten.
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `id` | TEXT PK | Format: `<PREFIX>-<MACHINE>-NNN` (e.g. `SIMP-L1-042`; prefix + machine id from projects.yaml) |
+| `id` | TEXT PK | Format: `<PREFIX>-<MACHINE>-NNN` (e.g. `SIMP-L1-042`; prefix + machine id from projects.yaml; `NNN` = 3-digit minimum, grows past 999) |
 | `ticket_type` | TEXT | `bug`, `feature`, `task`, `improvement`, `documentation` |
 | `status` | TEXT | `open`, `in_progress`, `blocked`, `done`, `wont_fix` |
 | `priority` | TEXT | `low`, `medium`, `high`, `critical` |
