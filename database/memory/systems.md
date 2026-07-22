@@ -40,14 +40,18 @@ hook, injects ≤2 matching pieces once per session, fails open. Weekly autotune
 (`subconscious_autotune.py`, Sun 4am, SIMP-D1-047): mines gated keyword candidates into a
 pending queue surfaced by session_digest; applied only after in-session user approval.
 
-**Subagent roster** (`.claude/agents/`, SIMP-D2-006, 2026-07-20): six generic game-dev
-subagent definitions with per-agent model tiers so the main session (Fable) delegates volume
-work to cheaper models. gameplay-implementer (sonnet, codes to spec, never commits),
-code-reviewer (opus, read-only diff review), playtest-verifier (sonnet, engine-side
-verification with evidence, never saves mutated scenes), scribe (haiku, tickets/memory/
-checklists via the CLI tools), game-designer (opus, read-only design proposals), researcher
-(haiku, sourced lookups). All project-agnostic per the framework guardrail; the orchestrator
-retains git and ticket authority. Replaced the removed `/agents` wizard workflow.
+**Subagent roster** (`.claude/agents/`, SIMP-D2-006, 2026-07-20; effort tiers added
+SIMP-D2-008, 2026-07-22): six generic game-dev subagent definitions with per-agent
+model+effort pins, set once in frontmatter and NOT tied to whatever model the orchestrating
+session happens to be running — originally tiered for a Fable main loop delegating volume
+work to cheaper models, the pins stay fixed even if the orchestrator later runs a cheaper/
+pricier model itself. gameplay-implementer (sonnet/xhigh, codes to spec, never commits),
+code-reviewer (opus/high, read-only diff review), playtest-verifier (sonnet/xhigh,
+engine-side verification with evidence, never saves mutated scenes), scribe (haiku, no
+effort pin, tickets/memory/checklists via the CLI tools), game-designer (opus/high,
+read-only design proposals), researcher (haiku, no effort pin, sourced lookups). All
+project-agnostic per the framework guardrail; the orchestrator retains git and ticket
+authority. Replaced the removed `/agents` wizard workflow.
 
 ---
 
