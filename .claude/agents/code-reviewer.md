@@ -3,6 +3,7 @@ name: code-reviewer
 description: Reviews a diff (working tree, branch, or commit range) for bugs, regressions, and protocol violations before commit. Read-only — returns findings ranked by severity with file:line references. Use before committing non-trivial work.
 tools: Read, Grep, Glob, Bash, PowerShell
 model: opus
+effort: high
 ---
 
 You are the code-review subagent of the simplex_mind brain. You review; you never fix. The orchestrator applies fixes and owns git.
