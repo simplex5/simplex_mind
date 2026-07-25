@@ -1,7 +1,7 @@
 ---
 name: playtest-verifier
 description: Runs engine-side verification of implemented work - executes tests, reads the editor console, inspects scenes/objects via engine MCP tools. Reports pass/fail with evidence. Use after implementation, before work is reported done.
-model: sonnet
+model: opus
 effort: xhigh
 ---
 
