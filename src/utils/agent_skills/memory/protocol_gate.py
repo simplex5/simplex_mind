@@ -29,6 +29,8 @@ Guarantees:
   throttle state file in the system temp dir, keyed by session_id.
 - Throttled: the cadence nag repeats at most every CADENCE_NAG_EVERY prompts
   while the condition holds; autotune and substitution nag once per session.
+- Prints a visible `[protocol-gate: <check names>]` marker line (systemMessage)
+  so the user can see in the terminal when enforcement fires (SIMP-D2-019).
 """
 
 import json
@@ -172,16 +174,16 @@ def main() -> int:
     except Exception:
         pass
 
-    demands = []
-    for check in (
-        lambda: check_cadence(last_mem, state),
-        lambda: check_autotune(state),
-        lambda: check_substitution(last_mem, state),
+    demands = []  # (check name, message)
+    for name, check in (
+        ("cadence", lambda: check_cadence(last_mem, state)),
+        ("autotune", lambda: check_autotune(state)),
+        ("substitution", lambda: check_substitution(last_mem, state)),
     ):
         try:
             msg = check()
             if msg:
-                demands.append(msg)
+                demands.append((name, msg))
         except Exception:
             continue  # each check fails open independently
 
@@ -192,9 +194,12 @@ def main() -> int:
 
     if demands:
         print(json.dumps({
+            "systemMessage": "[protocol-gate: " + ", ".join(n for n, _ in demands) + "]",
             "hookSpecificOutput": {
                 "hookEventName": "UserPromptSubmit",
-                "additionalContext": PREAMBLE + "\n".join(demands) + "\n</protocol-gate>",
+                "additionalContext": (
+                    PREAMBLE + "\n".join(m for _, m in demands) + "\n</protocol-gate>"
+                ),
             }
         }))
     return 0

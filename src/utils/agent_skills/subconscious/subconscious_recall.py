@@ -14,6 +14,8 @@ Guarantees:
   the system temp dir keyed by session_id).
 - Skips trivial prompts (short confirmations) and slash commands.
 - At most MAX_PIECES pieces per prompt, well under the 10k injection cap.
+- Prints a visible `[subconscious: <piece names>]` marker line (systemMessage)
+  so the user can see in the terminal when pieces fire (SIMP-D2-019).
 
 Tuning knobs are the constants below; SEMANTIC_THRESHOLD is the main one.
 """
@@ -154,6 +156,7 @@ def main() -> int:
     context = (PREAMBLE + "\n\n---\n\n".join(p["text"] for p in chosen)
                + stale_note + "\n</subconscious>")
     print(json.dumps({
+        "systemMessage": "[subconscious: " + ", ".join(p["name"] for p in chosen) + "]",
         "hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",
             "additionalContext": context,
