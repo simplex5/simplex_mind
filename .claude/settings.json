@@ -4,6 +4,19 @@
     "PYTHONUTF8": "1"
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "case \"$(uname -s)\" in MINGW*|MSYS*|CYGWIN*) py \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/memory/session_digest.py\" ;; *) python3 \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/memory/session_digest.py\" ;; esac",
+            "shell": "bash",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "matcher": "",
@@ -13,6 +26,12 @@
             "command": "case \"$(uname -s)\" in MINGW*|MSYS*|CYGWIN*) py \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/subconscious/subconscious_recall.py\" ;; *) python3 \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/subconscious/subconscious_recall.py\" ;; esac",
             "shell": "bash",
             "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "case \"$(uname -s)\" in MINGW*|MSYS*|CYGWIN*) py \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/memory/protocol_gate.py\" ;; *) python3 \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/memory/protocol_gate.py\" ;; esac",
+            "shell": "bash",
+            "timeout": 15
           }
         ]
       }
