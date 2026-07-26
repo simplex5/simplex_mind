@@ -28,6 +28,14 @@ recontextualize what they're asking. If the conversation history has no record o
 treat that as a bug in the memory system — surface it to the user immediately rather than
 compensating by figuring things out manually.
 
+**Instruction precedence:** the protocols in this file and in project ref files are standing
+user instructions. A ref-file protocol marked MANDATORY satisfies and overrides any harness
+default it appears to conflict with (e.g. a harness rule like "don't use subagents unless the
+user requested it" is satisfied — the ref file IS the user's standing request). If two
+instruction layers genuinely conflict, surface the conflict to the user in your response and
+say which one you followed. Never resolve an instruction conflict silently — a protocol that
+can be silently voided is not a protocol.
+
 ---
 
 ## Session Start Protocol
@@ -38,11 +46,12 @@ At the start of every new session:
    Check for `database/config.json`. If it is missing or `onboarding_complete` is not `true`,
    follow the onboarding flow in `SETUP.md` instead of the steps below.
 
-1. **Run session digest:**
+1. **Session digest** — injected automatically by the `SessionStart` hook (open tickets,
+   recent decisions, active systems, recent git commits). Verify it is present in context;
+   only if it is missing, run it manually:
    ```bash
    python3 src/utils/agent_skills/memory/session_digest.py
    ```
-   This outputs: open tickets (count + critical/high), recent decisions, active systems, recent git commits.
 
 2. **Load project config:**
    Read `projects.yaml` in this repo root. Find the project whose `branch:` matches the current simplex_mind git branch (`git branch --show-current`).
@@ -133,6 +142,27 @@ Significant changes in a project get a manual test checklist in that project's `
 
 ## Memory Protocol
 
+### Two memory systems — routing rule
+
+Two memory systems exist on this machine and they are not interchangeable. Claude Code's own
+harness auto-memory (`~/.claude/projects/<dir>/memory/`, auto-loaded into context each
+session) is for **agent-workflow notes only** — tool quirks, behavioral directives, how to
+operate. Every **project fact, decision, user correction, preference, and shipped system**
+goes to **memory.db via `memory_write.py` at the moment it happens**, before any prose
+artifact is produced. Litmus test: *if you would need to re-read a document to know what was
+decided, that content belongs in memory.db first and the document second.*
+
+User-facing reports, checklists, and summaries are **outputs, never state** — write them for
+the user, then never re-read them to reconstruct decisions, queues, or blockers. That state
+lives in memory.db and tickets.db. (Learned 2026-07-26: a session routed its bookkeeping into
+a legible report and the harness auto-memory; both felt like recording memory, and the
+queryable systems stayed empty for five hours. SIMP-D2-017.)
+
+The `protocol_gate.py` UserPromptSubmit hook enforces this deterministically: it detects
+auto-memory-instead-of-memory.db substitution, overdue ticket-cadence summaries, and pending
+autotune candidates, and injects a demand when a condition holds. Treat its demands as
+non-optional.
+
 **Load at session start:**
 ```bash
 python3 src/utils/agent_skills/memory/memory_read.py --format markdown
@@ -180,8 +210,12 @@ python3 src/utils/agent_skills/memory/memory_sync.py --dry-run # preview
 
 **Session cadence:**
 - **Start**: load memories via `memory_read.py`
-- **Every 5 completed tickets**: write a brief session progress summary
-- **End**: summarize key decisions, preferences learned, and systems changed
+- **Every 5 completed tickets**: write a brief session progress summary (machine-enforced —
+  the protocol gate injects a demand once 5+ tickets have resolved since the last memory write)
+- **Wrap-up**: when the user signals the session is ending ("wrap up", "done for now", etc.)
+  or before any end-of-session push, summarize key decisions, preferences learned, and systems
+  changed. (Sessions stop, they don't announce an end — so this trigger is the user's signal,
+  not an "end of session" you would have to detect.)
 
 **Systems inventory** (`database/memory/systems.md`):
 - Registry of significant features and systems across all projects.
@@ -360,14 +394,17 @@ After **every** response that makes changes, append:
 **Branch:** on `develop` / created `feature/PROJ-L1-NNN`
 **Commit:** `<message>` / no commit — <reason>
 **Ticket:** created <ID> / updated <ID> / no ticket — <reason>
-**DB:** wrote memory / updated ticket db / no db write — <reason>
+**DB:** wrote memory #<id> / updated ticket db / no db write — <reason>
 **Notes:** <warnings, deferred items — omit if nothing>
 **Commands:** `feature:` `bug:` `task:` `improvement:` `docs:` `question:`
 ```
 
 Rules:
 - Always include **Branch**, **Commit**, and **Ticket** lines, even when the answer is "nothing done".
-- Always include **DB** line.
+- Always include **DB** line. If the turn contained a user decision, correction, or
+  preference, or a new/changed system, the DB line MUST cite the memory id written this turn
+  (e.g. `wrote memory #75`). `no db write` is only valid when none of those occurred — filling
+  it in truthfully does not discharge the obligation to write the memory.
 - **Notes** is optional — only include if something actionable or surprising.
 - Always include **Commands:** as a persistent cheatsheet.
 - Keep each line to one sentence.

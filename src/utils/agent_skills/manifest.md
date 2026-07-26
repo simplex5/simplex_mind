@@ -29,6 +29,7 @@ All tools and reference files Claude invokes directly.
 | Semantic Search | `memory/semantic_search.py` | Cosine similarity search over embeddings |
 | Hybrid Search | `memory/hybrid_search.py` | Combined BM25 + vector search |
 | Post-Run Writer | `memory/memory_post_run.py` | Reads metrics JSON after each run; writes insight entry, upserts model-performance fact, creates anomaly tickets |
+| Protocol Gate | `memory/protocol_gate.py` | UserPromptSubmit hook: deterministic protocol enforcement — nags when 5+ tickets resolved since last memory write, re-surfaces pending autotune candidates mid-session, detects auto-memory-instead-of-memory.db substitution; read-only, throttled, always fail-open |
 
 ---
 
