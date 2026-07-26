@@ -75,6 +75,31 @@ projects:
 - **To switch projects:** `git checkout <branch>` in simplex_mind. On `master` or `develop`, no project is active.
 - To add a project: add an entry with `path`, `ref_file`, `ticket_prefix`, and `branch`.
 
+### Ref files are agent-agnostic
+
+`ref_file` is a **single key**, so a project has exactly ONE reference file and *every* agent —
+Codex, Cursor, Windsurf, Claude Code — reads that same file via `<path>/<ref_file>`. Do not
+expect a file named for your particular agent; there is deliberately no `AGENTS.md.ref`, and
+nothing creates one. A ref file named `CLAUDE.md.ref` is still yours to read — the filename is
+cosmetic, the indirection is what matters, and one key means two agents can never disagree
+about which file is authoritative.
+
+So **a project ref file carries project FACTS, not agent workflow.** Facts stay true whichever
+agent reads them: paths, git rules and branch names, tech stack and versions, engine/meta-file
+handling, ticket prefix, testing conventions.
+
+**If a project genuinely needs agent-specific workflow, fence it under a heading that names the
+agent** — e.g. `## Claude Code only — subagent delegation`. When you meet a section fenced for
+a different agent, **skip it**: it describes tools your runtime does not have. Do not attempt
+it, and do not let it cause you to discard the rest of the file. If you are *writing* project
+instructions, fence anything agent-specific the same way — an unfenced agent-specific
+instruction is the defect, not the content itself.
+
+Why this matters: the brain has two instruction files (CLAUDE.md and AGENTS.md) *because*
+agents need different instructions — but projects have one. An unfenced "always delegate to
+the implementer subagent, the verifier must PASS before done" hands binding orders to an agent
+with no subagents at all.
+
 ---
 
 ## Working Directory

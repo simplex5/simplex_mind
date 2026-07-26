@@ -115,8 +115,22 @@ crontab -e
 The second entry mines this machine's own conversations weekly for personal subconscious
 keyword candidates (gated pending queue — applied only after in-session user approval).
 
-**Step 9 — Create project CLAUDE.md.ref**
-Create `CLAUDE.md.ref` in the project root with project-specific instructions. Register it in `projects.yaml`.
+**Step 9 — Create the project ref file**
+Create `CLAUDE.md.ref` in the project root with project-specific instructions. Register it in
+`projects.yaml` under `ref_file`.
+
+> **Write it agent-agnostic.** `ref_file` is a single key, so this one file is read by *every*
+> agent — Claude Code, Codex, Cursor, Windsurf. The name is conventional, not functional; do
+> not create a second per-agent ref file, and note nothing supports one.
+>
+> Put project **facts** here — paths, git rules and branch names, tech stack and versions,
+> engine/meta-file handling, ticket prefix, testing conventions. Those are true whichever agent
+> reads them.
+>
+> **If the project genuinely needs agent-specific workflow, fence it under a heading naming the
+> agent** (e.g. `## Claude Code only — subagent delegation`), so other agents skip it rather
+> than attempting instructions for tools they lack. Unfenced agent-specific instructions are the
+> defect — an agent that cannot follow them will either fail trying or discard the whole file.
 
 **Step 10 — Commit onboarding artifacts**
 ```bash

@@ -106,6 +106,13 @@ python3 src/utils/agent_skills/git_commit.py init
 
 The active project is derived from the current simplex_mind git branch (matching against each project's `branch:` field). On `master`, no project is active.
 
+**Ref files are agent-agnostic.** `ref_file` is a single key, so that one file is read by every
+agent — Claude Code, Codex, Cursor, Windsurf. The `CLAUDE.md.ref` name is conventional, not
+functional, and there is no per-agent variant. Keep project **facts** in it (paths, git rules,
+tech stack, meta-file handling, testing conventions) and fence anything agent-specific under a
+heading that names the agent, e.g. `## Claude Code only — subagent delegation`, so other agents
+skip it instead of attempting instructions for tools they don't have.
+
 ## Configuration
 
 `init.py` creates `database/config.json` on first run.

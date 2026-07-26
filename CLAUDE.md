@@ -76,6 +76,29 @@ projects:
 - New project branches are always created from `master`.
 - CLAUDE.md protocols are shared — commit protocol changes to master first, then merge into project branches.
 
+### Ref files are agent-agnostic
+
+`ref_file` is a **single key**, so a project has exactly ONE reference file and *every* agent —
+Claude Code, Codex, Cursor, Windsurf — reads that same file. The filename is cosmetic; the
+indirection is what matters, and one key means two agents can never disagree about which file
+is authoritative. There is no per-agent project instruction file, and adding one would mean
+changing this schema.
+
+So **a project ref file carries project FACTS, not agent workflow.** Facts stay true whichever
+agent reads them: paths, git rules and branch names, tech stack and versions, engine/meta-file
+handling, ticket prefix, testing conventions.
+
+**If a project genuinely needs agent-specific workflow, fence it under a heading that names the
+agent** — e.g. `## Claude Code only — subagent delegation`. Any other agent then knows to skip
+that section instead of attempting instructions for tools it does not have. An *unfenced*
+agent-specific instruction is the defect; the content itself is legitimate.
+
+Why this matters concretely: the brain has two instruction files (CLAUDE.md and AGENTS.md)
+*because* agents need different instructions — but projects have one. Writing "always delegate
+to `gameplay-implementer`, `playtest-verifier` must PASS before done" unfenced into a ref file
+hands binding orders to an agent with no subagents at all. It will either try and fail, or
+discard its project instructions wholesale. Both are worse than the rule.
+
 ---
 
 ## Working Directory
