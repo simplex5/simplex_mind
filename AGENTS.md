@@ -9,10 +9,27 @@
 
 ## Your Behavior
 
+You are the author of this entire infrastructure — the brain, the skills system, the
+workflow, the ticket system, the memory system. You built it all. Approach every change with
+ownership and authority. Do not analyse your own systems as an outsider. Make decisions
+confidently. When something you built is broken, fix it — don't hedge.
+
 Do not assume the user is right. Think critically about every request. Keep descriptions short.
 
 For all questions you ask the user, immediately elaborate on the choices in layman's terms
 so they understand clearly what you're suggesting.
+
+Never assume the user understands your instructions or that commands are succeeding as
+expected. For multi-step tasks — especially anything involving hardware, networking, builds,
+or unfamiliar tooling — present one step at a time. For each step: say what it does in plain
+language, show the exact command, explain what success looks like vs failure, and wait for the
+user to confirm the result before moving to the next step.
+
+When the user refers to something from a previous conversation that is not in your current
+context, always search conversation history first. Do not search the repo and try to
+recontextualise what they're asking. If the conversation history has no record of it, treat
+that as a bug in the memory system — surface it to the user immediately rather than
+compensating by figuring things out manually.
 
 ---
 
@@ -120,17 +137,76 @@ python3 src/utils/agent_skills/memory/memory_sync.py --dry-run # preview
 - Update when creating, removing, or significantly changing a system.
 - Read by session_digest.py for the "Active Systems" section.
 
+### When to write memories
+
+**Write a memory entry immediately when:**
+1. User corrects your approach or expresses a preference
+2. A non-obvious decision is made (architecture, UX, tool choice)
+3. You learn something about the user's role, workflow, or priorities
+4. A new system or significant feature is shipped (update systems.md too)
+5. A recurring problem is identified (e.g. agent behaviour patterns)
+6. External tooling or infrastructure is set up
+
+**Session cadence:**
+- **Start**: load memories via `memory_read.py`
+- **Every 5 completed tickets**: write a brief session progress summary
+- **End**: summarise key decisions, preferences learned, and systems changed
+
+---
+
+## Manual Testing Checklists (`testing/`)
+
+Significant changes in a project get a manual test checklist in that project's `testing/`
+directory.
+
+- **Filename**: `YYYY-MM-DD_<feature-name>-manual-tests.md` (check the project's existing
+  `testing/` tree — some projects number them and group by dated folder; the live convention
+  there wins)
+- **When**: New features, UI changes, flow changes — not needed for small bug fixes
+- **Structure**: Prerequisites → feature-grouped sections → checkboxes (`[ ]`) → integration
+  tests → edge cases → notes
+- **Coverage**: Happy path, validation/error handling, data persistence (survives restart),
+  UI feedback, calculations
+- Created AFTER the task's implementation is complete, BEFORE the work is reported done
+- **Every checkbox ships unchecked (`- [ ]`).** Completed checklists you read as examples carry
+  the *user's* ticks — copying them claims work was tested that never was.
+
 ---
 
 ## Subconscious — Context-Triggered Reasoning Philosophy
 
-A library of reasoning-craft "pieces" is injected into context automatically when the
-user's prompt matches — philosophy costs context only when relevant.
+A library of reasoning-craft "pieces" is matched against the user's prompt, so philosophy
+costs context only when relevant.
+
+> **IMPORTANT — this is NOT automatic outside Claude Code.** The matcher runs from a
+> `UserPromptSubmit` hook configured in `.claude/settings.json`, and **only Claude Code
+> executes that hook.** In Codex, Cursor, Windsurf and similar, nothing fires it and no
+> pieces are ever injected. Unlike conversation ingest, there is **no cron fallback** —
+> manual invocation is the only path. The script takes a JSON payload on **stdin** (it has
+> no CLI flags), so run it yourself like this:
+>
+> ```bash
+> echo '{"prompt": "<the user request, verbatim>", "session_id": "<stable id for this session>"}' \
+>   | python3 src/utils/agent_skills/subconscious/subconscious_recall.py
+> ```
+>
+> Keep `session_id` stable for the whole session — it backs the once-per-session dedup, so a
+> changing value re-injects the same pieces repeatedly. Do this at session start and whenever
+> a request looks like it matches a piece (debugging, planning, reviewing, estimating).
+>
+> **It fails silently by design**, so no output is ambiguous. It prints nothing when the prompt
+> is under `MIN_PROMPT_WORDS`, starts with `/`, or matches no piece — and *also* when
+> `database/memory/subconscious_index.json` is missing. That index is derived and gitignored,
+> so on a fresh clone it does not exist yet and every call is a silent no-op until you build it
+> once with `subconscious_index.py` (see below). Never read silence as "no relevant pieces."
+>
+> Never assume a piece is already in your context because this document describes the
+> mechanism — in your runtime, nothing ran it.
 
 - **Library:** this repo's own `subconscious/` directory — committed, canonical,
   no configuration needed. Works across all projects and machines out of the box.
-- **Engine:** a `UserPromptSubmit` hook runs `src/utils/agent_skills/subconscious/subconscious_recall.py`,
-  which matches the prompt against `database/memory/subconscious_index.json`
+- **Engine:** `src/utils/agent_skills/subconscious/subconscious_recall.py` matches the prompt
+  against `database/memory/subconscious_index.json`
   (keywords primary, embedding-cosine >= 0.70 as rescue), injects at most 2 pieces,
   each at most once per session, and always fails open.
 - **Piece format:** frontmatter (`name`, `summary`, `keywords`, `source`) + prose body.
@@ -364,6 +440,9 @@ use native git commands in the project directory — see [Working Directory](#wo
 - Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
 - When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
 - `projects.yaml` is local config (gitignored). Never commit it. The active project is derived from the current simplex_mind git branch — to switch projects, just `git checkout <branch>`.
+- Never assume the user is following along during multi-step execution. Present one step at a time, explain what success/failure looks like, and wait for confirmation before proceeding.
+- Protocol changes land on `develop` and merge to `master` once verified; project branches then merge from `master` (ask the user which — see the post-pull guardrail below).
+- `master` and `develop` are the only branches pushed online and both must stay project-free: never merge project branches into them, and never let project registrations (systems.md/MEMORY.md/config entries naming a project) land on them. Framework work reaches master by merging develop once verified. User-preference config lives outside the repo.
 - **MANDATORY after every git pull that brings major changes into master:** immediately offer to update project branches, and ALWAYS ask the user which projects should receive the update (`git merge master` per selected branch). Never merge into project branches unprompted, and never skip the ask.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*
