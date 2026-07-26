@@ -56,6 +56,18 @@ effort pin, sourced lookups). All project-agnostic per the framework guardrail; 
 orchestrator retains git and ticket authority. Replaced the removed `/agents` wizard
 workflow.
 
+**Protocol enforcement layer** (SIMP-D2-017, 2026-07-26): hooks enforce what instructions
+couldn't. SessionStart hook auto-injects `session_digest.py` (start protocol can no longer be
+skipped); `memory/protocol_gate.py` on UserPromptSubmit machine-counts the 5-ticket memory
+cadence (`tickets.resolved_at` vs `MAX(memory_entries.created_at)`), re-surfaces pending
+autotune candidates mid-session, and detects harness-auto-memory-instead-of-memory.db
+substitution. Read-only DBs, throttled (cadence nag ≤ every 10 prompts, others once/session),
+always fail-open. Born from the 2026-07-26 breakdown: a ~5-hour session wrote zero memory.db
+entries while following the ticket protocol perfectly — response-shaped instructions fire,
+condition-shaped ones don't. CLAUDE.md carries the matching routing rules (two memory systems,
+reports are outputs never state, instruction precedence, wrap-up trigger replacing the
+unreachable "End" cadence).
+
 ---
 
 ## Retired Systems
