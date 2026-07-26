@@ -9,9 +9,21 @@ This page is the quick start. See [README.md](README.md) for what it does and ho
 structured, and [SETUP.md](SETUP.md) for the onboarding flow your agent follows.
 
 > ### On Windows? Read this first.
-> The commands below are written for Linux/macOS and **will fail on native Windows** — the
-> venv layout and the Python launcher are both different. Follow
-> [SETUP-WINDOWS.md](SETUP-WINDOWS.md) instead: use `py` instead of `python3`,
+> **Install [Git for Windows](https://gitforwindows.org/) and use Git Bash as your shell.**
+> This is required, not a preference — it is what provides the bash environment the whole
+> system assumes:
+>
+> - The hooks in `.claude/settings.json` declare `bash` as their shell and detect Windows by
+>   matching `uname -s` against `MINGW*`/`MSYS*`/`CYGWIN*`. Without Git Bash they **cannot run
+>   at all**, which silently disables conversation-history ingest and subconscious recall in
+>   Claude Code. Nothing errors — the features just never fire.
+> - Every command in these docs is bash syntax. `source venv/Scripts/activate` has no cmd or
+>   PowerShell equivalent, so **any** agent (Codex, Cursor, Windsurf included) needs Git Bash
+>   to follow them.
+>
+> The commands below are otherwise written for Linux/macOS and **will fail on native Windows** —
+> the venv layout and Python launcher differ. Follow
+> [SETUP-WINDOWS.md](SETUP-WINDOWS.md) instead: `py` instead of `python3`,
 > `venv/Scripts/activate` instead of `venv/bin/activate`, and Task Scheduler
 > (`scripts/setup_windows_tasks.ps1`) instead of the cron job in Step 4.
 
@@ -20,7 +32,8 @@ structured, and [SETUP.md](SETUP.md) for the onboarding flow your agent follows.
 ## Prerequisites
 
 - Python 3.10+
-- Git
+- Git — **on Windows this must be [Git for Windows](https://gitforwindows.org/)**, and you
+  should work in Git Bash (see the callout above for why)
 - An AI coding assistant (Claude Code, Codex, Cursor, Windsurf, or similar)
 
 ## Step 1 — Clone simplex_mind

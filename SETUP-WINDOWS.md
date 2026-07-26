@@ -9,10 +9,14 @@ commands and hooks on Windows, so one shell covers everything.
 
 ## Prerequisites
 
-1. **Git for Windows**: https://git-scm.com/downloads/win
+1. **Git for Windows**: https://gitforwindows.org/
+   (the same project as the `git-scm.com` Windows download — either link gets you there)
    Required. It provides Git Bash, which Claude Code uses as its shell and hook
    runner on Windows. Without it Claude Code falls back to PowerShell and the
    committed hooks will not work.
+   Non-Claude agents (Codex, Cursor, Windsurf) need it too: every command in these
+   docs is bash syntax, and `source venv/Scripts/activate` has no cmd or PowerShell
+   equivalent.
    **If Git is installed anywhere other than `C:\Program Files\Git`** (custom
    drive, portable install), Claude Code cannot find bash on its own — PATH is
    not consulted — and every `"shell": "bash"` hook fails with
