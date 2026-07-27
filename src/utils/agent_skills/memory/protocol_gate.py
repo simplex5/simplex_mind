@@ -31,6 +31,10 @@ Guarantees:
   while the condition holds; autotune and substitution nag once per session.
 - Prints a visible `[protocol-gate: <check names>]` marker line (systemMessage)
   so the user can see in the terminal when enforcement fires (SIMP-D2-019).
+- A check that raises is reported once per session as a visible
+  `[protocol-gate degraded: ...]` marker (SIMP-D2-022) — fail-open must never
+  mean fail-silent: a permanently broken check and a quiet healthy one are
+  different states and must look different.
 """
 
 import json
@@ -65,8 +69,9 @@ EPOCH = "1970-01-01 00:00:00"
 
 PREAMBLE = (
     "<protocol-gate> Deterministic protocol checks fired — these conditions were "
-    "measured in the databases just now, not inferred. Act on each demand as part "
-    "of handling this prompt; they are not optional.\n"
+    "detected by code just now (database queries and file timestamps, not "
+    "conversational inference). Act on each demand as part of handling this "
+    "prompt; they are not optional.\n"
 )
 
 
@@ -112,6 +117,8 @@ def check_autotune(state: dict) -> str:
     """Pending subconscious keyword candidates -> surface them, once per session."""
     if "autotune" in state["once"]:
         return ""
+    if not AUTOTUNE_STATE.exists():
+        return ""  # autotune never ran on this machine — nothing pending, not an error
     pending = json.loads(AUTOTUNE_STATE.read_text(encoding="utf-8")).get("pending", [])
     if not pending:
         return ""
@@ -144,11 +151,12 @@ def check_substitution(last_mem: str, state: dict) -> str:
     state["once"].append("substitution")
     hours = int((now - last_mem_ts) / 3600)
     return (
-        f"- MEMORY ROUTING: the harness auto-memory directory was written more "
-        f"recently than memory.db, and memory.db has been silent for {hours}h. "
-        f"Auto-memory is for agent-workflow notes only — project facts, decisions, "
-        f"corrections and preferences go to memory.db via memory_write.py FIRST. "
-        f"Mirror anything project-related into memory.db now."
+        f"- MEMORY ROUTING (file-mtime evidence — the timestamps are measured, the "
+        f"routing conclusion is inferred): the harness auto-memory directory was "
+        f"written more recently than memory.db, and memory.db has been silent for "
+        f"{hours}h. Auto-memory is for agent-workflow notes only — check whether "
+        f"project facts, decisions, corrections or preferences were routed there, "
+        f"and mirror anything project-related into memory.db via memory_write.py now."
     )
 
 
@@ -168,40 +176,56 @@ def main() -> int:
             pass
     state["prompts"] = int(state.get("prompts", 0)) + 1
 
-    last_mem = EPOCH
+    # last_mem = None means memory.db itself is unreadable: the checks that
+    # depend on it are skipped (their preconditions are unmeasurable) and the
+    # failure is surfaced as a degraded marker instead of vanishing.
+    last_mem = None
+    errors = []  # (check name, error type)
     try:
         last_mem = _last_memory_write()
-    except Exception:
-        pass
+    except Exception as e:
+        errors.append(("memory", type(e).__name__))
 
     demands = []  # (check name, message)
     for name, check in (
-        ("cadence", lambda: check_cadence(last_mem, state)),
+        ("cadence", lambda: check_cadence(last_mem, state) if last_mem else ""),
         ("autotune", lambda: check_autotune(state)),
-        ("substitution", lambda: check_substitution(last_mem, state)),
+        ("substitution", lambda: check_substitution(last_mem, state) if last_mem else ""),
     ):
         try:
             msg = check()
             if msg:
                 demands.append((name, msg))
-        except Exception:
-            continue  # each check fails open independently
+        except Exception as e:  # each check fails open independently — but visibly
+            errors.append((name, type(e).__name__))
+
+    # A permanently-broken check must be distinguishable from a quiet one:
+    # surface each erroring check once per session (SIMP-D2-022).
+    reported = state.setdefault("errors_reported", [])
+    fresh_errors = [(n, t) for n, t in errors if n not in reported]
+    reported.extend(n for n, _ in fresh_errors)
 
     try:
         state_path.write_text(json.dumps(state))
     except Exception:
         pass
 
+    out = {}
     if demands:
-        print(json.dumps({
-            "systemMessage": "[protocol-gate: " + ", ".join(n for n, _ in demands) + "]",
-            "hookSpecificOutput": {
-                "hookEventName": "UserPromptSubmit",
-                "additionalContext": (
-                    PREAMBLE + "\n".join(m for _, m in demands) + "\n</protocol-gate>"
-                ),
-            }
-        }))
+        out["systemMessage"] = "[protocol-gate: " + ", ".join(n for n, _ in demands) + "]"
+        out["hookSpecificOutput"] = {
+            "hookEventName": "UserPromptSubmit",
+            "additionalContext": (
+                PREAMBLE + "\n".join(m for _, m in demands) + "\n</protocol-gate>"
+            ),
+        }
+    if fresh_errors:
+        degraded = ("[protocol-gate degraded: "
+                    + ", ".join(f"{n} check failed ({t})" for n, t in fresh_errors)
+                    + " — run doctor.py]")
+        out["systemMessage"] = (out.get("systemMessage", "") + " " + degraded).strip()
+    if out:
+        print(json.dumps(out))
     return 0
 
 
