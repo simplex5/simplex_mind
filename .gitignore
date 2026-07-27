@@ -36,10 +36,12 @@ projects.yaml
 Thumbs.db
 
 # Project runtime dirs (created by init.py)
+# config.json is deliberately NOT negated: it is local runtime state
+# (onboarding_complete etc.) — committing it made fresh clones skip
+# onboarding entirely (SIMP-D2-021).
 database/*
 !database/memory/
 !database/ARCHITECTURE.md
-!database/config.json
 database/memory/*
 !database/memory/MEMORY.md
 !database/memory/systems.md

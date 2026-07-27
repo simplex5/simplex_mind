@@ -53,7 +53,6 @@ FRAMEWORK_FILES = [
     "database/ARCHITECTURE.md",
     "database/memory/MEMORY.md",
     "database/memory/systems.md",
-    "database/config.json",
 ]
 
 
