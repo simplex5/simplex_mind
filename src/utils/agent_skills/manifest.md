@@ -12,6 +12,7 @@ All tools and reference files Claude invokes directly.
 | Git Operations | `git_commit.py` | Init, status, commit, diff for framework files |
 | Initializer | `init.py` | Creates full project scaffold (idempotent); `--mark-onboarded` re-marks onboarding after the config-untracking migration |
 | Doctor | `doctor.py` | Health validation for the whole brain: onboarding classification (fresh clone vs lost config), DB/index/hooks/venv/git checks; `--status` compact page, exit 1 when degraded |
+| simplex CLI | `../../simplex_cli/cli.py` | Installed `simplex` command (`pip install -e .`) — thin dispatcher over these tools: ticket/memory/history/digest/doctor/status/backup + `project use` (git-checkout wrapper). Script paths stay canonical for hooks and other agents |
 | Shared Helpers | `_common.py` | Single source for repo paths (REPO_ROOT/DATABASE_DIR/MEMORY_DIR), row_to_dict, ticket priority ordering, standard CLI epilogue (cli_finish), optional dotenv loading |
 | Project Resolver | `project_resolver.py` | Shared utility for resolving project config from projects.yaml; routes ticket operations to per-project databases |
 

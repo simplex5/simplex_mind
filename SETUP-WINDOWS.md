@@ -55,7 +55,12 @@ git config user.email "dev@simplex5.com"
 py -m venv venv
 source venv/Scripts/activate       # Windows venv layout (not venv/bin/activate)
 pip install -r requirements.txt
+pip install -e .                   # installs simplex.exe into venv/Scripts/
 ```
+
+With the venv active, `simplex doctor` verifies the installation. Outside the
+venv, `venv/Scripts/simplex` or `py -m simplex_cli` (with `src` on PYTHONPATH)
+work as fallbacks.
 
 **Git identity is mandatory before any commit or push:** author must always be
 `simplex5 <dev@simplex5.com>`, never a real name. Verify with `git config user.name`

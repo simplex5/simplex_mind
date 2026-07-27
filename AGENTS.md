@@ -320,6 +320,15 @@ Also create a ticket immediately for:
 
 ---
 
+## simplex CLI
+
+The venv installs a `simplex` command (`pip install -e .`) fronting every brain tool —
+`simplex doctor`, `simplex status`, `simplex ticket list`, `simplex memory search`,
+`simplex history stats`, `simplex project use <name>` (a git-checkout wrapper). The
+script paths in this file remain canonical and always work without the install.
+
+---
+
 ## Conversation History Protocol
 
 **Ingest** — runs automatically via cron every 5 minutes. (Claude Code additionally runs ingestion via a Stop hook in `.claude/settings.json` after every response — see CLAUDE.md; other agents rely on the cron job.)
