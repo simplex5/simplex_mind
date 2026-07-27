@@ -29,6 +29,7 @@ FRAMEWORK_DIRS = [
     "src/",
     "subconscious/",
     "tests/",
+    ".github/",
     "scripts/",
 ]
 
@@ -42,6 +43,7 @@ FRAMEWORK_FILES = [
     "SETUP.md",
     "SETUP-WINDOWS.md",
     "HUMAN_INSTRUCTIONS.md",
+    "PRIVACY.md",
     ".gitattributes",
     "requirements.txt",
     "requirements.base.txt",

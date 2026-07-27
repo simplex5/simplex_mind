@@ -122,6 +122,9 @@ flags, final step `init.py --mark-onboarded`), never committed. A fresh clone ha
 config.json, which is exactly what routes agents into the SETUP.md onboarding flow.
 Verify any checkout with `python3 src/utils/agent_skills/doctor.py`.
 
+See [PRIVACY.md](PRIVACY.md) for exactly what this system stores (transcripts, token
+usage, memories), where it lives, and how to remove it.
+
 | Field | Type | Description |
 |-------|------|-------------|
 | `ticket_prefix` | string | Prefix for ticket IDs (e.g. `PROJ` → `PROJ-L1-001`) |
