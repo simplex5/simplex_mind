@@ -139,6 +139,27 @@ def append_to_daily_log(
     }
 
 
+def _with_project_tag(tags: Optional[List[str]]) -> Optional[List[str]]:
+    """Append 'project:<name>' when a project is active (SIMP-D2-022) — lets
+    the protocol gate scope its cadence query per project instead of being
+    suppressed by any global write. Resolver failures never block a write."""
+    try:
+        try:
+            from ..project_resolver import get_active_project
+        except ImportError:
+            from project_resolver import get_active_project
+        active = get_active_project()
+        if active:
+            tag = f"project:{active['name']}"
+            out = list(tags) if tags else []
+            if tag not in out:
+                out.append(tag)
+            return out
+    except Exception:
+        pass
+    return tags
+
+
 def write_to_memory(
     content: str,
     entry_type: str = 'fact',
@@ -182,14 +203,15 @@ def write_to_memory(
         if not log_result.get('success'):
             results["success"] = False
 
-    # Add to SQLite
+    # Add to SQLite (auto-tagged with the active project; the daily log keeps
+    # the caller's tags so its category line doesn't become 'project:...')
     if add_to_db:
         db_result = add_entry(
             content=content,
             entry_type=entry_type,
             source=source,
             importance=importance,
-            tags=tags,
+            tags=_with_project_tag(tags),
             context=context
         )
         results["db_result"] = db_result
