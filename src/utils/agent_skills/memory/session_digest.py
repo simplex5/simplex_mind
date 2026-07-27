@@ -240,6 +240,27 @@ def _check_subconscious_index_staleness() -> List[str]:
     return []
 
 
+def _check_onboarding_state() -> List[str]:
+    """Surface the config.json untracking seam (SIMP-D2-021): an established
+    machine that pulls the untrack commit loses its working-tree config.json and
+    must NOT be routed back through onboarding — just re-mark."""
+    try:
+        try:
+            from ..doctor import classify_onboarding
+        except ImportError:
+            from doctor import classify_onboarding
+        state = classify_onboarding(PROJECT_ROOT)
+        if state == "lost_config":
+            return ["CONFIG LOST: database/config.json is missing but databases exist — the config "
+                    "untracking migration removed it. Run 'python3 src/utils/agent_skills/init.py "
+                    "--mark-onboarded' (do NOT re-run onboarding)."]
+        if state == "fresh_clone":
+            return ["ONBOARDING INCOMPLETE: fresh clone detected — follow the onboarding flow in SETUP.md."]
+    except Exception as e:
+        log.warning("digest: onboarding check failed (%s)", e)
+    return []
+
+
 def _check_venv_drift() -> List[str]:
     """Compare requirements.txt pins against packages actually installed in the
     repo venv. SIMP-L1-006's root cause: fastembed was added to requirements
@@ -341,10 +362,10 @@ def generate_digest() -> str:
             parts.append(line)
         parts.append("")
 
-    drift = _check_venv_drift()
-    if drift:
+    env_issues = _check_onboarding_state() + _check_venv_drift()
+    if env_issues:
         parts.append("## Environment")
-        for line in drift:
+        for line in env_issues:
             parts.append(line)
         parts.append("")
 

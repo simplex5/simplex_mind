@@ -46,6 +46,29 @@ def on_branch(monkeypatch):
 
 
 @pytest.fixture
+def fake_repo(tmp_path):
+    """Build a temp brain-repo root with selectable state, for doctor/digest
+    tests. Returns a builder: fake_repo(config=..., dbs=..., projects_yaml=...)."""
+    import sqlite3
+
+    def _build(config=None, dbs=(), projects_yaml=False):
+        root = tmp_path / "brain"
+        (root / "database" / "memory").mkdir(parents=True, exist_ok=True)
+        if config is not None:
+            (root / "database" / "config.json").write_text(
+                __import__("json").dumps(config), encoding="utf-8")
+        for db in dbs:  # relative paths like "database/memory/memory.db"
+            path = root / db
+            path.parent.mkdir(parents=True, exist_ok=True)
+            sqlite3.connect(path).close()  # valid empty sqlite file
+        if projects_yaml:
+            (root / "projects.yaml").write_text("machine: T9\nprojects:\n", encoding="utf-8")
+        return root
+
+    return _build
+
+
+@pytest.fixture
 def mem_db(tmp_path, monkeypatch):
     """Point memory_db at a temp database file."""
     from memory import memory_db

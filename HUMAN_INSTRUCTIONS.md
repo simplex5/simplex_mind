@@ -68,7 +68,12 @@ Open your AI assistant **in the `simplex_mind` directory** and start a session:
 **You don't need a magic command.** The agent checks for `database/config.json` at the start of
 every session; if it's missing or onboarding isn't marked complete, it runs the onboarding flow
 in [SETUP.md](SETUP.md) automatically. If it doesn't, say `run onboarding` and point it at
-`SETUP.md`.
+`SETUP.md`. (`config.json` is local state, never committed — a fresh clone not having one is
+what triggers onboarding.) To check any machine's health at any time:
+
+```bash
+python3 src/utils/agent_skills/doctor.py
+```
 
 Onboarding asks for your project's path, name, ticket prefix, and goals, then writes
 `projects.yaml` (local config — gitignored, never committed) and the project's reference file.

@@ -117,7 +117,10 @@ skip it instead of attempting instructions for tools they don't have.
 
 ## Configuration
 
-`init.py` creates `database/config.json` on first run.
+`database/config.json` is **local runtime state** — written during onboarding (`init.py`
+flags, final step `init.py --mark-onboarded`), never committed. A fresh clone has no
+config.json, which is exactly what routes agents into the SETUP.md onboarding flow.
+Verify any checkout with `python3 src/utils/agent_skills/doctor.py`.
 
 | Field | Type | Description |
 |-------|------|-------------|

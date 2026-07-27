@@ -30,7 +30,18 @@ At the start of every new session, check for `database/config.json`. If it conta
 4. Report open ticket count + critical/high items
 5. Proceed to normal conversation
 
-If `database/config.json` is missing or `onboarding_complete` is not `true`, run the onboarding flow below.
+If `database/config.json` is missing or `onboarding_complete` is not `true`, first distinguish
+two cases (`doctor.py` automates this):
+
+- **Fresh clone** — no `projects.yaml` and no `database/*.db` files exist → run the onboarding flow below.
+- **Lost config** — databases exist but `config.json` is gone (an established machine pulled the
+  config-untracking migration) → run `python3 src/utils/agent_skills/init.py --mark-onboarded`
+  and do **not** re-run onboarding.
+
+`database/config.json` is local runtime state — never committed. Verify any checkout with:
+```bash
+python3 src/utils/agent_skills/doctor.py
+```
 
 ### New Project Flow
 
@@ -99,7 +110,10 @@ python3 src/utils/agent_skills/git_commit.py init
 Update `database/memory/MEMORY.md` with project info: name, description, goals, tech stack.
 
 **Step 7 — Mark onboarding complete**
-Write `"onboarding_complete": true` to `database/config.json`.
+```bash
+python3 src/utils/agent_skills/init.py --mark-onboarded
+```
+This writes `"onboarding_complete": true` into `database/config.json` (local, untracked).
 
 **Step 8 — Set up cron** (conversation history auto-ingestion + weekly keyword autotune)
 ```bash
