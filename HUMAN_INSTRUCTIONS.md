@@ -54,7 +54,11 @@ cd simplex_mind
 python3 -m venv venv
 source venv/bin/activate   # bash/zsh — fish users: source venv/bin/activate.fish
 pip install -r requirements.txt
+pip install -e .           # installs the `simplex` CLI into the venv
 ```
+
+With the venv active, `simplex doctor` verifies the whole installation and
+`simplex --help` lists every command (`simplex ticket list`, `simplex memory search`, …).
 
 **Windows:** don't run the above — see [SETUP-WINDOWS.md](SETUP-WINDOWS.md).
 

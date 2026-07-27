@@ -1,3 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simplex-mind"
+version = "0.1.0"
+description = "Persistent memory, tickets, and conversation history for coding agents"
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
+[project.scripts]
+simplex = "simplex_cli.cli:main"
+
+[tool.setuptools]
+packages = ["simplex_cli"]
+package-dir = { simplex_cli = "src/simplex_cli" }
+
+# requirements.txt stays the single source of truth for pins — the same file
+# session_digest's venv-drift check audits against.
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
