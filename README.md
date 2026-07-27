@@ -8,6 +8,8 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 
 > **On native Windows?** See [SETUP-WINDOWS.md](SETUP-WINDOWS.md) — use `py` instead of `python3`, and `scripts/setup_windows_tasks.ps1` instead of the cron lines below.
 
+> **What does it store about me?** [PRIVACY.md](PRIVACY.md) — the honest inventory: transcripts, token usage, memories; all local SQLite, and how to remove any of it.
+
 ## Architecture
 
 ```
@@ -15,15 +17,20 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 ├── simplex_mind/              ← brain repo (your AI agent launches here)
 │   ├── CLAUDE.md              ← instructions for Claude Code
 │   ├── AGENTS.md              ← instructions for Codex / Cursor / Windsurf
+│   ├── PRIVACY.md             ← what is stored, where, how to remove it
 │   ├── projects.yaml          ← maps project names → paths
 │   ├── subconscious/          ← reasoning-philosophy piece library (canonical)
+│   ├── .github/workflows/     ← CI (pytest + ruff, ubuntu + windows)
 │   ├── database/              ← all persistent data
 │   │   ├── memory/            ← memory.db, MEMORY.md, systems.md, logs/,
 │   │   │                            subconscious_index.json (derived, gitignored)
+│   │   ├── config.json        ← local onboarding/config state (never committed)
 │   │   ├── tickets.db         ← simplex_mind's own (fallback) ticket DB
 │   │   ├── conversation_history.db  ← conversation transcripts + token usage
+│   │   ├── backups/           ← `simplex backup` snapshots (gitignored)
 │   │   └── ARCHITECTURE.md
-│   └── src/utils/agent_skills/ ← all tools
+│   ├── src/utils/agent_skills/ ← the tools (script paths, always work)
+│   └── src/simplex_cli/       ← installable `simplex` CLI (pip install -e .)
 │
 ├── my-project/               ← project workspace (branches freely)
 │   ├── CLAUDE.md.ref          ← project-specific instructions
@@ -50,8 +57,11 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 - **Subconscious** — Reasoning-philosophy pieces injected into context only when the prompt topically matches (keyword + embedding triggers via a UserPromptSubmit hook); library and generic default keywords ship in this repo's `subconscious/` dir, personal trigger phrasing layers on top locally (gitignored overlay), mined from each user's own conversations
 - **Conversation history** — Verbatim transcript storage from AI assistant JSONL transcripts; cron-ingested; FTS5 search
 - **Git wrapper** — Structured git operations scoped to framework files
-- **Session digest** — Focused context loader (< 200 lines): open tickets, decisions, systems, git
+- **Session digest** — Focused context loader (< 200 lines): open tickets, decisions, systems, git; broken subsystems render as `UNAVAILABLE`, never as healthy emptiness
 - **Project registry** — `projects.yaml` maps project names to paths; the agent loads the active project's ref file
+- **`simplex` CLI** — one installed command fronting every tool (`pip install -e .`): `simplex doctor`, `simplex ticket list`, `simplex memory search`, `simplex project use <name>`, …
+- **Doctor** — 11 health checks with per-check remediation (`simplex doctor`, exit 1 when degraded); classifies fresh-clone vs lost-config onboarding states
+- **Backup & retention** — `simplex backup` (consistent SQLite snapshots) and `simplex history purge` (transcript deletion by project/age; see [PRIVACY.md](PRIVACY.md))
 
 ## Installation
 
@@ -67,13 +77,14 @@ cd ~/projects/simplex_mind
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt   # includes fastembed — local semantic search works out of the box
+pip install -e .                  # installs the `simplex` CLI into the venv
 # Optional — OpenAI embeddings fallback instead of the local model:
 # pip install openai
 ```
 
-3. Run the initializer:
+3. Run the initializer and mark onboarding complete:
 ```bash
-python3 src/utils/agent_skills/init.py --prefix PROJ
+python3 src/utils/agent_skills/init.py --prefix PROJ --mark-onboarded
 ```
 
 4. Set up conversation history auto-ingestion (cron):
@@ -97,6 +108,11 @@ projects:
 6. Create the initial git commit:
 ```bash
 python3 src/utils/agent_skills/git_commit.py init
+```
+
+7. Verify everything is wired up:
+```bash
+python3 src/utils/agent_skills/doctor.py   # or: simplex doctor — exit 0 = HEALTHY
 ```
 
 ## Adding a Project
@@ -138,24 +154,33 @@ usage, memories), where it lives, and how to remove it.
 - Python 3.10+
 - Git
 - `pip install -r requirements.txt` (required — includes fastembed for local semantic search)
+- `pip install -e .` (required for the `simplex` CLI; editable install only)
 - `pip install openai` (optional — OpenAI embeddings fallback)
 
 ## Directory Structure
 
 ```
+src/simplex_cli/             # installable `simplex` CLI (pip install -e .)
+├── cli.py                   # thin dispatcher over the agent-skills tools
+└── __main__.py              # `py -m simplex_cli` fallback
+
 src/utils/agent_skills/
 ├── __init__.py
 ├── manifest.md              # Tool inventory
-├── init.py                  # Project bootstrapper
+├── _common.py               # Shared paths (REPO_ROOT), CLI epilogue, migrations helper
+├── init.py                  # Project bootstrapper (--mark-onboarded writes config.json)
+├── doctor.py                # 11 health checks; fresh-clone vs lost-config classification
+├── backup_db.py             # SQLite online-backup of all DBs → database/backups/
 ├── git_commit.py            # Git wrapper
 ├── project_resolver.py      # Branch → project resolution, ticket DB routing
 ├── track_tokens.py          # Token tracking (optional)
 ├── memory/
 │   ├── memory_db.py         # SQLite CRUD
-│   ├── memory_write.py      # Write to logs + DB
+│   ├── memory_write.py      # Write to logs + DB (auto project:<name> tag)
 │   ├── memory_read.py       # Load memory at session start
 │   ├── memory_sync.py       # Regenerate MEMORY.md from DB
-│   ├── session_digest.py    # Session-start context digest
+│   ├── session_digest.py    # Session-start context digest (UNAVAILABLE on failure)
+│   ├── protocol_gate.py     # UserPromptSubmit hook: cadence/autotune/routing demands
 │   ├── hybrid_search.py     # BM25 + vector search
 │   ├── semantic_search.py   # Vector similarity search
 │   ├── embed_memory.py      # Embeddings (local fastembed; OpenAI fallback)
@@ -166,11 +191,13 @@ src/utils/agent_skills/
 │   ├── ticket_list.py       # CLI: list tickets
 │   ├── ticket_read.py       # CLI: read ticket
 │   ├── ticket_update.py     # CLI: update ticket
+│   ├── ticket_renumber.py   # CLI: renumber ticket IDs
 │   └── ticket_migrate.py    # Historical: one-time shared→per-project migration
 ├── conversation/
 │   ├── conversation_db.py    # SQLite + FTS5 CRUD
 │   ├── conversation_ingest.py # JSONL parser (multi-source)
-│   └── conversation_read.py  # CLI: search, list, read
+│   ├── conversation_read.py  # CLI: search, list, read
+│   └── conversation_purge.py # CLI: delete transcripts (see PRIVACY.md)
 └── subconscious/
     ├── subconscious_index.py  # embed library pieces → retrieval index
     ├── subconscious_recall.py # UserPromptSubmit hook: inject matching pieces
@@ -181,6 +208,17 @@ src/utils/agent_skills/
 ## Usage
 
 All scripts run from the simplex_mind root via `python3 src/utils/agent_skills/...`.
+With the venv active, every command below also has a `simplex` equivalent
+(`simplex ticket list`, `simplex memory search`, `simplex history stats`, …) — run
+`simplex --help` for the full table. Script paths stay canonical; the CLI is a convenience.
+
+### Health & maintenance
+```bash
+simplex doctor          # 11 checks with remediation lines; exit 1 when degraded
+simplex status          # compact read-only status page
+simplex backup          # consistent snapshots of all DBs → database/backups/<UTC>/
+simplex history purge --older-than 90 --dry-run   # transcript retention (PRIVACY.md)
+```
 
 ### Session Start
 ```bash
@@ -224,9 +262,26 @@ Ingestion also captures per-response API token usage into the `message_usage` ta
 survives Claude Code's ~30-day transcript cleanup. Lifetime totals + per-month breakdown
 are included in `--action stats`.
 
+Transcripts are stored verbatim — [PRIVACY.md](PRIVACY.md) documents exactly what is
+collected and `conversation_purge.py` / `simplex history purge` deletes it by
+project, age, or session (token usage preserved by default).
+
 ### Git
 ```bash
 python3 src/utils/agent_skills/git_commit.py init
 python3 src/utils/agent_skills/git_commit.py commit -m "message"
 python3 src/utils/agent_skills/git_commit.py status
 ```
+
+## Development
+
+```bash
+pip install -r requirements-dev.txt   # pytest + ruff
+pytest                                # test suite (hermetic — never touches your real DBs)
+ruff check .                          # lint
+```
+
+CI (`.github/workflows/ci.yml`) runs both on ubuntu-latest and windows-latest
+(Python 3.10 and 3.12) for every push/PR to `develop` and `master`, then runs
+`simplex doctor` on the bare checkout and asserts it exits nonzero reporting a
+fresh clone — the onboarding-detection path is exercised on every push.

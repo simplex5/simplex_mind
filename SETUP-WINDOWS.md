@@ -31,7 +31,7 @@ commands and hooks on Windows, so one shell covers everything.
    }
    ```
    Restart Claude Code afterwards; hook config is snapshotted at session start.
-2. **Python 3.11+ from python.org**: https://www.python.org/downloads/windows/
+2. **Python 3.10+ from python.org** (3.11 recommended): https://www.python.org/downloads/windows/
    Keep the **"py launcher"** component selected in the installer (it is on by
    default). The hooks and this guide invoke Python as `py` on Windows.
    Do NOT rely on the `python3` command; on Windows that name is usually the
@@ -86,8 +86,18 @@ Run SETUP.md's New Project Flow with these changes:
   windowless and log to `logs/`. Skipping this is acceptable: ingest still works
   via the Stop hook; autotune would then only run manually
   (`py src/utils/agent_skills/subconscious/subconscious_autotune.py`).
+- **Step 11 (verify):** identical on Windows — `py src/utils/agent_skills/doctor.py`
+  (or `simplex doctor` with the venv active). Expect `RESULT: HEALTHY`, exit 0.
 
-## Verify the transcript ingest
+## Verify the installation
+
+For overall health, `simplex doctor` is the one-shot check — 11 subsystem checks
+(databases, hooks, venv drift, git identity, branch mapping) with a one-line fix
+per failure, exit 1 when degraded. The transcript-ingest check below is the one
+Windows-specific piece worth verifying separately. (Transcripts are stored
+verbatim — see [PRIVACY.md](PRIVACY.md) for what is collected and how to remove it.)
+
+### Transcript ingest
 
 Claude Code names its transcript folders under `~/.claude/projects/` with an
 undocumented encoding on Windows, so simplex_mind does not guess it: on Windows,

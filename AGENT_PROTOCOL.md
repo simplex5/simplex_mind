@@ -10,7 +10,8 @@ and structured git commit behaviour across all projects.
 - Python 3.10+
 - Git repository initialised
 - simplex_mind cloned as a sibling repo (e.g. `~/projects/simplex_mind/`)
-- Tools live in `src/utils/agent_skills/` (memory, tickets, conversation, git)
+- Tools live in `src/utils/agent_skills/` (memory, tickets, conversation, subconscious,
+  doctor, backup, git); the installable `simplex` CLI lives in `src/simplex_cli/`
 
 ---
 
@@ -19,6 +20,15 @@ and structured git commit behaviour across all projects.
 ```bash
 pip install -r requirements.txt
 # Includes fastembed — semantic memory search runs fully locally, no API key.
+pip install -e .
+# Installs the `simplex` CLI into the venv — a unified front for every tool below:
+# simplex doctor / status / digest / init / backup
+# simplex ticket create|list|read|update
+# simplex memory write|search|read|sync
+# simplex history ingest|search|stats|purge
+# simplex project use <name> (= git checkout of the project's branch) / project list
+# The script paths in this document remain canonical and always work without the
+# install — hooks and cron call them directly.
 # Optional — OpenAI embeddings fallback instead of the local model:
 # pip install openai
 ```
@@ -37,7 +47,19 @@ Creates:
 - `database/memory/memory.db` — SQLite: facts, insights, daily logs
 - `database/tickets.db` — SQLite: simplex_mind's own (fallback) issue tracker
 - `database/conversation_history.db` — SQLite: conversation transcripts + token usage
+- `database/config.json` — local onboarding/config state (**never committed**; written
+  when init flags are passed)
 - `logs/` and `.tmp/` — runtime directories
+
+After setup is complete, mark onboarding done (the session-start check depends on it):
+```bash
+python src/utils/agent_skills/init.py --mark-onboarded
+```
+A missing/unmarked config.json routes agents into onboarding — deliberately, that is how
+fresh clones are detected. Two states look similar but differ: **fresh clone** (no
+projects.yaml, no databases → run full onboarding per SETUP.md) vs **lost config**
+(databases exist but config.json is gone, e.g. after pulling the untracking migration →
+just re-run `--mark-onboarded`, never re-onboard). `doctor.py` classifies this automatically.
 
 Ticket IDs are machine-scoped: `PREFIX-<MACHINE>-NNN` (e.g. `SIMP-L1-042`), where MACHINE comes from the top-level `machine:` key in projects.yaml — each machine mints in its own namespace so IDs never collide across computers.
 
@@ -126,6 +148,11 @@ python src/utils/agent_skills/memory/memory_write.py \
 ```bash
 python src/utils/agent_skills/memory/hybrid_search.py --query "..."
 ```
+
+When a project is active, `memory_write.py` auto-appends a `project:<name>` tag to the
+database row (not the daily log). The `protocol_gate.py` UserPromptSubmit hook uses these
+tags to scope its 5-resolved-tickets memory-cadence demand per project — a memory write
+about another project no longer suppresses the active project's cadence.
 
 **Direct MEMORY.md edits** (for curated, human-readable notes):
 - Use Read + Edit tools on `database/memory/MEMORY.md`.
@@ -231,7 +258,7 @@ When a prefix is present: ticket is created at the start, prefix stripped before
 
 ## 6. Schema Reference
 
-**Ticket fields:** `id` (PROJECT-NNN), `type`, `status`, `priority`, `title`, `description`, `project`, `notes`, `created_at`, `updated_at`, `resolved_at`
+**Ticket fields:** `id` (`PREFIX-<MACHINE>-NNN`), `type`, `status`, `priority`, `title`, `description`, `project`, `notes`, `created_at`, `updated_at`, `resolved_at`
 
 **Ticket types:** `bug` · `feature` · `task` · `improvement` · `documentation`
 
@@ -279,6 +306,14 @@ Ingestion also captures per-response API token usage into the `message_usage` ta
 survives Claude Code's ~30-day transcript cleanup. Lifetime totals + per-month breakdown:
 `conversation_read.py --action stats`.
 
+**Delete stored transcripts** (retention/removal — see [PRIVACY.md](PRIVACY.md)):
+```bash
+python3 src/utils/agent_skills/conversation/conversation_purge.py \
+    --older-than 90 --dry-run          # preview; selectors: --project/--older-than/--session/--all
+# re-run with --yes to delete. Token usage (message_usage) is preserved by default;
+# add --with-usage to remove it too. No stdin prompts — --yes is the confirmation.
+```
+
 ---
 
 ### 4.6 Session Digest
@@ -289,7 +324,11 @@ Run at the start of every session for focused context (< 200 lines):
 python3 src/utils/agent_skills/memory/session_digest.py
 ```
 
-Outputs: open ticket count + critical/high items, recent decisions, active systems summary, last 5 git commits.
+Outputs: open ticket count + critical/high items, recent decisions, active systems summary,
+last 5 git commits. Broken subsystems render as `UNAVAILABLE — <reason> (run doctor.py)` —
+never as a healthy-looking zero. The digest also self-heals onboarding state: it prints
+`CONFIG LOST: …` (config.json missing but databases exist → run `init.py --mark-onboarded`)
+or `ONBOARDING INCOMPLETE: …` (fresh clone → follow SETUP.md) under `## Environment`.
 
 ---
 
@@ -326,3 +365,33 @@ hand-curated content outside the block is preserved verbatim.
 Maintain `database/memory/systems.md` — a registry of significant features and systems.
 Update when creating, removing, or significantly changing a system.
 Read by session_digest.py for the "Active Systems" summary.
+
+---
+
+### 4.10 Doctor — Health Validation
+
+```bash
+python3 src/utils/agent_skills/doctor.py            # full validation, exit 1 when degraded
+python3 src/utils/agent_skills/doctor.py --status   # compact status page, always exit 0
+```
+
+Eleven read-only checks, each reporting `[ OK ]/[WARN]/[FAIL]` plus a one-line remediation:
+onboarding classification, projects.yaml validity, every ticket DB, memory.db,
+conversation DB + FTS, subconscious index freshness, autotune state, venv deps vs pins,
+hook registration, git identity, branch→project mapping. `classify_onboarding()` (the
+fresh-clone vs lost-config distinction from §3) is exported for reuse — session_digest.py
+imports it. Run doctor after any pull that changes brain state, and whenever a digest
+line or a `[protocol-gate degraded: …]` marker tells you to.
+
+---
+
+### 4.11 Backup
+
+```bash
+python3 src/utils/agent_skills/backup_db.py         # or: simplex backup
+```
+
+Copies memory.db, every ticket DB (brain + per-project), and conversation_history.db to
+`database/backups/<YYYYMMDD-HHMMSSZ>/` using SQLite's online backup API — consistent even
+while hooks hold the DBs open. Gitignored; no scheduling. Take one before any purge —
+purge is irreversible without it.
