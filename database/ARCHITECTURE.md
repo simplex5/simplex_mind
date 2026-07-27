@@ -224,3 +224,15 @@ Sibling state file `subconscious_autotune_state.json` (also local, gitignored): 
 autotune cron's memory — last run, pending keyword candidates awaiting user review, and the
 applied/rejected history that guarantees a phrase is proposed at most once. Journal of all
 autotune actions: `logs/subconscious_autotune.log`.
+
+## 6. `database/backups/` — local DB snapshots
+
+`simplex backup` (`src/utils/agent_skills/backup_db.py`) copies memory.db, every ticket DB
+(brain + per-project), and conversation_history.db into a timestamped
+`database/backups/<YYYYMMDD-HHMMSSZ>/` directory using SQLite's online backup API —
+consistent even while hooks/cron hold the DBs open. Gitignored via `database/*`; delete old
+snapshot dirs freely (see PRIVACY.md — backups are part of the data-removal story).
+
+Related: `simplex history purge` deletes transcript rows from conversation_history.db
+(messages + FTS via trigger, sessions tombstoned) while preserving `message_usage` by
+default — token accounting is designed to outlive transcript cleanup.
