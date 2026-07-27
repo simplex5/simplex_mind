@@ -29,6 +29,7 @@ FRAMEWORK_DIRS = [
     "src/",
     "subconscious/",
     "tests/",
+    ".github/",
     "scripts/",
 ]
 
