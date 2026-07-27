@@ -71,9 +71,11 @@ except ImportError:
 
 
 def _get_open_tickets() -> Dict[str, Any]:
-    """Get open ticket summary."""
+    """Get open ticket summary. A broken ticket system must never render as
+    'Open: 0' — failures carry an 'error' key instead (SIMP-D2-022)."""
+    empty: Dict[str, Any] = {"count": 0, "critical": [], "high": [], "in_progress": []}
     if not _ticket_list:
-        return {"count": 0, "critical": [], "high": [], "in_progress": []}
+        return {**empty, "error": "ticket tooling unavailable (import failed)"}
 
     try:
         # Route to active project's ticket DB
@@ -84,7 +86,9 @@ def _get_open_tickets() -> Dict[str, Any]:
                 active_target = active["name"]
 
         result = _ticket_list(status='open', target=active_target)
-        tickets = result.get('tickets', []) if result.get('success') else []
+        if not result.get('success'):
+            return {**empty, "error": result.get('error', 'ticket query failed')}
+        tickets = result.get('tickets', [])
 
         ip_result = _ticket_list(status='in_progress', target=active_target)
         ip_tickets = ip_result.get('tickets', []) if ip_result.get('success') else []
@@ -100,25 +104,26 @@ def _get_open_tickets() -> Dict[str, Any]:
         }
     except Exception as e:
         log.warning("digest: ticket section unavailable (%s)", e)
-        return {"count": 0, "critical": [], "high": [], "in_progress": []}
+        return {**empty, "error": f"{type(e).__name__}: {e}"}
 
 
-def _get_recent_decisions(days: int = 14) -> List[Dict[str, Any]]:
-    """Get decision entries from the last N days."""
+def _get_recent_decisions(days: int = 14):
+    """Get decision entries from the last N days. Returns (entries, error) —
+    an empty list is only trustworthy when error is None (SIMP-D2-022)."""
     try:
         result = list_entries(entry_type='decision', min_importance=1, limit=20)
         if not result.get('success'):
-            return []
+            return [], result.get('error', 'memory query failed')
 
         # created_at is UTC 'YYYY-MM-DD HH:MM:SS' (CURRENT_TIMESTAMP) — match it
         cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')
         return [
             e for e in result.get('entries', [])
             if e.get('created_at', '') >= cutoff
-        ]
+        ], None
     except Exception as e:
         log.warning("digest: recent-decisions section unavailable (%s)", e)
-        return []
+        return [], f"{type(e).__name__}: {e}"
 
 
 def _get_active_systems_summary() -> List[str]:
@@ -160,8 +165,8 @@ def _get_active_systems_summary() -> List[str]:
     return summaries
 
 
-def _get_recent_git(count: int = 5) -> List[str]:
-    """Get last N git commits on current branch."""
+def _get_recent_git(count: int = 5):
+    """Get last N git commits on current branch. Returns (commits, error)."""
     try:
         result = subprocess.run(
             ['git', 'log', f'-{count}', '--oneline', '--no-decorate'],
@@ -169,10 +174,11 @@ def _get_recent_git(count: int = 5) -> List[str]:
             timeout=5
         )
         if result.returncode == 0:
-            return [line.strip() for line in result.stdout.strip().split('\n') if line.strip()]
+            return [line.strip() for line in result.stdout.strip().split('\n') if line.strip()], None
+        return [], result.stderr.strip() or f"git log exited {result.returncode}"
     except Exception as e:
         log.warning("digest: git log unavailable (%s)", e)
-    return []
+        return [], f"{type(e).__name__}: {e}"
 
 
 def _get_current_branch() -> str:
@@ -312,7 +318,10 @@ def generate_digest() -> str:
     # 1. Open tickets
     tickets = _get_open_tickets()
     parts.append("## Tickets")
-    parts.append(f"Open: {tickets['count']}")
+    if tickets.get("error"):
+        parts.append(f"Open: UNAVAILABLE — {tickets['error']} (run doctor.py)")
+    else:
+        parts.append(f"Open: {tickets['count']}")
     if tickets['critical']:
         for t in tickets['critical']:
             parts.append(f"  CRITICAL: {t.get('id')} — {t.get('title')}")
@@ -326,8 +335,12 @@ def generate_digest() -> str:
     parts.append("")
 
     # 2. Recent decisions
-    decisions = _get_recent_decisions()
-    if decisions:
+    decisions, decisions_error = _get_recent_decisions()
+    if decisions_error:
+        parts.append("## Recent Decisions (14d)")
+        parts.append(f"UNAVAILABLE — {decisions_error} (run doctor.py)")
+        parts.append("")
+    elif decisions:
         parts.append("## Recent Decisions (14d)")
         for d in decisions:
             created = d.get('created_at', '')[:10]
@@ -347,8 +360,12 @@ def generate_digest() -> str:
         parts.append("")
 
     # 4. Recent git
-    commits = _get_recent_git()
-    if commits:
+    commits, git_error = _get_recent_git()
+    if git_error:
+        parts.append("## Recent Commits")
+        parts.append(f"UNAVAILABLE — {git_error}")
+        parts.append("")
+    elif commits:
         parts.append("## Recent Commits")
         for c in commits:
             parts.append(f"- {c}")
