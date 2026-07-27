@@ -43,8 +43,12 @@ can be silently voided is not a protocol.
 At the start of every new session:
 
 **0. Onboarding check:**
-   Check for `database/config.json`. If it is missing or `onboarding_complete` is not `true`,
-   follow the onboarding flow in `SETUP.md` instead of the steps below.
+   Check for `database/config.json`. If it is missing or `onboarding_complete` is not `true`:
+   - No `projects.yaml` and no `database/*.db` files → fresh clone: follow the onboarding flow
+     in `SETUP.md` instead of the steps below.
+   - Databases exist but config is gone → lost config (untracking migration): run
+     `python3 src/utils/agent_skills/init.py --mark-onboarded` and do NOT re-onboard.
+   `python3 src/utils/agent_skills/doctor.py` performs this classification plus full health checks.
 
 1. **Session digest** — injected automatically by the `SessionStart` hook (open tickets,
    recent decisions, active systems, recent git commits). Verify it is present in context;

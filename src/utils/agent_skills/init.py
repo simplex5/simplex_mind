@@ -62,9 +62,12 @@ def _write_config(args: argparse.Namespace) -> None:
         existing["project_description"] = args.project_description
     if args.tech_stack:
         existing["tech_stack"] = args.tech_stack
+    if args.mark_onboarded:
+        existing["onboarding_complete"] = True
 
     # Only write if we have values to set
-    if any(getattr(args, k) for k in ("prefix", "project_name", "project_description", "tech_stack")):
+    if any(getattr(args, k) for k in
+           ("prefix", "project_name", "project_description", "tech_stack", "mark_onboarded")):
         config_path.write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
         print("  write  database/config.json")
 
@@ -75,6 +78,9 @@ def main():
     parser.add_argument("--project-name", help="Project name")
     parser.add_argument("--project-description", help="One-line project description")
     parser.add_argument("--tech-stack", help="Comma-separated tech stack")
+    parser.add_argument("--mark-onboarded", action="store_true",
+                        help="Set onboarding_complete: true in database/config.json (config is local, "
+                             "untracked — established machines re-mark after the untracking migration)")
     args = parser.parse_args()
 
     print("simplex_mind — initializing project runtime...\n")
