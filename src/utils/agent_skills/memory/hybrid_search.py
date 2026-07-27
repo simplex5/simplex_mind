@@ -324,6 +324,8 @@ def main():
 
     # Normalize weights
     total_weight = args.bm25_weight + args.semantic_weight
+    if total_weight <= 0:
+        parser.error("--bm25-weight and --semantic-weight must sum to > 0")
     bm25_w = args.bm25_weight / total_weight
     sem_w = args.semantic_weight / total_weight
 
