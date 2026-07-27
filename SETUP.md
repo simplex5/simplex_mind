@@ -129,6 +129,10 @@ crontab -e
 The second entry mines this machine's own conversations weekly for personal subconscious
 keyword candidates (gated pending queue — applied only after in-session user approval).
 
+> This step turns on verbatim transcript storage. [PRIVACY.md](PRIVACY.md) documents exactly
+> what is collected, where it lives, and how to remove it (`simplex history purge`). For manual
+> snapshots of all databases: `simplex backup`.
+
 **Step 9 — Create the project ref file**
 Create `CLAUDE.md.ref` in the project root with project-specific instructions. Register it in
 `projects.yaml` under `ref_file`.
@@ -151,6 +155,13 @@ Create `CLAUDE.md.ref` in the project root with project-specific instructions. R
 python3 src/utils/agent_skills/git_commit.py commit -m "onboarding: initialize project with simplex_mind"
 ```
 
+**Step 11 — Verify**
+```bash
+python3 src/utils/agent_skills/doctor.py
+```
+Expect `RESULT: HEALTHY` (exit 0). Any `[FAIL]` line comes with its one-line fix; a fresh
+setup may show `[WARN] autotune: never run` — that clears after the first weekly cron run.
+
 ---
 
 ## Python Virtual Environment
@@ -160,6 +171,7 @@ cd ~/projects/simplex_mind
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+pip install -e .   # installs the `simplex` CLI into the venv
 # Optional: pip install openai numpy rank_bm25
 ```
 
@@ -174,9 +186,12 @@ See [`AGENT_PROTOCOL.md`](AGENT_PROTOCOL.md) for the full specification. Key too
 
 - **Memory**: `memory/memory_write.py`, `memory/memory_read.py`, `memory/hybrid_search.py`, `memory/memory_sync.py`, `memory/session_digest.py`
 - **Tickets**: `tickets/ticket_create.py`, `tickets/ticket_list.py`, `tickets/ticket_read.py`, `tickets/ticket_update.py`
-- **Conversation**: `conversation/conversation_ingest.py`, `conversation/conversation_read.py`
+- **Conversation**: `conversation/conversation_ingest.py`, `conversation/conversation_read.py`, `conversation/conversation_purge.py` (retention — see PRIVACY.md)
 - **Git**: `git_commit.py` — `init`, `status`, `commit`, `diff`
-- **Init**: `init.py` — bootstraps `database/` directory, SQLite schemas, and `MEMORY.md`
+- **Init**: `init.py` — bootstraps `database/` directory, SQLite schemas, `MEMORY.md`, and `database/config.json` (local, untracked); `--mark-onboarded` sets onboarding complete
+- **Doctor**: `doctor.py` — health validation, exit 1 when degraded; `--status` compact page
+- **Backup**: `backup_db.py` — SQLite online-backup of all DBs to `database/backups/`
+- **CLI**: the venv's `simplex` command fronts all of the above (`simplex --help`); script paths stay canonical
 ```
 
 ---
@@ -222,6 +237,7 @@ Rules:
 - Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
 - When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
 - `projects.yaml` is local config (gitignored). Never commit it. The active project is derived from the current simplex_mind git branch — to switch projects, just `git checkout <branch>`.
+- `database/config.json` is local onboarding/config state (gitignored). Never commit it — a committed config made every fresh clone skip onboarding (SIMP-D2-021).
 - Protocol changes to shared instruction files land on develop and merge to master once verified; project branches then merge from master.
 
 *(Add new guardrails as mistakes happen. Keep this under 15 items.)*

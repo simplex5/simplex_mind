@@ -2,6 +2,9 @@
 
 Four SQLite databases power simplex_mind's persistence layer: `memory.db`, `activity.db`,
 `tickets.db` (one per project + a brain fallback), and `conversation_history.db`.
+Non-DB state also lives under `database/`: `config.json` (§7, local onboarding state),
+the subconscious index + autotune state (§5), and `backups/` snapshots (§6) — all local,
+none committed.
 
 **Schema versioning (SIMP-L1-031):** every DB module declares an ordered `MIGRATIONS`
 list applied by `_common.run_migrations()`, gated by SQLite's `PRAGMA user_version`.
@@ -40,7 +43,7 @@ Managed by `src/utils/agent_skills/memory/memory_db.py`.
 | `access_count` | INTEGER | Incremented on read |
 | `embedding` | BLOB | Optional vector (for semantic search) |
 | `embedding_model` | TEXT | Model used for embedding |
-| `tags` | TEXT | JSON array of string tags |
+| `tags` | TEXT | JSON array of string tags. Reserved convention: `project:<name>` is auto-appended by `memory_write.py` when a project is active and queried by `protocol_gate.py` to scope the memory cadence per project |
 | `context` | TEXT | Free-text context (e.g. run_id) |
 | `is_active` | INTEGER | Soft-delete flag |
 
@@ -165,13 +168,17 @@ Managed by `src/utils/agent_skills/conversation/conversation_db.py`.
 | `messages` | Verbatim transcript messages (role, content, timestamp) |
 | `messages_fts` | FTS5 full-text index over message content |
 | `ingest_state` | Per-file byte offsets for incremental ingestion |
-| `message_usage` | Per-response API token counts (input/output/cache), incl. tool-call-only responses that never reach `messages`; survives Claude Code's ~30-day JSONL cleanup (SIMP-040) |
+| `message_usage` | Per-response API token counts (input/output/cache), incl. tool-call-only responses that never reach `messages`; survives Claude Code's ~30-day JSONL cleanup (SIMP-040) **and survives `conversation_purge.py` by default** — token accounting outlives transcript deletion unless `--with-usage` is passed |
 
 ### Writers
 
 - `conversation_ingest.py` — parses Claude Code JSONL transcripts (source dirs derived from
   `projects.yaml`); incremental via byte offsets. Triggered by the Stop hook in
   `.claude/settings.json` after every response, plus an optional 5-minute cron as safety net.
+- `conversation_purge.py` — deletes `messages` rows by project/age/session (the `messages_ad`
+  trigger keeps `messages_fts` consistent), tombstones `sessions` (`message_count = 0`);
+  `--with-usage` additionally deletes `message_usage` + the session rows. `ingest_state`
+  untouched — byte offsets prevent purged content from silently re-ingesting. See PRIVACY.md.
 
 ### Readers
 
@@ -204,6 +211,7 @@ orchestrator run
 - Daily log sync between disk files and `daily_logs` table is manual (`sync_log_to_db()`)
 - Embedding/semantic search returns empty results if embeddings were never generated
 - `MEMORY.md` on disk is the primary curated memory; the DB holds structured/searchable entries
+- `conversation_purge.py` is irreversible — take a `simplex backup` snapshot first if in doubt
 
 ---
 
@@ -236,3 +244,14 @@ snapshot dirs freely (see PRIVACY.md — backups are part of the data-removal st
 Related: `simplex history purge` deletes transcript rows from conversation_history.db
 (messages + FTS via trigger, sessions tombstoned) while preserving `message_usage` by
 default — token accounting is designed to outlive transcript cleanup.
+
+## 7. `database/config.json` — local onboarding/config state
+
+Written by `init.py` (flag args merge into it; `--mark-onboarded` sets
+`"onboarding_complete": true`). **Never committed** — it was untracked in SIMP-D2-021
+precisely because a committed `onboarding_complete: true` made every fresh clone skip
+SETUP.md onboarding. Its presence/absence drives `doctor.classify_onboarding()`:
+present+true = onboarded; missing with no local state = fresh clone (run onboarding);
+missing but databases exist = lost config (run `init.py --mark-onboarded`, never
+re-onboard). Also holds user-supplied project metadata (name, description, tech stack,
+ticket prefix) — see PRIVACY.md.

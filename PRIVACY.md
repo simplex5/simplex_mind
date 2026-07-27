@@ -13,6 +13,7 @@ or sent anywhere by default**. This file is the honest inventory.
 | **Memories** (facts, decisions, preferences you or the agent record) | `database/memory/memory.db`, `database/memory/MEMORY.md`, daily logs | Written explicitly via `memory_write.py` / `simplex memory write` |
 | **Memory embeddings** (vector representations of memory content) | `database/memory/memory.db` | Computed **locally** via fastembed by default. If an OpenAI API key is configured, `embed_memory.py` falls back to OpenAI — memory content is then sent to OpenAI. No key, no egress. |
 | **Tickets** (work items, notes) | `database/tickets.db` per project | Written via ticket tools |
+| **Project metadata** (name, description, tech stack, ticket prefix, onboarding state) | `database/config.json` (local, never committed) | Written during onboarding via `init.py` flags |
 | **Subconscious keyword mining** | `database/memory/subconscious_*.json` | Reads your local transcripts to propose trigger keywords; runs locally |
 
 ## Where it does NOT go
@@ -32,8 +33,9 @@ or sent anywhere by default**. This file is the honest inventory.
   source the ingester reads. Purging the database does not touch them — delete those JSONL
   files separately if you want the content gone everywhere. (Claude Code also cleans them up
   itself after ~30 days.)
-- **Memories:** delete rows via the memory tools, or delete `database/memory/memory.db` and
-  the markdown logs.
+- **Memories:** find the entry with `simplex memory search --query "..."`, then deactivate it
+  via `memory_db.py`'s soft-delete (`is_active = 0`), or delete `database/memory/memory.db`
+  and the markdown logs outright.
 - **Backups:** `simplex backup` writes copies under `database/backups/` — delete old backup
   directories along with anything you purge.
 - **Everything:** deleting the `database/` directory removes all collected data on this
@@ -42,5 +44,6 @@ or sent anywhere by default**. This file is the honest inventory.
 ## Multi-machine note
 
 Each machine keeps its own `database/` — there is no cross-machine sync, so removal is
-per-machine. If you gave someone a clone of this repo, they received **no data**: a fresh
-clone contains empty scaffolding only.
+per-machine (this is also why `config.json` is local: see SETUP.md's fresh-clone vs
+lost-config detection). If you gave someone a clone of this repo, they received **no
+data**: a fresh clone contains empty scaffolding only.

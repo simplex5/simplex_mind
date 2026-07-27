@@ -102,6 +102,10 @@ crontab -e
 **Windows:** run `scripts/setup_windows_tasks.ps1` instead — it registers the equivalent
 Task Scheduler jobs (per-user, no admin required).
 
+> This step turns on verbatim transcript storage — your prompts and the agent's responses are
+> saved to a local database. [PRIVACY.md](PRIVACY.md) lists exactly what is collected, where
+> it lives (all local, nothing leaves the machine), and how to delete any of it.
+
 ---
 
 ## Step 5 — Check it actually worked
@@ -109,13 +113,22 @@ Task Scheduler jobs (per-user, no admin required).
 With the venv active, from the `simplex_mind` directory:
 
 ```bash
+simplex doctor
+```
+
+This runs 11 health checks — databases, config, hooks, search index, venv — and prints a
+one-line fix for anything broken. `RESULT: HEALTHY` (exit 0) means everything is wired up.
+A fresh setup may show `[WARN] autotune: never run`; that clears after the first weekly run.
+
+Then see the digest your agent gets at session start:
+
+```bash
 python3 src/utils/agent_skills/memory/session_digest.py
 ```
 
-You should see a digest printing open tickets, recent decisions, active systems and recent
-commits. If it runs without error, the database, config and tooling are all wired up correctly.
+You should see open tickets, recent decisions, active systems and recent commits.
 
-Then confirm semantic search is live:
+Finally confirm semantic search is live:
 
 ```bash
 python3 src/utils/agent_skills/memory/hybrid_search.py --query "test"
@@ -129,9 +142,12 @@ venv — activate the venv and re-run `pip install -r requirements.txt`.
 - **Start every session in `simplex_mind`**, not in your project folder. The agent reads the
   session digest, works out which project is active, and loads that project's instructions.
 - **Which project is active is derived from the git branch** in `simplex_mind`. To switch
-  projects, `git checkout <branch>`. On `master` or `develop`, no project is active.
+  projects, `git checkout <branch>` — or the friendlier `simplex project use <name>`, which
+  looks the branch up for you. On `master` or `develop`, no project is active.
 - **To add another project**, see [Adding a Project](README.md#adding-a-project) — one brain
   serves all of them.
+- **To snapshot your data** (memories, tickets, conversation history): `simplex backup`
+  copies every database to a timestamped folder under `database/backups/`.
 
 ---
 

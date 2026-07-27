@@ -137,6 +137,8 @@ python3 src/utils/agent_skills/memory/memory_write.py \
     --type <fact|preference|event|insight|task|relationship|decision|note> \
     --importance <1-10>
 ```
+When a project is active, the database row is auto-tagged `project:<name>` — used to scope
+per-project queries and the memory cadence.
 
 **Write with ticket cross-reference:**
 ```bash
@@ -324,7 +326,9 @@ Also create a ticket immediately for:
 
 The venv installs a `simplex` command (`pip install -e .`) fronting every brain tool —
 `simplex doctor`, `simplex status`, `simplex ticket list`, `simplex memory search`,
-`simplex history stats`, `simplex project use <name>` (a git-checkout wrapper). The
+`simplex history stats`, `simplex history purge`, `simplex backup`,
+`simplex project use <name>` (a git-checkout wrapper); `simplex --help` lists the full
+table. For agents without a hook system this CLI is the most convenient entry point. The
 script paths in this file remain canonical and always work without the install.
 
 ---
@@ -364,6 +368,12 @@ Ingestion also captures per-response API token usage into the `message_usage` ta
 (input/output/cache counts — including tool-call-only responses), so token accounting
 survives Claude Code's ~30-day transcript cleanup. Lifetime totals + per-month breakdown
 are included in `--action stats`.
+
+**Delete stored transcripts** (retention — see `PRIVACY.md`):
+```bash
+python3 src/utils/agent_skills/conversation/conversation_purge.py \
+    --older-than 90 --dry-run    # preview; --yes to delete; message_usage preserved by default
+```
 
 ---
 
@@ -459,6 +469,7 @@ use native git commands in the project directory — see [Working Directory](#wo
 
 **Never commit:**
 - `projects.yaml` — local config, gitignored
+- `database/config.json` — local onboarding/config state (committing it made fresh clones skip onboarding — SIMP-D2-021)
 - Benchmark runs — output is gitignored
 - Edits to `database/memory/logs/` or `database/*.db` — local session state
 
@@ -476,7 +487,7 @@ use native git commands in the project directory — see [Working Directory](#wo
 - Update `database/memory/systems.md` when creating, removing, or significantly changing a system.
 - Plans must include a Maintenance section listing: ticket ID, branch decision (stay or create), and commit strategy.
 - When the user asks about tickets without explicitly naming a project, ask which project. Never guess — wastes tokens scanning wrong DBs.
-- `projects.yaml` is local config (gitignored). Never commit it. The active project is derived from the current simplex_mind git branch — to switch projects, just `git checkout <branch>`.
+- `projects.yaml` and `database/config.json` are local config (gitignored). Never commit either. The active project is derived from the current simplex_mind git branch — to switch projects, just `git checkout <branch>` (or `simplex project use <name>`).
 - Never assume the user is following along during multi-step execution. Present one step at a time, explain what success/failure looks like, and wait for confirmation before proceeding.
 - Protocol changes land on `develop` and merge to `master` once verified; project branches then merge from `master` (ask the user which — see the post-pull guardrail below).
 - `master` and `develop` are the only branches pushed online and both must stay project-free: never merge project branches into them, and never let project registrations (systems.md/MEMORY.md/config entries naming a project) land on them. Framework work reaches master by merging develop once verified. User-preference config lives outside the repo.
@@ -492,24 +503,31 @@ use native git commands in the project directory — see [Working Directory](#wo
 simplex_mind/                          <- brain repo (agent launches here)
 |-- CLAUDE.md                          <- Claude Code instructions
 |-- AGENTS.md                          <- this file — Codex/Cursor/Windsurf instructions
+|-- PRIVACY.md                         <- what is stored, where, how to remove it
 |-- projects.yaml                      <- maps project names -> paths (local, gitignored)
 |-- subconscious/                      <- reasoning-philosophy piece library (canonical, committed)
+|-- .github/workflows/ci.yml           <- CI: pytest + ruff, ubuntu + windows
 |-- database/
 |   |-- memory/
 |   |   |-- memory.db                  <- structured memory (SQLite)
 |   |   |-- MEMORY.md                  <- curated persistent memory
 |   |   |-- systems.md                 <- system inventory
 |   |   +-- logs/                      <- daily logs (YYYY-MM-DD.md)
+|   |-- config.json                    <- local onboarding/config state (never committed)
 |   |-- tickets.db                     <- brain (SIMP) tickets — each project has its own <project>/database/tickets.db
 |   |-- conversation_history.db        <- conversation transcripts + token usage
+|   |-- backups/                       <- `simplex backup` snapshots (gitignored)
 |   +-- ARCHITECTURE.md                <- database schema docs
+|-- src/simplex_cli/                   <- installable `simplex` CLI (pip install -e .)
 +-- src/utils/agent_skills/
     |-- memory/                        <- memory tools
     |-- tickets/                       <- ticket tools
-    |-- conversation/                  <- conversation history tools
+    |-- conversation/                  <- conversation history tools (incl. conversation_purge)
     |-- subconscious/                  <- context-triggered philosophy: index, recall hook, miner, autotune
     |-- git_commit.py                  <- git operations
-    |-- init.py                        <- project bootstrapper
+    |-- init.py                        <- project bootstrapper (--mark-onboarded)
+    |-- doctor.py                      <- health checks, onboarding classification
+    |-- backup_db.py                   <- SQLite online-backup of all DBs
     |-- project_resolver.py            <- branch -> project resolution, ticket DB routing
     |-- track_tokens.py                <- token metrics logger (optional)
     +-- manifest.md                    <- tool inventory

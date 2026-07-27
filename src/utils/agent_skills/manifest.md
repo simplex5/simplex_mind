@@ -1,6 +1,8 @@
 # agent_skills/ — Skills Manifest
 
-All tools and reference files Claude invokes directly.
+All tools agents and humans invoke — by script path (canonical, always works) or via the
+installed `simplex` CLI. CI (`.github/workflows/ci.yml`) runs `ruff` + `pytest` on every
+push: a new tool needs a test.
 
 ---
 
@@ -11,9 +13,9 @@ All tools and reference files Claude invokes directly.
 | Token Tracker | `track_tokens.py` | Appends call objects to metrics JSON (optional — consumed by a user-side statusline script outside this repo) |
 | Git Operations | `git_commit.py` | Init, status, commit, diff for framework files |
 | Initializer | `init.py` | Creates full project scaffold (idempotent); `--mark-onboarded` re-marks onboarding after the config-untracking migration |
-| Doctor | `doctor.py` | Health validation for the whole brain: onboarding classification (fresh clone vs lost config), DB/index/hooks/venv/git checks; `--status` compact page, exit 1 when degraded |
+| Doctor | `doctor.py` | Health validation for the whole brain: 11 checks (onboarding, projects.yaml, DBs, index, autotune, venv, hooks, git identity, branch mapping) with per-check remediation; `--status` compact page, exit 1 when degraded; exports `classify_onboarding()` (fresh clone vs lost config), reused by session_digest |
 | Backup | `backup_db.py` | `simplex backup` — SQLite online-backup of memory.db, all tickets DBs, conversation_history.db to timestamped `database/backups/<UTC>/` (gitignored); safe while DBs are in use |
-| simplex CLI | `../../simplex_cli/cli.py` | Installed `simplex` command (`pip install -e .`) — thin dispatcher over these tools: ticket/memory/history/digest/doctor/status/backup + `project use` (git-checkout wrapper). Script paths stay canonical for hooks and other agents |
+| simplex CLI | `../../simplex_cli/cli.py` | Installed `simplex` command (`pip install -e .`) — thin dispatcher over these tools: ticket/memory/history/digest/doctor/status/backup + `project use` (git-checkout wrapper). Script paths stay canonical for hooks and other agents; `py -m simplex_cli` (via `__main__.py`) works as an uninstalled fallback |
 | Shared Helpers | `_common.py` | Single source for repo paths (REPO_ROOT/DATABASE_DIR/MEMORY_DIR), row_to_dict, ticket priority ordering, standard CLI epilogue (cli_finish), optional dotenv loading |
 | Project Resolver | `project_resolver.py` | Shared utility for resolving project config from projects.yaml; routes ticket operations to per-project databases |
 
@@ -25,14 +27,14 @@ All tools and reference files Claude invokes directly.
 |------|------|-------------|
 | Memory DB | `memory/memory_db.py` | SQLite CRUD for persistent memory entries (types: fact, preference, event, insight, task, relationship, decision) |
 | Memory Reader | `memory/memory_read.py` | Load MEMORY.md + systems.md + daily logs at session start |
-| Memory Writer | `memory/memory_write.py` | Append to daily logs and SQLite; supports `--ticket` cross-reference |
+| Memory Writer | `memory/memory_write.py` | Append to daily logs and SQLite; supports `--ticket` cross-reference; auto-appends a `project:<name>` tag to DB rows when a project is active (the tag protocol_gate's cadence check queries) |
 | Memory Sync | `memory/memory_sync.py` | Update the marker-delimited AUTO-SYNC block in MEMORY.md from memory.db; all hand-curated content outside the block is preserved verbatim |
-| Session Digest | `memory/session_digest.py` | Focused session-start context: open tickets, decisions, systems, git log (< 200 lines) |
+| Session Digest | `memory/session_digest.py` | Focused session-start context: open tickets, decisions, systems, git log (< 200 lines); broken subsystems render as `UNAVAILABLE — <reason>` (never a false `Open: 0`); prints `CONFIG LOST` / `ONBOARDING INCOMPLETE` self-heal lines via doctor's `classify_onboarding()` |
 | Embedding Gen | `memory/embed_memory.py` | Vector embeddings for semantic search (optional OpenAI) |
 | Semantic Search | `memory/semantic_search.py` | Cosine similarity search over embeddings |
 | Hybrid Search | `memory/hybrid_search.py` | Combined BM25 + vector search |
 | Post-Run Writer | `memory/memory_post_run.py` | Reads metrics JSON after each run; writes insight entry, upserts model-performance fact, creates anomaly tickets |
-| Protocol Gate | `memory/protocol_gate.py` | UserPromptSubmit hook: deterministic protocol enforcement — nags when 5+ tickets resolved since last memory write, re-surfaces pending autotune candidates mid-session, detects auto-memory-instead-of-memory.db substitution; read-only, throttled, always fail-open; prints a visible `[protocol-gate: …]` marker line when it fires |
+| Protocol Gate | `memory/protocol_gate.py` | UserPromptSubmit hook: deterministic protocol enforcement — nags when 5+ tickets resolved since last memory write (scoped per project via `project:<name>` tags, global fallback until the first tagged write), re-surfaces pending autotune candidates mid-session, detects auto-memory-instead-of-memory.db substitution; read-only, throttled, always fail-open; prints a visible `[protocol-gate: …]` marker when it fires and a once-per-session `[protocol-gate degraded: …]` marker when a check errors |
 
 ---
 
