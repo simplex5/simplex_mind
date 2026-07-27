@@ -37,6 +37,7 @@ COMMANDS = {
     ("history", "ingest"): ("conversation.conversation_ingest", []),
     ("history", "search"): ("conversation.conversation_read", ["--action", "search"]),
     ("history", "stats"): ("conversation.conversation_read", ["--action", "stats"]),
+    ("history", "purge"): ("conversation.conversation_purge", []),
 }
 
 

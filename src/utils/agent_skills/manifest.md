@@ -67,3 +67,4 @@ All tools and reference files Claude invokes directly.
 | Conversation DB | `conversation/conversation_db.py` | SQLite CRUD + FTS5 for verbatim conversation transcripts |
 | Conversation Ingester | `conversation/conversation_ingest.py` | Parse Claude Code JSONL files into conversation_history.db; multi-source directory support; captures per-response token usage; cron-friendly |
 | Conversation Reader | `conversation/conversation_read.py` | CLI: list sessions, get transcript, full-text search, recent messages, stats incl. token totals + per-month breakdown |
+| Conversation Purge | `conversation/conversation_purge.py` | Delete stored transcripts by project/age/session (`simplex history purge`); preserves token usage by default, requires --yes, see PRIVACY.md |
