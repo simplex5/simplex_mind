@@ -66,7 +66,28 @@ always fail-open. Born from the 2026-07-26 breakdown: a ~5-hour session wrote ze
 entries while following the ticket protocol perfectly — response-shaped instructions fire,
 condition-shaped ones don't. CLAUDE.md carries the matching routing rules (two memory systems,
 reports are outputs never state, instruction precedence, wrap-up trigger replacing the
-unreachable "End" cadence).
+unreachable "End" cadence). Extended 2026-07-27 (SIMP-D2-022): digest sections render broken
+subsystems as `UNAVAILABLE — <reason>` instead of healthy emptiness, gate checks that raise
+surface a once-per-session `[protocol-gate degraded: ...]` marker, and the cadence query is
+scoped to `project:<name>` tags (memory_write auto-tags; global fallback until first tagged
+write per project).
+
+**simplex CLI + doctor + CI** (SIMP-D2-021/023/025/026/027, 2026-07-27 — born from an external
+GPT 5.6 review of a friend's failed fresh-clone install): `pip install -e .` installs the
+`simplex` command (`src/simplex_cli/cli.py`, thin dispatcher over the agent-skills tools —
+script paths stay canonical for hooks/cron/other agents). Subcommands: init, doctor, status,
+digest, ticket/memory/history tools, `history purge` (transcript retention/deletion, preserves
+`message_usage` by default, see PRIVACY.md), `backup` (SQLite online-backup of all DBs to
+gitignored `database/backups/<UTC>/`), `project use <name>` (= git checkout of the project's
+branch). `doctor.py` runs 11 health checks with per-check remediation, exit 1 when degraded;
+`classify_onboarding` distinguishes fresh_clone from lost_config — the seam created by
+untracking `database/config.json` (the root-cause bug: a committed
+`onboarding_complete: true` made every fresh clone skip SETUP.md onboarding). Established
+machines pulling the untrack commit lose their config.json; digest + doctor print the repair
+(`init.py --mark-onboarded`). CI (`.github/workflows/ci.yml`): pytest + ruff on
+ubuntu/windows × py3.10/3.12, plus a live bare-checkout doctor assertion (must exit nonzero
+and say "fresh clone"). Deferred: full bootstrap state machine (SIMP-D2-028, do not start
+without user).
 
 ---
 
