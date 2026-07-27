@@ -12,6 +12,8 @@ All tools and reference files Claude invokes directly.
 | Git Operations | `git_commit.py` | Init, status, commit, diff for framework files |
 | Initializer | `init.py` | Creates full project scaffold (idempotent); `--mark-onboarded` re-marks onboarding after the config-untracking migration |
 | Doctor | `doctor.py` | Health validation for the whole brain: onboarding classification (fresh clone vs lost config), DB/index/hooks/venv/git checks; `--status` compact page, exit 1 when degraded |
+| Backup | `backup_db.py` | `simplex backup` — SQLite online-backup of memory.db, all tickets DBs, conversation_history.db to timestamped `database/backups/<UTC>/` (gitignored); safe while DBs are in use |
+| simplex CLI | `../../simplex_cli/cli.py` | Installed `simplex` command (`pip install -e .`) — thin dispatcher over these tools: ticket/memory/history/digest/doctor/status/backup + `project use` (git-checkout wrapper). Script paths stay canonical for hooks and other agents |
 | Shared Helpers | `_common.py` | Single source for repo paths (REPO_ROOT/DATABASE_DIR/MEMORY_DIR), row_to_dict, ticket priority ordering, standard CLI epilogue (cli_finish), optional dotenv loading |
 | Project Resolver | `project_resolver.py` | Shared utility for resolving project config from projects.yaml; routes ticket operations to per-project databases |
 
@@ -66,3 +68,4 @@ All tools and reference files Claude invokes directly.
 | Conversation DB | `conversation/conversation_db.py` | SQLite CRUD + FTS5 for verbatim conversation transcripts |
 | Conversation Ingester | `conversation/conversation_ingest.py` | Parse Claude Code JSONL files into conversation_history.db; multi-source directory support; captures per-response token usage; cron-friendly |
 | Conversation Reader | `conversation/conversation_read.py` | CLI: list sessions, get transcript, full-text search, recent messages, stats incl. token totals + per-month breakdown |
+| Conversation Purge | `conversation/conversation_purge.py` | Delete stored transcripts by project/age/session (`simplex history purge`); preserves token usage by default, requires --yes, see PRIVACY.md |

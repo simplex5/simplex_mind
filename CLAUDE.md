@@ -132,6 +132,22 @@ simplex_mind is the launch directory, but most work happens in the active projec
 
 ---
 
+## simplex CLI
+
+The venv installs a `simplex` command (`pip install -e .`) fronting every brain tool.
+The script paths in this file remain canonical and always work — hooks and cron call
+them directly and must not depend on the install. Use whichever is convenient:
+
+```bash
+simplex doctor                     # full health validation (exit 1 when degraded)
+simplex status                     # compact status page
+simplex ticket list --status open  # any ticket/memory/history tool flag works
+simplex memory search --query "..."
+simplex project use <name>         # = git checkout of that project's branch
+```
+
+---
+
 ## Manual Testing Checklists (`testing/`)
 
 Significant changes in a project get a manual test checklist in that project's `testing/` directory.
