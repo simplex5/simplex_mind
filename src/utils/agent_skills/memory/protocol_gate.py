@@ -11,8 +11,9 @@ Three read-only checks per prompt:
 
 1. Ticket cadence — 5+ tickets resolved in the active project since the last
    memory.db write -> demand a progress summary. Machine-counted via
-   tickets.resolved_at vs MAX(memory_entries.created_at); the agent-counted
-   version of this cadence fired 0 times in 8 closures.
+   tickets.resolved_at vs MAX(memory_entries.created_at), scoped to entries
+   tagged 'project:<name>' when a project is active (global fallback until the
+   first tagged write); the agent-counted version fired 0 times in 8 closures.
 2. Pending autotune candidates — re-surface mid-session. Anything announced
    only in the t=0 digest competes with the user's first request and loses.
 3. Substitution detector — the harness's own auto-memory directory received a
@@ -80,10 +81,22 @@ def _read_only(db_path: Path):
     return sqlite3.connect(f"file:{db_path.as_posix()}?mode=ro", uri=True)
 
 
-def _last_memory_write() -> str:
-    """UTC 'YYYY-MM-DD HH:MM:SS' of the newest memory.db entry, or EPOCH."""
+def _last_memory_write(project: str = None) -> str:
+    """UTC 'YYYY-MM-DD HH:MM:SS' of the newest memory.db entry, or EPOCH.
+    With a project name, prefer entries tagged 'project:<name>' (memory_write
+    auto-tags them, SIMP-D2-022) so a write about another project can't
+    suppress this project's cadence. Falls back to the global max while no
+    tagged entries exist yet — the transition period before the first tagged
+    write per project."""
     con = _read_only(MEMORY_DB)
     try:
+        if project:
+            row = con.execute(
+                "SELECT MAX(created_at) FROM memory_entries WHERE tags LIKE ?",
+                (f'%"project:{project}"%',),
+            ).fetchone()
+            if row[0]:
+                return row[0]
         row = con.execute("SELECT MAX(created_at) FROM memory_entries").fetchone()
         return row[0] or EPOCH
     finally:
@@ -179,18 +192,27 @@ def main() -> int:
     # last_mem = None means memory.db itself is unreadable: the checks that
     # depend on it are skipped (their preconditions are unmeasurable) and the
     # failure is surfaced as a degraded marker instead of vanishing.
-    last_mem = None
+    # Cadence scopes to the active project's tagged entries; substitution is
+    # about the whole DB being silent, so it stays global (SIMP-D2-022).
+    last_mem_global = None
+    last_mem_cadence = None
     errors = []  # (check name, error type)
     try:
-        last_mem = _last_memory_write()
+        active = project_resolver.get_active_project()
+        project = active["name"] if active else None
+    except Exception:
+        project = None
+    try:
+        last_mem_global = _last_memory_write()
+        last_mem_cadence = _last_memory_write(project) if project else last_mem_global
     except Exception as e:
         errors.append(("memory", type(e).__name__))
 
     demands = []  # (check name, message)
     for name, check in (
-        ("cadence", lambda: check_cadence(last_mem, state) if last_mem else ""),
+        ("cadence", lambda: check_cadence(last_mem_cadence, state) if last_mem_cadence else ""),
         ("autotune", lambda: check_autotune(state)),
-        ("substitution", lambda: check_substitution(last_mem, state) if last_mem else ""),
+        ("substitution", lambda: check_substitution(last_mem_global, state) if last_mem_global else ""),
     ):
         try:
             msg = check()

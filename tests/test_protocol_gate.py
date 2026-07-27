@@ -105,6 +105,41 @@ def test_stdout_is_single_json_object(gate_env):
     assert "degraded" in out["systemMessage"]
 
 
+def _insert_memory(db, created_at, tags=None):
+    con = sqlite3.connect(db)
+    con.execute("INSERT INTO memory_entries (created_at, tags) VALUES (?, ?)",
+                (created_at, json.dumps(tags) if tags else None))
+    con.commit()
+    con.close()
+
+
+def _resolve_tickets(db, n, when):
+    con = sqlite3.connect(db)
+    con.executemany("INSERT INTO tickets (resolved_at) VALUES (?)", [(when,)] * n)
+    con.commit()
+    con.close()
+
+
+def test_cadence_scoped_to_active_project(gate_env):
+    # alpha's own last write is old; a NEWER write about another project must
+    # not suppress alpha's cadence nag (SIMP-D2-022)
+    _insert_memory(gate_env.mem_db, "2098-01-01 00:00:00", ["project:alpha"])
+    _insert_memory(gate_env.mem_db, "2099-06-01 00:00:00", ["project:other"])
+    _resolve_tickets(gate_env.tickets_db, 5, "2099-01-01 00:00:00")
+    rc, out = gate_env.run("scope1")
+    assert rc == 0
+    assert "[protocol-gate: cadence]" in out["systemMessage"]
+
+
+def test_cadence_global_fallback_before_first_tagged_write(gate_env):
+    # no alpha-tagged entries yet -> global max applies (transition behavior)
+    _insert_memory(gate_env.mem_db, "2099-06-01 00:00:00", None)
+    _resolve_tickets(gate_env.tickets_db, 5, "2099-01-01 00:00:00")
+    rc, out = gate_env.run("scope2")
+    assert rc == 0
+    assert out is None
+
+
 def test_autotune_pending_surfaces_once(gate_env):
     (gate_env.tmp / "autotune_state.json").write_text(
         json.dumps({"pending": [{"piece": "p", "phrase": "x"}]}), encoding="utf-8")
