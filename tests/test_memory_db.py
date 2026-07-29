@@ -178,3 +178,25 @@ def test_bm25_corpus_respects_scope(mem_db):
     mem_db.add_entry("quantum widget global", scope="global")
     contents = {e["content"] for e in hs.get_all_entries_for_bm25(project_scope="alpha")}
     assert contents == {"quantum widget alpha", "quantum widget global"}
+
+
+# --- frozen migration SQL (SIMP-D2-040) ---
+
+def test_shipped_migrations_are_frozen_literals(mem_db):
+    """Shipped migration DDL must never be built from mutable constants —
+    editing VALID_TYPES once silently rewrote migration 1 and forced
+    migration 2 to exist. Pin the source AND the produced schema."""
+    import inspect
+    for fn in (mem_db._migration_1_base_schema, mem_db._migrate_type_constraint):
+        src = inspect.getsource(fn)
+        assert "join(VALID_TYPES)" not in src   # the exact interpolation that shipped
+        assert "f'''" not in src and 'f"""' not in src  # no f-string DDL at all
+
+
+def test_fresh_schema_type_check_is_byte_pinned(mem_db):
+    conn = mem_db.get_connection()
+    (sql,) = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE name='memory_entries'").fetchone()
+    conn.close()
+    assert ("CHECK(type IN ('fact', 'preference', 'event', 'insight', "
+            "'task', 'relationship', 'decision'))") in sql

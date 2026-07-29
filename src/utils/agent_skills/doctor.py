@@ -242,6 +242,41 @@ def check_hooks(root: Path) -> dict:
     return _result("hooks", OK, "digest, recall, gate, ingest, ticket-gate registered")
 
 
+def check_db_integrity(root: Path) -> dict:
+    """PRAGMA foreign_key_check + integrity_check on every local DB (SIMP-D2-040).
+    This is what catches the legacy rename-migration FK breakage on machines
+    that hit it (D2 measured healthy 2026-07-29; L1 unverified) — a broken FK
+    is invisible until a join goes wrong, so doctor must look for it."""
+    dbs = [
+        root / "database" / "memory" / "memory.db",
+        root / "database" / "tickets.db",
+        root / "database" / "conversation_history.db",
+        root / "database" / "hooks.db",
+    ]
+    issues, checked = [], 0
+    for db in dbs:
+        if not db.exists():
+            continue  # presence is the other checks' job
+        checked += 1
+        try:
+            con = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+            try:
+                fk_rows = con.execute("PRAGMA foreign_key_check").fetchall()
+                (integrity,) = con.execute("PRAGMA integrity_check").fetchone()
+            finally:
+                con.close()
+            if fk_rows:
+                issues.append(f"{db.name}: {len(fk_rows)} foreign-key violation(s)")
+            if integrity != "ok":
+                issues.append(f"{db.name}: integrity_check says {integrity!r}")
+        except sqlite3.Error as e:
+            issues.append(f"{db.name}: unreadable ({e})")
+    if issues:
+        return _result("db integrity", FAIL, "; ".join(issues),
+                       "restore from simplex backup, or write the repair migration (SIMP-D2-045)")
+    return _result("db integrity", OK, f"{checked} database(s): FKs + integrity clean")
+
+
 def check_hook_events(root: Path) -> dict:
     """hooks.db observability (SIMP-D2-038): recent degraded outcomes are a
     real signal — a permanently broken check looks identical to a quiet one
@@ -312,6 +347,7 @@ CHECKS = [
     check_venv,
     check_hooks,
     check_hook_events,
+    check_db_integrity,
     check_git_identity,
     check_branch_mapping,
 ]

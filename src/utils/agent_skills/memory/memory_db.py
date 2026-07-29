@@ -63,12 +63,15 @@ def _migrate_type_constraint(conn):
     if "'decision'" in table_sql:
         return  # Already migrated
 
-    valid_types_sql = "'" + "', '".join(VALID_TYPES) + "'"
+    # Frozen literal DDL (SIMP-D2-040): this migration has shipped — building
+    # it from the mutable VALID_TYPES constant meant editing the constant
+    # silently rewrote history (migration 2 exists because that already
+    # happened once). Never interpolate constants into shipped migrations.
     cursor.execute('ALTER TABLE memory_entries RENAME TO memory_entries_old')
-    cursor.execute(f'''
+    cursor.execute('''
         CREATE TABLE memory_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            type TEXT NOT NULL CHECK(type IN ({valid_types_sql})),
+            type TEXT NOT NULL CHECK(type IN ('fact', 'preference', 'event', 'insight', 'task', 'relationship', 'decision')),
             content TEXT NOT NULL,
             content_hash TEXT UNIQUE,
             source TEXT DEFAULT 'session' CHECK(source IN ('user', 'inferred', 'session', 'external', 'system')),
@@ -122,15 +125,15 @@ def get_connection():
 
 
 def _migration_1_base_schema(conn):
-    """v1: base schema. Idempotent — pre-versioning DBs replay this as a no-op."""
+    """v1: base schema. Idempotent — pre-versioning DBs replay this as a no-op.
+    DDL is frozen literal SQL (SIMP-D2-040) — never built from mutable constants."""
     cursor = conn.cursor()
 
     # Main memory entries table
-    valid_types_sql = "'" + "', '".join(VALID_TYPES) + "'"
-    cursor.execute(f'''
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS memory_entries (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            type TEXT NOT NULL CHECK(type IN ({valid_types_sql})),
+            type TEXT NOT NULL CHECK(type IN ('fact', 'preference', 'event', 'insight', 'task', 'relationship', 'decision')),
             content TEXT NOT NULL,
             content_hash TEXT UNIQUE,
             source TEXT DEFAULT 'session' CHECK(source IN ('user', 'inferred', 'session', 'external', 'system')),
