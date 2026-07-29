@@ -1,7 +1,11 @@
 # Database Architecture
 
-Four SQLite databases power simplex_mind's persistence layer: `memory.db`, `activity.db`,
-`tickets.db` (one per project + a brain fallback), and `conversation_history.db`.
+Five SQLite databases power simplex_mind's persistence layer: `memory.db`, `activity.db`,
+`tickets.db` (one per project + a brain fallback), `conversation_history.db`, and
+`hooks.db` (hook-layer session state + event log, SIMP-D2-038 — managed by
+`memory/hook_state.py`: `hook_session_state` replaces the old per-session temp-JSON
+throttle files, `hook_events` is an append-only observability log pruned past 90 days;
+every access is fail-open so a broken hooks.db can never block a prompt).
 Non-DB state also lives under `database/`: `config.json` (§7, local onboarding state),
 the subconscious index + autotune state (§5), and `backups/` snapshots (§6) — all local,
 none committed.

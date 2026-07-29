@@ -15,8 +15,8 @@ from memory import protocol_gate
 @pytest.fixture
 def gate_env(tmp_path, monkeypatch, fake_projects, on_branch):
     """Healthy gate environment on temp state: valid empty memory.db, valid
-    empty tickets.db for the active project, no autotune file, temp throttle
-    dir. Returns a runner: run(session_id) -> (exit_code, parsed_stdout|None)."""
+    empty tickets.db for the active project, no autotune file, temp hooks.db
+    (SIMP-D2-038). Returns a runner: run(session_id) -> (exit_code, parsed_stdout|None)."""
     mem_db = tmp_path / "memory.db"
     con = sqlite3.connect(mem_db)
     con.execute("CREATE TABLE memory_entries (created_at TEXT, tags TEXT)")
@@ -34,8 +34,8 @@ def gate_env(tmp_path, monkeypatch, fake_projects, on_branch):
     con.close()
     on_branch("alpha-branch")  # active project: alpha -> tickets_db above
 
-    import tempfile
-    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
+    from memory import hook_state
+    monkeypatch.setattr(hook_state, "DB_PATH", tmp_path / "hooks.db")
 
     def run(session_id="s1"):
         payload = json.dumps({"session_id": session_id}).encode()
@@ -138,6 +138,28 @@ def test_cadence_global_fallback_before_first_tagged_write(gate_env):
     rc, out = gate_env.run("scope2")
     assert rc == 0
     assert out is None
+
+
+def test_state_durable_and_events_logged(gate_env):
+    # once-per-session semantics now ride hooks.db (SIMP-D2-038): state row
+    # upserted, one invocation event per run with a duration
+    rc, out = gate_env.run("evt1")
+    assert rc == 0
+    con = sqlite3.connect(gate_env.tmp / "hooks.db")
+    con.row_factory = sqlite3.Row
+    events = con.execute(
+        "SELECT check_name, outcome, duration_ms FROM hook_events WHERE hook='protocol_gate'"
+    ).fetchall()
+    state_rows = con.execute(
+        "SELECT session_id, state FROM hook_session_state WHERE hook='protocol_gate'"
+    ).fetchall()
+    con.close()
+    invocations = [e for e in events if e["check_name"] == "invocation"]
+    assert len(invocations) == 1
+    assert invocations[0]["outcome"] == "skipped"  # healthy quiet prompt
+    assert invocations[0]["duration_ms"] is not None
+    assert len(state_rows) == 1 and state_rows[0]["session_id"] == "evt1"
+    assert json.loads(state_rows[0]["state"])["prompts"] == 1
 
 
 def test_autotune_pending_surfaces_once(gate_env):

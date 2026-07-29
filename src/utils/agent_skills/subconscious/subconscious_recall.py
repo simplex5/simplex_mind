@@ -10,8 +10,9 @@ Registered in .claude/settings.json under hooks.UserPromptSubmit.
 
 Guarantees:
 - Always exits 0 — a broken subconscious must never block a prompt (fail-open).
-- Session dedup: a piece is injected at most once per session (state file in
-  the system temp dir keyed by session_id).
+- Session dedup: a piece is injected at most once per session (durable state
+  in database/hooks.db keyed by session_id — SIMP-D2-038; every invocation
+  also logs an outcome+duration event there for observability).
 - Skips trivial prompts (short confirmations) and slash commands.
 - At most MAX_PIECES pieces per prompt, well under the 10k injection cap.
 - Prints a visible `[subconscious: <piece names>]` marker line (systemMessage)
@@ -23,7 +24,7 @@ Tuning knobs are the constants below; SEMANTIC_THRESHOLD is the main one.
 import json
 import re
 import sys
-import tempfile
+import time
 from pathlib import Path
 
 try:
@@ -31,6 +32,12 @@ try:
 except ImportError:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from _common import REPO_ROOT as _REPO_ROOT
+
+try:
+    from ..memory import hook_state
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "memory"))
+    import hook_state
 INDEX_PATH = _REPO_ROOT / "database" / "memory" / "subconscious_index.json"
 PIECES_DIR = _REPO_ROOT / "subconscious"
 KEYWORD_OVERLAY = _REPO_ROOT / "database" / "memory" / "subconscious_keywords.json"
@@ -106,30 +113,31 @@ def _staleness_note(index) -> str:
 
 
 def main() -> int:
+    t0 = time.time()
     # utf-8-sig: some Windows pipe paths prepend a BOM, which json.load rejects
     data = json.loads(sys.stdin.buffer.read().decode("utf-8-sig"))
     prompt = (data.get("user_input") or data.get("prompt") or "").strip()
-    # Claude Code sends a UUID; sanitize anyway since this lands in a file path.
+    # Claude Code sends a UUID; sanitize anyway since this lands in a DB key.
     session_id = re.sub(r"[^A-Za-z0-9_-]", "_", str(data.get("session_id", "unknown")))[:64]
 
+    def _done(outcome: str, reason: str = "") -> int:
+        """Every exit logs one observability row (SIMP-D2-038) — fail-open."""
+        hook_state.log_event("subconscious_recall", session_id, "invocation", outcome,
+                             reason=reason, duration_ms=int((time.time() - t0) * 1000))
+        return 0
+
     if not prompt or prompt.startswith("/") or len(prompt.split()) < MIN_PROMPT_WORDS:
-        return 0
+        return _done("skipped", "short-or-command-prompt")
     if not INDEX_PATH.exists():
-        return 0
+        return _done("skipped", "no-index")
     index = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
     stale_note = _staleness_note(index)
 
-    state_path = Path(tempfile.gettempdir()) / f"subconscious_{session_id}.json"
-    injected = set()
-    if state_path.exists():
-        try:
-            injected = set(json.loads(state_path.read_text()))
-        except Exception:
-            pass
+    injected = set(hook_state.get_state("subconscious_recall", session_id, default=[]) or [])
 
     candidates = [p for p in index["pieces"] if p["name"] not in injected]
     if not candidates:
-        return 0
+        return _done("skipped", "all-pieces-injected")
 
     prompt_norm = normalize(prompt)
     scored = []
@@ -165,11 +173,9 @@ def main() -> int:
     if not scored:
         if degraded:
             print(json.dumps({"systemMessage": degraded}))
-            try:
-                state_path.write_text(json.dumps(sorted(injected)))
-            except Exception:
-                pass
-        return 0
+            hook_state.set_state("subconscious_recall", session_id, sorted(injected))
+            return _done("degraded", "embedding-dim-mismatch")
+        return _done("skipped", "no-match")
     scored.sort(key=lambda t: (t[0], t[1]), reverse=True)
     chosen = [p for _, _, p in scored[:MAX_PIECES]]
 
@@ -184,11 +190,9 @@ def main() -> int:
         }
     }))
 
-    try:
-        state_path.write_text(json.dumps(sorted(injected | {p["name"] for p in chosen})))
-    except Exception:
-        pass
-    return 0
+    hook_state.set_state("subconscious_recall", session_id,
+                         sorted(injected | {p["name"] for p in chosen}))
+    return _done("degraded" if degraded else "fired", ",".join(p["name"] for p in chosen))
 
 
 if __name__ == "__main__":

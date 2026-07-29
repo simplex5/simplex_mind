@@ -241,6 +241,29 @@ def check_hooks(root: Path) -> dict:
     return _result("hooks", OK, "digest, recall, gate, ingest registered")
 
 
+def check_hook_events(root: Path) -> dict:
+    """hooks.db observability (SIMP-D2-038): recent degraded outcomes are a
+    real signal — a permanently broken check looks identical to a quiet one
+    without this. Absence of the DB is normal before the first hook run."""
+    db = root / "database" / "hooks.db"
+    if not db.exists():
+        return _result("hook events", OK, "no hooks.db yet (created on first hook run)")
+    try:
+        (n_degraded,) = _count_ro(
+            db, "SELECT COUNT(*) FROM hook_events "
+                "WHERE outcome = 'degraded' AND created_at > datetime('now', '-7 days')")
+        (last,) = _count_ro(db, "SELECT MAX(created_at) FROM hook_events")
+        detail = f"last event {last or 'never'}"
+        if n_degraded:
+            return _result("hook events", WARN,
+                           f"{n_degraded} degraded outcome(s) in the last 7 days; {detail}",
+                           "inspect: SELECT * FROM hook_events WHERE outcome='degraded' ORDER BY id DESC")
+        return _result("hook events", OK, detail)
+    except sqlite3.Error as e:
+        return _result("hook events", FAIL, f"hooks.db unreadable ({e})",
+                       "delete database/hooks.db — it is rebuilt on the next prompt")
+
+
 def check_git_identity(root: Path) -> dict:
     def _config(key):
         try:
@@ -287,6 +310,7 @@ CHECKS = [
     check_autotune,
     check_venv,
     check_hooks,
+    check_hook_events,
     check_git_identity,
     check_branch_mapping,
 ]
