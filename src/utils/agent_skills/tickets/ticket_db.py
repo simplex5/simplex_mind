@@ -69,6 +69,10 @@ def get_connection(db_path: Path = None, target: str = None) -> sqlite3.Connecti
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout=5000")
+    # WAL: session-start digest and the per-prompt protocol_gate cadence check
+    # read this DB while the live session writes tickets. See memory_db's
+    # get_connection for the full rationale. (SIMP-D2-035)
+    conn.execute("PRAGMA journal_mode=WAL")
     init_db(conn)
     return conn
 
