@@ -26,8 +26,9 @@ subconscious_recall.py.
 
 Guarantees:
 - Always exits 0 (fail-open) — a broken gate must never block a prompt.
-- Read-only on all databases (sqlite URI mode=ro); the only write is its own
-  throttle state file in the system temp dir, keyed by session_id.
+- Read-only on all protocol databases (sqlite URI mode=ro); its only writes go
+  to database/hooks.db — durable session throttle state plus an append-only
+  event log, replacing the leaked temp-dir JSON files (SIMP-D2-038).
 - Throttled: the cadence nag repeats at most every CADENCE_NAG_EVERY prompts
   while the condition holds; autotune and substitution nag once per session.
 - Prints a visible `[protocol-gate: <check names>]` marker line (systemMessage)
@@ -42,7 +43,6 @@ import json
 import re
 import sqlite3
 import sys
-import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -52,6 +52,12 @@ try:
 except ImportError:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from _common import REPO_ROOT as _REPO_ROOT
+
+try:
+    from . import hook_state
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import hook_state
 
 try:
     from .. import project_resolver
@@ -174,19 +180,15 @@ def check_substitution(last_mem: str, state: dict) -> str:
 
 
 def main() -> int:
+    t0 = time.time()
     # utf-8-sig: some Windows pipe paths prepend a BOM, which json.load rejects
     data = json.loads(sys.stdin.buffer.read().decode("utf-8-sig"))
     session_id = re.sub(r"[^A-Za-z0-9_-]", "_", str(data.get("session_id", "unknown")))[:64]
 
-    state_path = Path(tempfile.gettempdir()) / f"protocol_gate_{session_id}.json"
     state = {"prompts": 0, "once": []}
-    if state_path.exists():
-        try:
-            loaded = json.loads(state_path.read_text())
-            if isinstance(loaded, dict):
-                state.update(loaded)
-        except Exception:
-            pass
+    loaded = hook_state.get_state("protocol_gate", session_id)
+    if isinstance(loaded, dict):
+        state.update(loaded)
     state["prompts"] = int(state.get("prompts", 0)) + 1
 
     # last_mem = None means memory.db itself is unreadable: the checks that
@@ -227,10 +229,19 @@ def main() -> int:
     fresh_errors = [(n, t) for n, t in errors if n not in reported]
     reported.extend(n for n, _ in fresh_errors)
 
-    try:
-        state_path.write_text(json.dumps(state))
-    except Exception:
-        pass
+    hook_state.set_state("protocol_gate", session_id, state)
+
+    # Observability rows (SIMP-D2-038): one per check outcome + one invocation
+    # summary carrying duration. All fail-open inside hook_state.
+    for n, _ in demands:
+        hook_state.log_event("protocol_gate", session_id, n, "fired")
+    for n, t in errors:
+        hook_state.log_event("protocol_gate", session_id, n, "degraded", reason=t)
+    hook_state.log_event(
+        "protocol_gate", session_id, "invocation",
+        "fired" if demands else "skipped",
+        reason=",".join(n for n, _ in demands),
+        duration_ms=int((time.time() - t0) * 1000))
 
     out = {}
     if demands:
