@@ -41,6 +41,41 @@ def _run_main(monkeypatch, argv):
     return doctor.main()
 
 
+# --- DB integrity checks (SIMP-D2-040) ---
+
+def test_db_integrity_fails_on_fk_violation(fake_repo):
+    import sqlite3
+    root = fake_repo(dbs=["database/memory/memory.db"])
+    con = sqlite3.connect(root / "database" / "memory" / "memory.db")
+    con.execute("CREATE TABLE parent (id INTEGER PRIMARY KEY)")
+    con.execute("CREATE TABLE child (id INTEGER PRIMARY KEY, "
+                "parent_id INTEGER REFERENCES parent(id))")
+    con.execute("INSERT INTO child (id, parent_id) VALUES (1, 999)")  # orphan
+    con.commit()
+    con.close()
+    r = doctor.check_db_integrity(root)
+    assert r["level"] == doctor.FAIL
+    assert "foreign-key violation" in r["detail"]
+
+
+def test_db_integrity_ok_on_healthy_dbs(fake_repo):
+    import sqlite3
+    root = fake_repo(dbs=["database/memory/memory.db", "database/tickets.db"])
+    for db in ("database/memory/memory.db", "database/tickets.db"):
+        con = sqlite3.connect(root / db)
+        con.execute("CREATE TABLE t (id INTEGER PRIMARY KEY)")
+        con.commit()
+        con.close()
+    r = doctor.check_db_integrity(root)
+    assert r["level"] == doctor.OK
+    assert "2 database(s)" in r["detail"]
+
+
+def test_db_integrity_skips_missing_dbs(fake_repo):
+    r = doctor.check_db_integrity(fake_repo())
+    assert r["level"] == doctor.OK  # presence is other checks' business
+
+
 def test_doctor_exits_1_on_fresh_clone(fake_repo, monkeypatch, capsys):
     root = fake_repo()
     rc = _run_main(monkeypatch, ["--root", str(root)])
