@@ -36,8 +36,8 @@ except ImportError:
 try:
     from ..memory import hook_state
 except ImportError:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "memory"))
-    import hook_state
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from memory import hook_state
 INDEX_PATH = _REPO_ROOT / "database" / "memory" / "subconscious_index.json"
 PIECES_DIR = _REPO_ROOT / "subconscious"
 KEYWORD_OVERLAY = _REPO_ROOT / "database" / "memory" / "subconscious_keywords.json"
