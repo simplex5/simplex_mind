@@ -46,10 +46,10 @@ load_dotenv_if_available()
 # Import from sibling modules
 try:
     from .semantic_search import semantic_search
-    from .memory_db import get_connection
+    from .memory_db import get_connection, scope_predicate
 except ImportError:
     from semantic_search import semantic_search
-    from memory_db import get_connection
+    from memory_db import get_connection, scope_predicate
 
 # Try to import rank_bm25, fall back to simple implementation
 try:
@@ -93,17 +93,19 @@ def simple_bm25_score(query_tokens: List[str], doc_tokens: List[str],
     return score
 
 
-def get_all_entries_for_bm25() -> List[Dict[str, Any]]:
-    """Get all active entries for BM25 indexing."""
+def get_all_entries_for_bm25(project_scope: str = 'auto') -> List[Dict[str, Any]]:
+    """Get active entries for BM25 indexing — scoped to the active project +
+    global by default; the shared predicate also enforces expiry (SIMP-D2-037)."""
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute('''
+    pred_sql, pred_params = scope_predicate(project_scope)
+    cursor.execute(f'''
         SELECT id, type, content, source, importance, tags, created_at
         FROM memory_entries
-        WHERE is_active = 1
+        WHERE {pred_sql}
         ORDER BY importance DESC
-    ''')
+    ''', pred_params)
 
     entries = [dict(row) for row in cursor.fetchall()]
     conn.close()
@@ -188,7 +190,8 @@ def hybrid_search(
     semantic_weight: float = 0.3,
     min_score: float = 0.1,
     semantic_only: bool = False,
-    keyword_only: bool = False
+    keyword_only: bool = False,
+    project_scope: str = 'auto'
 ) -> Dict[str, Any]:
     """
     Perform hybrid BM25 + semantic search.
@@ -202,6 +205,8 @@ def hybrid_search(
         min_score: Minimum combined score
         semantic_only: Only use semantic search
         keyword_only: Only use keyword search
+        project_scope: see memory_db.scope_predicate() — 'auto' scopes to the
+                       active project + global; '*' = --all-projects (SIMP-D2-037)
 
     Returns:
         dict with combined results
@@ -215,7 +220,7 @@ def hybrid_search(
     }
 
     # Get entries for BM25
-    all_entries = get_all_entries_for_bm25()
+    all_entries = get_all_entries_for_bm25(project_scope=project_scope)
 
     # Filter by type if specified
     if entry_type:
@@ -242,7 +247,8 @@ def hybrid_search(
     # Semantic-only search
     if semantic_only:
         results["method"] = "semantic_only"
-        sem_results = semantic_search(query, entry_type=entry_type, limit=limit, threshold=0.3)
+        sem_results = semantic_search(query, entry_type=entry_type, limit=limit, threshold=0.3,
+                                      project_scope=project_scope)
         if sem_results.get("success"):
             results["results"] = [{
                 "id": r["id"],
@@ -261,7 +267,8 @@ def hybrid_search(
 
     # Step 2: Semantic search on candidates. If the backend is unavailable,
     # degrade to keyword-only — but say so instead of pretending it's hybrid.
-    sem_results = semantic_search(query, entry_type=entry_type, limit=limit * 3, threshold=0.2)
+    sem_results = semantic_search(query, entry_type=entry_type, limit=limit * 3, threshold=0.2,
+                                  project_scope=project_scope)
     semantic_scores = {}
     if sem_results.get("success"):
         semantic_scores = {r["id"]: r["similarity"] for r in sem_results.get("results", [])}
@@ -319,6 +326,8 @@ def main():
                        help='Only use semantic/vector search')
     parser.add_argument('--keyword-only', action='store_true',
                        help='Only use keyword/BM25 search')
+    parser.add_argument('--all-projects', action='store_true',
+                       help='Search across every project scope (default: active project + global)')
 
     args = parser.parse_args()
 
@@ -337,7 +346,8 @@ def main():
         semantic_weight=sem_w,
         min_score=args.min_score,
         semantic_only=args.semantic_only,
-        keyword_only=args.keyword_only
+        keyword_only=args.keyword_only,
+        project_scope='*' if args.all_projects else 'auto'
     )
 
     if result.get('success'):

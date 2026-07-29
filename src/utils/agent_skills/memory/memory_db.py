@@ -187,10 +187,88 @@ def _migration_1_base_schema(conn):
     conn.commit()
 
 
+def _migration_3_scope_provenance(conn):
+    """v3: project-scoped recall + provenance (SIMP-D2-037).
+
+    Writes were already tagged 'project:<name>' (SIMP-D2-022) but every read
+    path recalled globally — cross-project pollution. scope makes the project
+    a real column; provenance distinguishes who wrote the entry (foreground
+    agent vs the future distiller, SIMP-D2-046).
+
+    Backfill heuristic: the first 'project:<name>' tag wins; untagged entries
+    stay 'global'. Entries written during a project session about global
+    matters can be rescoped later via update_entry.
+
+    DDL is frozen literal SQL — never built from mutable constants
+    (SIMP-D2-040 discipline)."""
+    cursor = conn.cursor()
+    cursor.execute(
+        "ALTER TABLE memory_entries ADD COLUMN scope TEXT NOT NULL DEFAULT 'global'"
+    )
+    cursor.execute(
+        "ALTER TABLE memory_entries ADD COLUMN provenance TEXT NOT NULL DEFAULT 'agent'"
+    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_memory_scope ON memory_entries(scope)")
+
+    rows = cursor.execute(
+        "SELECT id, tags FROM memory_entries WHERE tags IS NOT NULL"
+    ).fetchall()
+    for row in rows:
+        try:
+            tags = json.loads(row['tags'])
+        except (ValueError, TypeError):
+            continue
+        for tag in tags or []:
+            if isinstance(tag, str) and tag.startswith('project:') and tag[8:]:
+                cursor.execute(
+                    'UPDATE memory_entries SET scope = ? WHERE id = ?',
+                    (tag[8:], row['id'])
+                )
+                break
+    conn.commit()
+
+
 MIGRATIONS = [
     (1, _migration_1_base_schema),
     (2, _migrate_type_constraint),
+    (3, _migration_3_scope_provenance),
 ]
+
+
+def _default_scope() -> str:
+    """Resolve 'auto' scope: the active project's name, or 'global' on the
+    brain branches. A resolver failure fails open to '*' (unfiltered) —
+    availability beats precision for recall."""
+    try:
+        try:
+            from ..project_resolver import get_active_project
+        except ImportError:
+            from project_resolver import get_active_project
+        active = get_active_project()
+        return active['name'] if active else 'global'
+    except Exception:
+        return '*'
+
+
+def scope_predicate(project_scope: str = 'auto'):
+    """The one active-memory predicate every read path shares (SIMP-D2-037):
+    active + unexpired + scope-visible. Returns (sql_fragment, params).
+
+    project_scope values:
+        'auto'   — resolve from the active project (default for all readers)
+        '<name>' — that project's entries plus 'global'
+        'global' — global entries only (brain branches resolve to this)
+        '*'      — no scope filter (--all-projects)
+    Centralizing this is what fixed expiry being honored by list but ignored
+    by every search path."""
+    if project_scope == 'auto':
+        project_scope = _default_scope()
+    sql = 'is_active = 1 AND (expires_at IS NULL OR expires_at > datetime("now"))'
+    if project_scope == '*':
+        return sql, []
+    if project_scope == 'global':
+        return sql + " AND scope = 'global'", []
+    return sql + " AND scope IN (?, 'global')", [project_scope]
 
 
 def row_to_dict(row) -> Optional[Dict]:
@@ -217,7 +295,9 @@ def add_entry(
     importance: int = 5,
     tags: Optional[List[str]] = None,
     context: Optional[str] = None,
-    expires_at: Optional[str] = None
+    expires_at: Optional[str] = None,
+    scope: Optional[str] = None,
+    provenance: str = 'agent'
 ) -> Dict[str, Any]:
     """
     Add a new memory entry.
@@ -231,6 +311,10 @@ def add_entry(
         tags: Optional list of tags
         context: Optional context about when/why this was learned
         expires_at: Optional expiration datetime
+        scope: 'global' or a project name. None resolves from the active
+               project (SIMP-D2-037) — pass 'global' explicitly to write a
+               cross-project fact from inside a project session.
+        provenance: who wrote this ('agent', 'user', 'distiller', ...)
 
     Returns:
         dict with success status and entry data
@@ -267,11 +351,23 @@ def add_entry(
 
     tags_json = json.dumps(tags) if tags else None
 
+    if scope is None:
+        scope = _default_scope()
+        if scope == '*':  # resolver failed — never store the wildcard
+            scope = 'global'
+    if not isinstance(scope, str) or not scope.strip():
+        conn.close()
+        return {"success": False, "error": f"Invalid scope {scope!r} — 'global' or a project name"}
+    if not isinstance(provenance, str) or not provenance.strip():
+        conn.close()
+        return {"success": False, "error": f"Invalid provenance {provenance!r}"}
+
     cursor.execute('''
         INSERT INTO memory_entries
-        (type, content, content_hash, source, confidence, importance, tags, context, expires_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (entry_type, content, content_hash, source, confidence, importance, tags_json, context, expires_at))
+        (type, content, content_hash, source, confidence, importance, tags, context, expires_at, scope, provenance)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (entry_type, content, content_hash, source, confidence, importance, tags_json, context, expires_at,
+          scope.strip(), provenance.strip()))
 
     entry_id = cursor.lastrowid
     conn.commit()
@@ -322,7 +418,8 @@ def list_entries(
     active_only: bool = True,
     limit: int = 100,
     offset: int = 0,
-    min_importance: int = 1
+    min_importance: int = 1,
+    project_scope: str = 'auto'
 ) -> Dict[str, Any]:
     """
     List memory entries with optional filters.
@@ -330,10 +427,13 @@ def list_entries(
     Args:
         entry_type: Filter by type
         source: Filter by source
-        active_only: Only show active entries
+        active_only: Only show active entries (also applies scope + expiry —
+                     False is the unfiltered admin view)
         limit: Max results
         offset: Pagination offset
         min_importance: Minimum importance level
+        project_scope: see scope_predicate() — 'auto' scopes to the active
+                       project + global; '*' disables (SIMP-D2-037)
 
     Returns:
         dict with entries array
@@ -359,8 +459,9 @@ def list_entries(
         params.append(source)
 
     if active_only:
-        conditions.append('is_active = 1')
-        conditions.append('(expires_at IS NULL OR expires_at > datetime("now"))')
+        pred_sql, pred_params = scope_predicate(project_scope)
+        conditions.append(pred_sql)
+        params.extend(pred_params)
 
     conditions.append('importance >= ?')
     params.append(min_importance)
@@ -388,7 +489,8 @@ def list_entries(
 def search_entries(
     query: str,
     entry_type: Optional[str] = None,
-    limit: int = 20
+    limit: int = 20,
+    project_scope: str = 'auto'
 ) -> Dict[str, Any]:
     """
     Search memory entries by text (basic full-text search).
@@ -398,6 +500,7 @@ def search_entries(
         query: Search query
         entry_type: Optional type filter
         limit: Max results
+        project_scope: see scope_predicate() (SIMP-D2-037)
 
     Returns:
         dict with matching entries
@@ -412,23 +515,25 @@ def search_entries(
     escaped = query.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
     search_pattern = f'%{escaped}%'
 
+    pred_sql, pred_params = scope_predicate(project_scope)
+
     if entry_type:
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT * FROM memory_entries
-            WHERE is_active = 1
+            WHERE {pred_sql}
             AND type = ?
             AND (content LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\' OR context LIKE ? ESCAPE '\\')
             ORDER BY importance DESC, created_at DESC
             LIMIT ?
-        ''', (entry_type, search_pattern, search_pattern, search_pattern, limit))
+        ''', (*pred_params, entry_type, search_pattern, search_pattern, search_pattern, limit))
     else:
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT * FROM memory_entries
-            WHERE is_active = 1
+            WHERE {pred_sql}
             AND (content LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\' OR context LIKE ? ESCAPE '\\')
             ORDER BY importance DESC, created_at DESC
             LIMIT ?
-        ''', (search_pattern, search_pattern, search_pattern, limit))
+        ''', (*pred_params, search_pattern, search_pattern, search_pattern, limit))
 
     entries = [row_to_dict(row) for row in cursor.fetchall()]
 
@@ -455,7 +560,8 @@ def update_entry(entry_id: int, **kwargs) -> Dict[str, Any]:
     Returns:
         dict with updated entry
     """
-    allowed_fields = ['content', 'type', 'source', 'confidence', 'importance', 'tags', 'context', 'expires_at', 'is_active']
+    allowed_fields = ['content', 'type', 'source', 'confidence', 'importance', 'tags', 'context',
+                      'expires_at', 'is_active', 'scope', 'provenance']
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -549,8 +655,9 @@ def delete_entry(entry_id: int, soft_delete: bool = True) -> Dict[str, Any]:
     return {"success": True, "message": message}
 
 
-def get_recent(hours: int = 24, entry_type: Optional[str] = None) -> Dict[str, Any]:
-    """Get memory entries from the last N hours."""
+def get_recent(hours: int = 24, entry_type: Optional[str] = None,
+               project_scope: str = 'auto') -> Dict[str, Any]:
+    """Get memory entries from the last N hours (scoped — SIMP-D2-037)."""
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -558,18 +665,20 @@ def get_recent(hours: int = 24, entry_type: Optional[str] = None) -> Dict[str, A
     # The cutoff must use the same clock and format for string comparison.
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime('%Y-%m-%d %H:%M:%S')
 
+    pred_sql, pred_params = scope_predicate(project_scope)
+
     if entry_type:
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT * FROM memory_entries
-            WHERE is_active = 1 AND type = ? AND created_at >= ?
+            WHERE {pred_sql} AND type = ? AND created_at >= ?
             ORDER BY created_at DESC
-        ''', (entry_type, cutoff))
+        ''', (*pred_params, entry_type, cutoff))
     else:
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT * FROM memory_entries
-            WHERE is_active = 1 AND created_at >= ?
+            WHERE {pred_sql} AND created_at >= ?
             ORDER BY created_at DESC
-        ''', (cutoff,))
+        ''', (*pred_params, cutoff))
 
     entries = [row_to_dict(row) for row in cursor.fetchall()]
 

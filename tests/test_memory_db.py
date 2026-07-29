@@ -98,3 +98,83 @@ def test_non_content_update_keeps_embedding(mem_db):
     embedding, model = _raw_embedding(mem_db, eid)
     assert embedding is not None
     assert model == "test-model"
+
+
+# --- project-scoped recall + centralized expiry (SIMP-D2-037) ---
+
+def test_scope_isolation_in_search(mem_db):
+    mem_db.add_entry("alpha secret plans", scope="alpha")
+    mem_db.add_entry("beta secret plans", scope="beta")
+    mem_db.add_entry("global secret plans", scope="global")
+    r = mem_db.search_entries("secret plans", project_scope="alpha")
+    assert {e["content"] for e in r["entries"]} == {"alpha secret plans", "global secret plans"}
+    r_all = mem_db.search_entries("secret plans", project_scope="*")
+    assert len(r_all["entries"]) == 3
+    r_glob = mem_db.search_entries("secret plans", project_scope="global")
+    assert {e["content"] for e in r_glob["entries"]} == {"global secret plans"}
+
+
+def test_scope_isolation_in_list_and_recent(mem_db):
+    mem_db.add_entry("alpha fact", scope="alpha")
+    mem_db.add_entry("global fact", scope="global")
+    listed = mem_db.list_entries(project_scope="beta")
+    assert {e["content"] for e in listed["entries"]} == {"global fact"}
+    recent = mem_db.get_recent(hours=24, project_scope="beta")
+    assert {e["content"] for e in recent["entries"]} == {"global fact"}
+
+
+def test_expired_entry_invisible_everywhere(mem_db):
+    # expiry was honored by list but ignored by search — the shared predicate
+    # must make every read path agree
+    mem_db.add_entry("stale entry", expires_at="2000-01-01 00:00:00", scope="global")
+    mem_db.add_entry("fresh entry", scope="global")
+    searched = {e["content"] for e in mem_db.search_entries("entry", project_scope="*")["entries"]}
+    listed = {e["content"] for e in mem_db.list_entries(project_scope="*")["entries"]}
+    assert "stale entry" not in searched and "fresh entry" in searched
+    assert "stale entry" not in listed and "fresh entry" in listed
+
+
+def test_add_entry_auto_scope_resolves_active_project(mem_db, fake_projects, on_branch):
+    on_branch("alpha-branch")
+    r = mem_db.add_entry("written during alpha session")
+    assert r["entry"]["scope"] == "alpha"
+    on_branch("develop")
+    r2 = mem_db.add_entry("written on brain branch")
+    assert r2["entry"]["scope"] == "global"
+
+
+def test_migration_backfills_scope_from_tags(tmp_path, monkeypatch):
+    """A legacy (pre-v3) DB gets scope backfilled from its project:<name> tags."""
+    import json as _json
+    import sqlite3
+    from memory import memory_db
+
+    db_path = tmp_path / "legacy.db"
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    memory_db._migration_1_base_schema(conn)
+    conn.execute(
+        "INSERT INTO memory_entries (type, content, content_hash, tags) VALUES ('fact', 'tagged entry', 'h1', ?)",
+        (_json.dumps(["project:alpha", "SIMP-D2-001"]),))
+    conn.execute(
+        "INSERT INTO memory_entries (type, content, content_hash) VALUES ('fact', 'untagged entry', 'h2')")
+    conn.execute("PRAGMA user_version = 2")
+    conn.commit()
+    conn.close()
+
+    monkeypatch.setattr(memory_db, "DB_PATH", db_path)
+    monkeypatch.setattr(memory_db, "_schema_ready", False)
+    conn = memory_db.get_connection()
+    rows = {r["content"]: r["scope"]
+            for r in conn.execute("SELECT content, scope FROM memory_entries")}
+    conn.close()
+    assert rows == {"tagged entry": "alpha", "untagged entry": "global"}
+
+
+def test_bm25_corpus_respects_scope(mem_db):
+    from memory import hybrid_search as hs
+    mem_db.add_entry("quantum widget alpha", scope="alpha")
+    mem_db.add_entry("quantum widget beta", scope="beta")
+    mem_db.add_entry("quantum widget global", scope="global")
+    contents = {e["content"] for e in hs.get_all_entries_for_bm25(project_scope="alpha")}
+    assert contents == {"quantum widget alpha", "quantum widget global"}

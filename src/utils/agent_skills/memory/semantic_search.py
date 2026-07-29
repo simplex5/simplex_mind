@@ -44,10 +44,10 @@ load_dotenv_if_available()
 # Import from sibling modules
 try:
     from .embed_memory import generate_embedding, bytes_to_embedding
-    from .memory_db import get_connection
+    from .memory_db import get_connection, scope_predicate
 except ImportError:
     from embed_memory import generate_embedding, bytes_to_embedding
-    from memory_db import get_connection
+    from memory_db import get_connection, scope_predicate
 
 
 def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
@@ -76,14 +76,17 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 
 def get_all_embeddings(
     entry_type: Optional[str] = None,
-    active_only: bool = True
+    active_only: bool = True,
+    project_scope: str = 'auto'
 ) -> List[Dict[str, Any]]:
     """
     Get all memory entries with embeddings.
 
     Args:
         entry_type: Optional type filter
-        active_only: Only get active entries
+        active_only: Only get active entries (applies the shared scope +
+                     expiry predicate — SIMP-D2-037)
+        project_scope: see memory_db.scope_predicate()
 
     Returns:
         List of entries with their embeddings
@@ -95,7 +98,9 @@ def get_all_embeddings(
     params = []
 
     if active_only:
-        conditions.append('is_active = 1')
+        pred_sql, pred_params = scope_predicate(project_scope)
+        conditions.append(pred_sql)
+        params.extend(pred_params)
 
     if entry_type:
         conditions.append('type = ?')
@@ -127,7 +132,8 @@ def semantic_search(
     entry_type: Optional[str] = None,
     limit: int = 10,
     threshold: float = 0.5,
-    client=None
+    client=None,
+    project_scope: str = 'auto'
 ) -> Dict[str, Any]:
     """
     Search memories by semantic similarity.
@@ -138,6 +144,7 @@ def semantic_search(
         limit: Maximum results to return
         threshold: Minimum similarity threshold (0-1)
         client: Optional OpenAI client
+        project_scope: see memory_db.scope_predicate() (SIMP-D2-037)
 
     Returns:
         dict with ranked results
@@ -150,7 +157,7 @@ def semantic_search(
     query_embedding = embed_result['embedding']
 
     # Get all entries with embeddings
-    entries = get_all_embeddings(entry_type=entry_type)
+    entries = get_all_embeddings(entry_type=entry_type, project_scope=project_scope)
 
     if not entries:
         return {
@@ -271,6 +278,8 @@ def main():
     parser.add_argument('--threshold', type=float, default=0.5,
                        help='Minimum similarity threshold (0-1)')
     parser.add_argument('--similar-to', type=int, help='Find entries similar to this ID')
+    parser.add_argument('--all-projects', action='store_true',
+                       help='Search across every project scope (default: active project + global)')
 
     args = parser.parse_args()
 
@@ -288,7 +297,8 @@ def main():
             query=args.query,
             entry_type=args.type,
             limit=args.limit,
-            threshold=args.threshold
+            threshold=args.threshold,
+            project_scope='*' if args.all_projects else 'auto'
         )
 
     else:

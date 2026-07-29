@@ -204,7 +204,8 @@ def read_recent_logs(days: int = 2) -> List[Dict[str, Any]]:
 def read_db_entries(
     hours: int = 24,
     entry_type: Optional[str] = None,
-    min_importance: int = 5
+    min_importance: int = 5,
+    project_scope: str = 'auto'
 ) -> List[Dict[str, Any]]:
     """
     Read recent entries from SQLite database.
@@ -213,11 +214,12 @@ def read_db_entries(
         hours: Hours to look back
         entry_type: Optional type filter
         min_importance: Minimum importance level
+        project_scope: see memory_db.scope_predicate() (SIMP-D2-037)
 
     Returns:
         List of entries
     """
-    result = get_recent(hours=hours, entry_type=entry_type)
+    result = get_recent(hours=hours, entry_type=entry_type, project_scope=project_scope)
 
     if result.get('success'):
         entries = result.get('entries', [])
@@ -234,7 +236,8 @@ def load_all_memory(
     include_systems: bool = True,
     log_days: int = 2,
     db_hours: int = 24,
-    min_importance: int = 5
+    min_importance: int = 5,
+    project_scope: str = 'auto'
 ) -> Dict[str, Any]:
     """
     Load all memory context for session start.
@@ -284,7 +287,8 @@ def load_all_memory(
 
     # Load DB entries
     if include_db:
-        entries = read_db_entries(hours=db_hours, min_importance=min_importance)
+        entries = read_db_entries(hours=db_hours, min_importance=min_importance,
+                                  project_scope=project_scope)
         result["db_entries"] = entries
         result["summary"]["db_entries_loaded"] = len(entries)
 
@@ -352,6 +356,8 @@ def main():
     parser.add_argument('--days', type=int, default=2, help='Days of logs to include')
     parser.add_argument('--db-hours', type=int, default=24, help='Hours of DB entries')
     parser.add_argument('--min-importance', type=int, default=5, help='Min importance for DB entries')
+    parser.add_argument('--all-projects', action='store_true',
+                       help='Include DB entries from every project scope (default: active project + global)')
     parser.add_argument('--format', choices=['markdown', 'json', 'summary'], default='markdown',
                        help='Output format')
     parser.add_argument('--quiet', action='store_true', help='Suppress status messages')
@@ -369,7 +375,8 @@ def main():
         include_db=args.include_db,
         log_days=args.days,
         db_hours=args.db_hours,
-        min_importance=args.min_importance
+        min_importance=args.min_importance,
+        project_scope='*' if args.all_projects else 'auto'
     )
 
     # Format output
