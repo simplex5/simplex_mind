@@ -45,7 +45,10 @@ Managed by `src/utils/agent_skills/memory/memory_db.py`.
 | `embedding_model` | TEXT | Model used for embedding |
 | `tags` | TEXT | JSON array of string tags. Reserved convention: `project:<name>` is auto-appended by `memory_write.py` when a project is active and queried by `protocol_gate.py` to scope the memory cadence per project |
 | `context` | TEXT | Free-text context (e.g. run_id) |
+| `expires_at` | DATETIME | Optional expiry — enforced by the shared `scope_predicate()` on every read path (SIMP-D2-037) |
 | `is_active` | INTEGER | Soft-delete flag |
+| `scope` | TEXT | `'global'` or a project name (migration v3, backfilled from `project:<name>` tags). Every read path defaults to active project + global; `--all-projects` widens (SIMP-D2-037) |
+| `provenance` | TEXT | Who wrote the entry: `'agent'` (default), `'user'`, `'distiller'`, … (SIMP-D2-037/046) |
 
 ### Writers
 

@@ -168,7 +168,8 @@ def write_to_memory(
     tags: Optional[List[str]] = None,
     context: Optional[str] = None,
     log_to_file: bool = True,
-    add_to_db: bool = True
+    add_to_db: bool = True,
+    scope: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Write to both daily log and SQLite database.
@@ -182,6 +183,9 @@ def write_to_memory(
         context: Optional context
         log_to_file: Whether to append to daily log
         add_to_db: Whether to add to SQLite
+        scope: None = auto (active project, else 'global'); pass 'global'
+               explicitly for a cross-project fact written mid-project
+               (SIMP-D2-037)
 
     Returns:
         dict with results from both operations
@@ -212,7 +216,8 @@ def write_to_memory(
             source=source,
             importance=importance,
             tags=_with_project_tag(tags),
-            context=context
+            context=context,
+            scope=scope
         )
         results["db_result"] = db_result
         # Don't fail if it's a duplicate - that's expected
@@ -366,6 +371,9 @@ def main():
     parser.add_argument('--importance', type=int, default=5, help='Importance level 1-10')
     parser.add_argument('--tags', help='Comma-separated tags')
     parser.add_argument('--context', help='Context about when/why this was learned')
+    parser.add_argument('--scope', help="Recall scope: a project name or 'global'. "
+                        "Default: the active project (else global). Use --scope global "
+                        "for a cross-project fact written during a project session.")
 
     parser.add_argument('--log-only', action='store_true', help='Only write to daily log file')
     parser.add_argument('--db-only', action='store_true', help='Only write to SQLite database')
@@ -420,7 +428,8 @@ def main():
                 tags=tags,
                 context=args.context,
                 log_to_file=log_to_file,
-                add_to_db=add_to_db
+                add_to_db=add_to_db,
+                scope=args.scope
             )
 
         # Cross-reference: append note to ticket if --ticket provided
