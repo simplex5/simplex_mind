@@ -399,15 +399,19 @@ def search_entries(
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Simple LIKE search (for basic text matching)
-    search_pattern = f'%{query}%'
+    # Simple LIKE search (for basic text matching). Escape LIKE wildcards so
+    # snake_case and %-containing queries match literally — unescaped, '_' is
+    # any-one-char and '%' any-run, so "memory_write" also matched
+    # "memoryXwrite" and a query containing '%' matched everything. (SIMP-D2-034)
+    escaped = query.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+    search_pattern = f'%{escaped}%'
 
     if entry_type:
         cursor.execute('''
             SELECT * FROM memory_entries
             WHERE is_active = 1
             AND type = ?
-            AND (content LIKE ? OR tags LIKE ? OR context LIKE ?)
+            AND (content LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\' OR context LIKE ? ESCAPE '\\')
             ORDER BY importance DESC, created_at DESC
             LIMIT ?
         ''', (entry_type, search_pattern, search_pattern, search_pattern, limit))
@@ -415,7 +419,7 @@ def search_entries(
         cursor.execute('''
             SELECT * FROM memory_entries
             WHERE is_active = 1
-            AND (content LIKE ? OR tags LIKE ? OR context LIKE ?)
+            AND (content LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\' OR context LIKE ? ESCAPE '\\')
             ORDER BY importance DESC, created_at DESC
             LIMIT ?
         ''', (search_pattern, search_pattern, search_pattern, limit))
@@ -472,6 +476,11 @@ def update_entry(entry_id: int, **kwargs) -> Dict[str, Any]:
                 # Update content hash too
                 updates.append('content_hash = ?')
                 values.append(compute_content_hash(value))
+                # The stored vector still describes the OLD text — clear it so
+                # semantic search can't rank new content by the old meaning;
+                # the next embed pass recomputes it. (SIMP-D2-034)
+                updates.append('embedding = NULL')
+                updates.append('embedding_model = NULL')
             updates.append(f'{field} = ?')
             values.append(value)
 

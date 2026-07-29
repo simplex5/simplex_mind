@@ -77,6 +77,10 @@ def keyword_hits(prompt_norm: str, keywords: list) -> int:
 
 
 def cosine(a: list, b: list) -> float:
+    if len(a) != len(b):
+        # Different embedding models: zip() would silently truncate and score
+        # nonsense. 0.0 = "no semantic signal", never garbage. (SIMP-D2-034)
+        return 0.0
     dot = sum(x * y for x, y in zip(a, b))
     na = sum(x * x for x in a) ** 0.5
     nb = sum(y * y for y in b) ** 0.5
@@ -142,6 +146,16 @@ def main() -> int:
     except Exception:
         pass  # keyword-only mode
 
+    # Index built with a different embedding model → every cosine would be
+    # garbage. Drop to keyword-only mode, visibly, once per session. (SIMP-D2-034)
+    degraded = ""
+    if prompt_emb and candidates and len(candidates[0].get("embedding", [])) != len(prompt_emb):
+        prompt_emb = None
+        if "__dim_mismatch_warned__" not in injected:
+            injected.add("__dim_mismatch_warned__")
+            degraded = ("[subconscious degraded: index embedding dimension != model — "
+                        "semantic rescue off; run subconscious_index.py]")
+
     for p in candidates:
         kw = kw_scores[p["name"]]
         sem = cosine(prompt_emb, p["embedding"]) if prompt_emb else 0.0
@@ -149,6 +163,12 @@ def main() -> int:
             scored.append((kw, sem, p))
 
     if not scored:
+        if degraded:
+            print(json.dumps({"systemMessage": degraded}))
+            try:
+                state_path.write_text(json.dumps(sorted(injected)))
+            except Exception:
+                pass
         return 0
     scored.sort(key=lambda t: (t[0], t[1]), reverse=True)
     chosen = [p for _, _, p in scored[:MAX_PIECES]]
@@ -156,7 +176,8 @@ def main() -> int:
     context = (PREAMBLE + "\n\n---\n\n".join(p["text"] for p in chosen)
                + stale_note + "\n</subconscious>")
     print(json.dumps({
-        "systemMessage": "[subconscious: " + ", ".join(p["name"] for p in chosen) + "]",
+        "systemMessage": ("[subconscious: " + ", ".join(p["name"] for p in chosen) + "]"
+                          + (" " + degraded if degraded else "")),
         "hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",
             "additionalContext": context,
