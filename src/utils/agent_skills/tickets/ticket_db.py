@@ -187,7 +187,14 @@ def create_ticket(
 
     cursor = conn.cursor()
 
-    ticket_id = _next_id(cursor, prefix)
+    try:
+        ticket_id = _next_id(cursor, prefix)
+    except RuntimeError as e:
+        # Missing `machine:` in projects.yaml — the guidance in the raise must
+        # reach the caller as a clean error, not a traceback, and the
+        # connection must not leak. (SIMP-D2-034)
+        conn.close()
+        return {"success": False, "error": str(e)}
 
     cursor.execute('''
         INSERT INTO tickets (id, ticket_type, title, description, project, how_discovered, priority)

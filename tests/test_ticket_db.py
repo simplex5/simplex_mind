@@ -39,6 +39,26 @@ def test_create_unknown_target_fails_cleanly(fake_projects):
     assert "Unknown project target" in r["error"]
 
 
+def test_create_without_machine_id_fails_cleanly(fake_projects, monkeypatch):
+    # No `machine:` key → _next_id raises RuntimeError; create_ticket must
+    # return the guidance as a clean error, not leak a traceback (SIMP-D2-034)
+    import textwrap
+    import project_resolver
+    fake_projects["yaml"].write_text(textwrap.dedent(f"""\
+        projects:
+          alpha:
+            path: {fake_projects['proj_dir']}
+            ref_file: CLAUDE.md.ref
+            ticket_prefix: ALPH
+            branch: alpha-branch
+    """))
+    monkeypatch.setattr(project_resolver, "_projects_cache", None)
+    monkeypatch.setattr(project_resolver, "_machine_cache", ...)
+    r = ticket_db.create_ticket("task", "X", target="alpha")
+    assert r["success"] is False
+    assert "machine" in r["error"].lower()
+
+
 def test_update_sets_and_clears_resolved_at(fake_projects):
     tid = ticket_db.create_ticket("task", "Lifecycle", target="alpha")["id"]
     done = ticket_db.update_ticket(tid, target="alpha", status="done")
