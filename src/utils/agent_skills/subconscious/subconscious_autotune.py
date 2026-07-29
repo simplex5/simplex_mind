@@ -127,7 +127,10 @@ def mine_candidates(state: dict):
     pieces = index["pieces"]
     prompts = load_prompts(DEFAULT_DB, min_len=25, since="2000-01-01")
     if not prompts:
-        return [], [], 0
+        # Same arity as the normal path below — the empty path once returned a
+        # 3-tuple and crashed every fresh-corpus run at the caller's unpack
+        # (SIMP-D2-033: error swallowed into last_run_error, self-blinding).
+        return [], 0
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "memory"))
     import embed_memory
