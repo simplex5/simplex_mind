@@ -106,6 +106,12 @@ def get_connection():
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout=5000")
+    # WAL: the protocol_gate hook reads this DB on every prompt while the live
+    # session writes. Rollback journal made every prompt a lock-collision dice
+    # roll — degraded gate markers, worst case a lost memory write after the
+    # busy timeout. Readers and writers never block each other under WAL.
+    # conversation_db has run WAL on this disk since day one. (SIMP-D2-035)
+    conn.execute("PRAGMA journal_mode=WAL")
 
     if _schema_ready:
         return conn
