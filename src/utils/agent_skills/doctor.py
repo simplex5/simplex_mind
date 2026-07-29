@@ -234,11 +234,12 @@ def check_hooks(root: Path) -> dict:
         blob = json.dumps(json.loads(settings.read_text(encoding="utf-8")))
     except (OSError, json.JSONDecodeError) as e:
         return _result("hooks", FAIL, f"settings.json unparseable ({e})", "restore it from git")
-    required = ["session_digest.py", "subconscious_recall.py", "protocol_gate.py", "conversation_ingest.py"]
+    required = ["session_digest.py", "subconscious_recall.py", "protocol_gate.py",
+                "conversation_ingest.py", "pretooluse_gate.py"]
     missing = [name for name in required if name not in blob]
     if missing:
         return _result("hooks", FAIL, f"not registered: {', '.join(missing)}", "restore .claude/settings.json from git")
-    return _result("hooks", OK, "digest, recall, gate, ingest registered")
+    return _result("hooks", OK, "digest, recall, gate, ingest, ticket-gate registered")
 
 
 def check_hook_events(root: Path) -> dict:

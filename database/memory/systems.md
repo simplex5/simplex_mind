@@ -70,7 +70,16 @@ unreachable "End" cadence). Extended 2026-07-27 (SIMP-D2-022): digest sections r
 subsystems as `UNAVAILABLE — <reason>` instead of healthy emptiness, gate checks that raise
 surface a once-per-session `[protocol-gate degraded: ...]` marker, and the cadence query is
 scoped to `project:<name>` tags (memory_write auto-tags; global fallback until first tagged
-write per project).
+write per project). Extended 2026-07-29 (Hermes reports batch, SIMP-D2-038/039): hook session
+state moved from leaked temp-dir JSON into `database/hooks.db` via `memory/hook_state.py`
+(WAL, fail-open, 90-day event retention) — `hook_events` logs every check outcome + invocation
+duration, the measurement substrate for warn→deny decisions and hook-latency questions; doctor
+gained a hook-events section. New `tickets/pretooluse_gate.py` PreToolUse hook enforces the
+last prose-only hard rule: warn-once `[ticket-gate]` demand when an Edit/Write/NotebookEdit
+call starts with no open/in_progress ticket in the routed DB (unmanaged paths skipped; v1
+never denies and never emits a permissionDecision). Memory recall became project-scoped the
+same day (SIMP-D2-037): `scope` + `provenance` columns, shared `scope_predicate()` (active +
+unexpired + project-or-global) on every read path, `--all-projects` to widen.
 
 **simplex CLI + doctor + CI** (SIMP-D2-021/023/025/026/027, 2026-07-27 — born from an external
 GPT 5.6 review of a friend's failed fresh-clone install): `pip install -e .` installs the

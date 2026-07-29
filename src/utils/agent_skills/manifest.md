@@ -35,6 +35,7 @@ push: a new tool needs a test.
 | Hybrid Search | `memory/hybrid_search.py` | Combined BM25 + vector search |
 | Post-Run Writer | `memory/memory_post_run.py` | Reads metrics JSON after each run; writes insight entry, upserts model-performance fact, creates anomaly tickets |
 | Protocol Gate | `memory/protocol_gate.py` | UserPromptSubmit hook: deterministic protocol enforcement — nags when 5+ tickets resolved since last memory write (scoped per project via `project:<name>` tags, global fallback until the first tagged write), re-surfaces pending autotune candidates mid-session, detects auto-memory-instead-of-memory.db substitution; read-only, throttled, always fail-open; prints a visible `[protocol-gate: …]` marker when it fires and a once-per-session `[protocol-gate degraded: …]` marker when a check errors |
+| Hook State Store | `memory/hook_state.py` | Shared library for the hook layer (SIMP-D2-038): durable per-session state + append-only `hook_events` observability log in `database/hooks.db` (WAL, 90-day retention, every call fail-open); replaced the leaked temp-dir JSON state files |
 
 ---
 
@@ -49,6 +50,7 @@ push: a new tool needs a test.
 | Ticket Read | `tickets/ticket_read.py` | CLI: get full detail for a single ticket by ID (--target or auto-infer from ID prefix) |
 | Ticket Migrate | `tickets/ticket_migrate.py` | One-time migration from shared tickets.db to per-project databases (historical; keep for reference) |
 | Ticket Renumber | `tickets/ticket_renumber.py` | One-time migration of legacy PREFIX-NNN ids to machine-scoped PREFIX-<MACHINE>-NNN across ticket DBs, memory.db, and daily logs (`--dry-run` to preview; run once per machine) |
+| Ticket Gate | `tickets/pretooluse_gate.py` | PreToolUse hook (SIMP-D2-039): warn-once demand when a file-editing tool call starts with no open/in_progress ticket in the routed DB; skips paths outside the brain/project trees; never denies, never touches permissionDecision; logs every decision to hooks.db (the warn→deny evidence base); visible `[ticket-gate: …]` / `[ticket-gate degraded: …]` markers |
 
 ---
 
