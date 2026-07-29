@@ -66,6 +66,12 @@ At the start of every new session:
 3. **Report readiness:**
    Report the open ticket count, any critical/high items, and confirm which project is active (or that you're on master with no active project).
 
+**Context-injection design law (prompt cache — SIMP-D2-036):** session-start context — this
+file, the SessionStart digest — must stay byte-stable for the whole session; never mutate it
+mid-session. Anything dynamic (protocol-gate demands, subconscious pieces) rides per-prompt
+injection instead. Mutating the stable tier mid-session invalidates the prompt cache and
+silently multiplies token cost. Future features must not break this split.
+
 ---
 
 ## Project Navigation
@@ -233,6 +239,21 @@ python3 src/utils/agent_skills/memory/memory_sync.py --dry-run # preview
 4. A new system or significant feature is shipped (update systems.md too)
 5. A recurring problem is identified (e.g., agent behavior patterns)
 6. External tooling or infrastructure is set up (e.g., Tailscale, Remote Control)
+
+**How to write them (content rules — SIMP-D2-036):**
+- **Declarative facts, not instructions to yourself.** "User prefers concise responses" ✓;
+  "Always respond concisely" ✗ — imperative phrasing is re-read as a directive by a future
+  session and warps behavior.
+- **Staleness test:** if it will be stale in a week it does not belong in memory.db — no
+  commit SHAs, PR numbers, or "phase N done" (tickets and git already carry those).
+- **Anchor completed actions in time:** "Sent the proposal to John on 2026-07-29", never
+  "send the proposal to John" — a resumed session must not redo finished work.
+- **Never persist an environment-dependent failure as a durable negative rule** — "X is
+  broken" entries harden into refusals cited long after X was fixed. Record the fix, or
+  record nothing.
+- **Update or consolidate an existing entry before creating a near-duplicate** — search first.
+- **Selection bar:** prefer what reduces future user steering. "Nothing to save" is a real
+  option — but not the default.
 
 **Session cadence:**
 - **Start**: load memories via `memory_read.py`
