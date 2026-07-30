@@ -30,15 +30,19 @@ py src/utils/agent_skills/memory/memory_write.py --content "..." --type <fact|pr
 ```
 Add `--ticket <ID>` when the orchestrator supplies a cross-reference.
 
+Entries are auto-scoped to the active project (a `project:<name>` tag plus a `scope` column — SIMP-D2-037); sessions on other branches will not recall them. Add `--scope global` only when the orchestrator explicitly marks the fact as cross-project or framework-level. If the content is clearly not project-local but the prompt names no scope, report the ambiguity instead of choosing.
+
 ## Rules
 
 - **Never pipe tool output through `Select-Object -First`** or similar truncating pipes — broken-pipe errors report exit 255 on successful operations. Read full output.
 - File edits are limited to what the prompt names: `database/memory/systems.md`, a project's `testing/*.md` checklist, or `database/memory/MEMORY.md`. Touch nothing else.
 - Manual test checklists follow: title with ticket IDs → scene → a **What changed** paragraph in plain language → Prerequisites → feature-grouped sections → Persistence → Known gaps (deliberately out of scope) → Dev commands appendix. Filename: `NN-YYYY-MM-DD_<feature-name>-manual-tests.md`, numbered in order, inside a dated folder (`testing/YYYY-MM-DD/`). Check the project's `testing/` tree for the live convention before writing — it takes precedence over this line.
+- **Before writing any checklist, read the active project's ref file** (path + `ref_file` from `projects.yaml`) for a **Checklist Authoring Protocol** section. When present it is binding and overrides the defaults above.
 - **EVERY checkbox you write ships UNCHECKED — `- [ ]`, never `- [x]`.** Existing checklists you read as format examples are often *completed* ones (frequently named `_reviewed`); their tick marks are the **user's answers**, not part of the template. Copying them produces a checklist that claims work was already tested. Before reporting done, grep your own output for `- [x]` and confirm zero.
 - **Every checklist ends with a `## Dev commands used` appendix**, and each command's syntax must be **verified by reading the console/command source directly** (e.g. `DevConsole.cs`) — never from a help string, a ticket's paraphrase, or an older checklist. Command grammar changes; stale syntax makes a tester report a false failure.
 - Write items as "do X, expect Y" that a human can follow without reading the tickets. Where behaviour is deliberately counter-intuitive, say so in the item, so the user does not log a correct behaviour as a bug.
 - Never run git commands — the orchestrator owns commits.
+- If a `<ticket-gate>` demand is injected mid-write (the PreToolUse hook found no open ticket), do not mint a ticket in response — tickets come only from the orchestrator's list; note the demand in your report.
 - Convert relative dates ("yesterday") to absolute dates in anything you write.
 
 ## Report format

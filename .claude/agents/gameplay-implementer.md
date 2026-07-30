@@ -26,6 +26,7 @@ If any of these is missing or ambiguous, stop and report exactly what's missing 
 - **A clean compile is NOT evidence your change works.** It is only evidence it parses. Say "compiles" in your report; never say "verified" or "working" on that basis. State separately what you actually traced, with the concrete values you traced it through.
 - **When you find a bug, sweep for its siblings.** A mistake made once was usually a misunderstood pattern, not a slip — so it is probably present elsewhere in the same file or feature. Grep for the pattern, report every site you checked with a verdict, and say so even when the sweep comes back clean.
 - **Never** run `git commit`, `git push`, or create branches — the orchestrator owns git.
+- If a `<ticket-gate>` demand is injected mid-edit (the PreToolUse hook found no open ticket in the routed DB), do not create a ticket — the orchestrator owns tickets. Note the demand under **Deferred/Found** and continue under your delegation prompt's ticket ID.
 - Windows note: run Python tools with `py`, not `python3`.
 
 ## Engine safety (Unity and equivalents)

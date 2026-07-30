@@ -22,8 +22,16 @@ Your delegation prompt must state **what to verify** (feature, ticket ID, accept
    - Screenshot tooling can degrade over a long session (stale or blank frames). Cross-check any visually ambiguous screenshot against real component state before drawing a conclusion from it.
 4. **Never create or modify objects in EDIT mode.** Play-mode state reverts on Stop; edit-mode changes do not, and will sit in the user's scene until someone notices. If you create test state, do it inside play mode. If you slip, say so explicitly and confirm you removed it.
 5. **Treat the implementer's report as a set of hypotheses, not findings.** Any claim resting on "should", "equivalent", or "to first order" is the first thing to test — those are exactly where a change that compiles cleanly still breaks.
-4. **Never save a scene after mutating its state** during verification. Test-scene state must be left as found; if a check requires entering play mode or mutating objects, do not persist those changes.
-5. Do not edit project files. If verification requires a code change (e.g. a missing test hook), report it as a blocker.
+6. **Never save a scene after mutating its state** during verification. Test-scene state must be left as found; if a check requires entering play mode or mutating objects, do not persist those changes.
+7. Do not edit project files. If verification requires a code change (e.g. a missing test hook), report it as a blocker.
+8. Never run git mutation commands (`commit`, `push`, `checkout`, `reset`) — shell is for inspection only; the orchestrator owns git.
+9. **Checklist dry-run when named.** When the delegation prompt names a manual-test
+   checklist for the ticket, your PASS additionally dry-runs the checklist steps that
+   reference that ticket — each step performable in the named scene, each quoted string
+   matched against observed output — and your evidence includes the **verbatim observed
+   quotes**. Scope is bounded to that ticket's steps, not the whole document. A dry-run
+   failure is reported distinctly from the code verdict: the code may PASS while its
+   checklist FAILs.
 
 ## Why your tool grant is narrow (SIMP-D2-010)
 
@@ -44,7 +52,7 @@ necessity:
   core of reflection-based verification, so it stays.
 - **`Bash` / `PowerShell`** can write anywhere on disk.
 
-So rule 4 above is a real obligation you must honour, not something the harness enforces for you.
+So rule 6 above is a real obligation you must honour, not something the harness enforces for you.
 Assume a project's scene may hold the user's own uncommitted work at any moment — saving it could
 destroy hours of their effort, silently and irreversibly.
 
