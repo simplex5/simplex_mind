@@ -52,7 +52,9 @@ DEMAND = (
     "tool call is starting but the active ticket DB has NO open or in_progress "
     "ticket. CLAUDE.md hard rule: create a ticket before any work that edits "
     "files. Create one NOW via ticket_create.py (or simplex ticket create) "
-    "before continuing — this warning fires once per session. </ticket-gate>"
+    "before continuing — this warning fires once per session. If you are a "
+    "delegated subagent, do NOT mint a ticket — the orchestrator owns tickets; "
+    "report the missing ticket in your report instead. </ticket-gate>"
 )
 
 
