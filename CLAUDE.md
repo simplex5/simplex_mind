@@ -204,9 +204,18 @@ python3 src/utils/agent_skills/memory/memory_read.py --format markdown
 ```bash
 python3 src/utils/agent_skills/memory/memory_write.py \
     --content "..." \
-    --type <fact|preference|event|insight|task|relationship|decision|note> \
+    --type <fact|preference|event|insight|task|relationship|decision> \
     --importance <1-10>
 ```
+(`--type note` is accepted but is daily-log-only — it is NOT persisted to memory.db and
+will never be recalled. Use a real type for anything that must survive.)
+
+**Scope (SIMP-D2-037) — read before writing from a project branch:** entries are
+auto-scoped to the active project (`scope` column + `project:<name>` tag); sessions on
+other branches will NOT recall them. A framework-level or cross-project fact written
+while a project is active MUST pass `--scope global`, or it silently becomes invisible
+on master/develop. Recall widens with `--all-projects` on `hybrid_search.py` and
+`memory_read.py`.
 
 **Write with ticket cross-reference:**
 ```bash
@@ -352,6 +361,11 @@ python3 src/utils/agent_skills/tickets/ticket_update.py \
 
 **Hard rule: Create a ticket before starting any work that edits files.**
 No exceptions. `question:` prefix is the only exemption.
+Machine-enforced by `tickets/pretooluse_gate.py` (PreToolUse hook): when an
+Edit/Write/NotebookEdit call starts with no open ticket in the routed DB, it injects a
+warn-once `<ticket-gate>` demand with a `[ticket-gate: no open ticket]` marker
+(`[ticket-gate degraded: ...]` = the gate itself broke — run doctor.py). Outcomes are
+logged to `database/hooks.db`.
 
 Also create a ticket immediately for:
 1. Bug discovered mid-task
@@ -552,7 +566,12 @@ simplex_mind/                          ← brain repo (Claude launches here)
 ├── PRIVACY.md                         ← what is stored, where, how to remove it
 ├── projects.yaml                      ← maps project names → paths (local, gitignored)
 ├── subconscious/                      ← reasoning-philosophy piece library (canonical, committed)
+├── pyproject.toml                     ← `simplex` CLI entry point, pytest/ruff config
 ├── .github/workflows/ci.yml           ← CI: pytest + ruff, ubuntu + windows
+├── .claude/
+│   ├── settings.json                  ← hook registrations (digest, recall, gate, ticket-gate, ingest)
+│   └── agents/                        ← six subagent definitions (implementer, verifier, reviewer, designer, researcher, scribe)
+├── tests/                             ← pytest suite (hermetic; "a new tool needs a test")
 ├── database/
 │   ├── memory/
 │   │   ├── memory.db                  ← structured memory (SQLite)
@@ -562,18 +581,19 @@ simplex_mind/                          ← brain repo (Claude launches here)
 │   ├── config.json                    ← local onboarding/config state (never committed)
 │   ├── tickets.db                     ← brain (SIMP) tickets — each project has its own <project>/database/tickets.db
 │   ├── conversation_history.db        ← conversation transcripts + token usage
+│   ├── hooks.db                       ← hook session state + event log (runtime, gitignored)
 │   ├── backups/                       ← `simplex backup` snapshots (gitignored)
 │   └── ARCHITECTURE.md                ← database schema docs
 ├── src/simplex_cli/                   ← installable `simplex` CLI (pip install -e .)
 └── src/utils/agent_skills/
-    ├── memory/                        ← memory tools (incl. session_digest, protocol_gate hooks)
-    ├── tickets/                       ← ticket tools
+    ├── memory/                        ← memory tools (incl. session_digest + protocol_gate hooks, hook_state.py → hooks.db)
+    ├── tickets/                       ← ticket tools (incl. pretooluse_gate.py ticket-gate hook)
     ├── conversation/                  ← conversation history tools (incl. conversation_purge)
     ├── subconscious/                  ← context-triggered philosophy: index, recall hook, miner, autotune
     ├── git_commit.py                  ← git operations
     ├── init.py                        ← project bootstrapper (--mark-onboarded)
     ├── doctor.py                      ← health checks, onboarding classification
-    ├── backup_db.py                   ← SQLite online-backup of all DBs
+    ├── backup_db.py                   ← SQLite online-backup of persistent DBs
     ├── project_resolver.py            ← branch → project resolution, ticket DB routing
     ├── track_tokens.py                ← token metrics logger (optional)
     └── manifest.md                    ← tool inventory

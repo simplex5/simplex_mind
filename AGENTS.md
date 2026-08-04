@@ -134,11 +134,17 @@ python3 src/utils/agent_skills/memory/memory_read.py --format markdown
 ```bash
 python3 src/utils/agent_skills/memory/memory_write.py \
     --content "..." \
-    --type <fact|preference|event|insight|task|relationship|decision|note> \
+    --type <fact|preference|event|insight|task|relationship|decision> \
     --importance <1-10>
 ```
-When a project is active, the database row is auto-tagged `project:<name>` — used to scope
-per-project queries and the memory cadence.
+(`--type note` is accepted but is daily-log-only — NOT persisted to memory.db, never
+recalled. Use a real type for anything that must survive.)
+
+When a project is active, the entry is auto-scoped to that project (`scope` column +
+`project:<name>` tag — SIMP-D2-037); sessions on other branches will NOT recall it. A
+framework-level or cross-project fact written while a project is active MUST pass
+`--scope global`. Recall widens with `--all-projects` on `hybrid_search.py` and
+`memory_read.py`.
 
 **Write with ticket cross-reference:**
 ```bash
@@ -356,7 +362,7 @@ script paths in this file remain canonical and always work without the install.
 
 ## Conversation History Protocol
 
-**Ingest** — runs automatically via cron every 5 minutes. (Claude Code additionally runs ingestion via a Stop hook in `.claude/settings.json` after every response — see CLAUDE.md; other agents rely on the cron job.)
+**Ingest** — runs via an **optional** cron job every 5 minutes (Linux/macOS) or the Windows Task Scheduler tasks from `scripts/setup_windows_tasks.ps1`; nothing installs either automatically — SETUP.md step 8 wires it up. (Claude Code additionally runs ingestion via a Stop hook in `.claude/settings.json` after every response — see CLAUDE.md; other agents rely on the scheduled job, and without one ingestion is manual.)
 ```bash
 python3 src/utils/agent_skills/conversation/conversation_ingest.py
 ```
@@ -527,7 +533,10 @@ simplex_mind/                          <- brain repo (agent launches here)
 |-- PRIVACY.md                         <- what is stored, where, how to remove it
 |-- projects.yaml                      <- maps project names -> paths (local, gitignored)
 |-- subconscious/                      <- reasoning-philosophy piece library (canonical, committed)
+|-- pyproject.toml                     <- `simplex` CLI entry point, pytest/ruff config
 |-- .github/workflows/ci.yml           <- CI: pytest + ruff, ubuntu + windows
+|-- .claude/                           <- Claude Code only: settings.json hook registrations + subagent definitions (other agents: ignore)
+|-- tests/                             <- pytest suite (hermetic; "a new tool needs a test")
 |-- database/
 |   |-- memory/
 |   |   |-- memory.db                  <- structured memory (SQLite)
@@ -537,18 +546,19 @@ simplex_mind/                          <- brain repo (agent launches here)
 |   |-- config.json                    <- local onboarding/config state (never committed)
 |   |-- tickets.db                     <- brain (SIMP) tickets — each project has its own <project>/database/tickets.db
 |   |-- conversation_history.db        <- conversation transcripts + token usage
+|   |-- hooks.db                       <- hook session state + event log (runtime, gitignored; written by Claude Code hooks)
 |   |-- backups/                       <- `simplex backup` snapshots (gitignored)
 |   +-- ARCHITECTURE.md                <- database schema docs
 |-- src/simplex_cli/                   <- installable `simplex` CLI (pip install -e .)
 +-- src/utils/agent_skills/
-    |-- memory/                        <- memory tools
-    |-- tickets/                       <- ticket tools
+    |-- memory/                        <- memory tools (hook_state.py -> hooks.db)
+    |-- tickets/                       <- ticket tools (pretooluse_gate.py is a Claude Code hook)
     |-- conversation/                  <- conversation history tools (incl. conversation_purge)
     |-- subconscious/                  <- context-triggered philosophy: index, recall hook, miner, autotune
     |-- git_commit.py                  <- git operations
     |-- init.py                        <- project bootstrapper (--mark-onboarded)
     |-- doctor.py                      <- health checks, onboarding classification
-    |-- backup_db.py                   <- SQLite online-backup of all DBs
+    |-- backup_db.py                   <- SQLite online-backup of persistent DBs
     |-- project_resolver.py            <- branch -> project resolution, ticket DB routing
     |-- track_tokens.py                <- token metrics logger (optional)
     +-- manifest.md                    <- tool inventory

@@ -47,12 +47,12 @@ and NOT tied to whatever model the orchestrating session happens to be running â
 stay fixed even if the orchestrator later runs a cheaper/pricier model itself. Opus 5's
 release (same $5/$25 price as Opus 4.8, stronger agentic coding, review accurate at lower
 effort; `model: opus` is an alias so opus pins auto-resolve to it) motivated promoting
-implementer/verifier from sonnet to opus and lowering reviewer effort. gameplay-implementer
-(opus/xhigh, codes to spec, never commits), code-reviewer (opus/medium, read-only diff
-review), playtest-verifier (opus/xhigh, engine-side verification with evidence, never
-saves mutated scenes), scribe (haiku, no effort pin, tickets/memory/checklists via the
-CLI tools), game-designer (opus/high, read-only design proposals), researcher (haiku, no
-effort pin, sourced lookups). All project-agnostic per the framework guardrail; the
+implementer/verifier from sonnet to opus. Current pins (synced to frontmatter
+2026-08-04): gameplay-implementer (opus/xhigh, codes to spec, never commits),
+code-reviewer (opus/xhigh, read-only diff review), playtest-verifier (opus/xhigh,
+engine-side verification with evidence, never saves mutated scenes), scribe
+(sonnet/xhigh, tickets/memory/checklists via the CLI tools), game-designer (opus/xhigh,
+read-only design proposals), researcher (opus/high, sourced lookups). All project-agnostic per the framework guardrail; the
 orchestrator retains git and ticket authority. Replaced the removed `/agents` wizard
 workflow.
 
@@ -88,7 +88,7 @@ script paths stay canonical for hooks/cron/other agents). Subcommands: init, doc
 digest, ticket/memory/history tools, `history purge` (transcript retention/deletion, preserves
 `message_usage` by default, see PRIVACY.md), `backup` (SQLite online-backup of all DBs to
 gitignored `database/backups/<UTC>/`), `project use <name>` (= git checkout of the project's
-branch). `doctor.py` runs 11 health checks with per-check remediation, exit 1 when degraded;
+branch). `doctor.py` runs 13 health checks with per-check remediation, exit 1 when degraded;
 `classify_onboarding` distinguishes fresh_clone from lost_config â€” the seam created by
 untracking `database/config.json` (the root-cause bug: a committed
 `onboarding_complete: true` made every fresh clone skip SETUP.md onboarding). Established

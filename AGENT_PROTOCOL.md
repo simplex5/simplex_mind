@@ -258,7 +258,7 @@ When a prefix is present: ticket is created at the start, prefix stripped before
 
 ## 6. Schema Reference
 
-**Ticket fields:** `id` (`PREFIX-<MACHINE>-NNN`), `type`, `status`, `priority`, `title`, `description`, `project`, `notes`, `created_at`, `updated_at`, `resolved_at`
+**Ticket fields:** `id` (`PREFIX-<MACHINE>-NNN`), `ticket_type` (CLI flag: `--type`), `status`, `priority`, `title`, `description`, `project`, `how_discovered`, `notes`, `created_at`, `updated_at`, `resolved_at`
 
 **Ticket types:** `bug` · `feature` · `task` · `improvement` · `documentation`
 
@@ -266,7 +266,7 @@ When a prefix is present: ticket is created at the start, prefix stripped before
 
 **Ticket priorities:** `low` · `medium` · `high` · `critical`
 
-**Memory types:** `fact` · `preference` · `event` · `insight` · `task` · `relationship` · `decision` · `note`
+**Memory types:** `fact` · `preference` · `event` · `insight` · `task` · `relationship` · `decision` (`note` is accepted by memory_write.py but is daily-log-only — never persisted to memory.db)
 
 **Memory importance:** 1–10 (default 5). Higher = surfaced more prominently in search.
 
@@ -373,12 +373,15 @@ Read by session_digest.py for the "Active Systems" summary.
 ```bash
 python3 src/utils/agent_skills/doctor.py            # full validation, exit 1 when degraded
 python3 src/utils/agent_skills/doctor.py --status   # compact status page, always exit 0
+python3 src/utils/agent_skills/doctor.py --json     # machine-readable results
 ```
 
-Eleven read-only checks, each reporting `[ OK ]/[WARN]/[FAIL]` plus a one-line remediation:
+Thirteen read-only checks, each reporting `[ OK ]/[WARN]/[FAIL]` plus a one-line remediation:
 onboarding classification, projects.yaml validity, every ticket DB, memory.db,
 conversation DB + FTS, subconscious index freshness, autotune state, venv deps vs pins,
-hook registration, git identity, branch→project mapping. `classify_onboarding()` (the
+hook registration, hook events (degraded-outcome scan of hooks.db), db integrity
+(FK + integrity_check over all local DBs incl. hooks.db), git identity,
+branch→project mapping. `classify_onboarding()` (the
 fresh-clone vs lost-config distinction from §3) is exported for reuse — session_digest.py
 imports it. Run doctor after any pull that changes brain state, and whenever a digest
 line or a `[protocol-gate degraded: …]` marker tells you to.
