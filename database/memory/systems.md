@@ -86,7 +86,7 @@ GPT 5.6 review of a friend's failed fresh-clone install): `pip install -e .` ins
 `simplex` command (`src/simplex_cli/cli.py`, thin dispatcher over the agent-skills tools —
 script paths stay canonical for hooks/cron/other agents). Subcommands: init, doctor, status,
 digest, ticket/memory/history tools, `history purge` (transcript retention/deletion, preserves
-`message_usage` by default, see PRIVACY.md), `backup` (SQLite online-backup of all DBs to
+`message_usage` by default, see PRIVACY.md), `backup` (SQLite online-backup of the persistent DBs to
 gitignored `database/backups/<UTC>/`), `project use <name>` (= git checkout of the project's
 branch). `doctor.py` runs 13 health checks with per-check remediation, exit 1 when degraded;
 `classify_onboarding` distinguishes fresh_clone from lost_config — the seam created by

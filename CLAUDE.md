@@ -151,7 +151,7 @@ simplex digest                     # session-start digest (same output as the ho
 simplex ticket list --status open  # any ticket/memory/history tool flag works
 simplex memory search --query "..."
 simplex history purge --older-than 90 --dry-run   # transcript retention (PRIVACY.md)
-simplex backup                     # snapshot all DBs -> database/backups/<UTC>/
+simplex backup                     # snapshot persistent DBs -> database/backups/<UTC>/
 simplex project use <name>         # = git checkout of that project's branch
 ```
 
