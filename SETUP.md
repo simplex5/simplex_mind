@@ -131,7 +131,7 @@ keyword candidates (gated pending queue — applied only after in-session user a
 
 > This step turns on verbatim transcript storage. [PRIVACY.md](PRIVACY.md) documents exactly
 > what is collected, where it lives, and how to remove it (`simplex history purge`). For manual
-> snapshots of all databases: `simplex backup`.
+> snapshots of the persistent databases: `simplex backup`.
 
 **Step 9 — Create the project ref file**
 Create `CLAUDE.md.ref` in the project root with project-specific instructions. Register it in
@@ -172,7 +172,7 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 pip install -e .   # installs the `simplex` CLI into the venv
-# Optional: pip install openai numpy rank_bm25
+# Optional: pip install openai rank_bm25
 ```
 
 ---
@@ -190,8 +190,8 @@ See [`AGENT_PROTOCOL.md`](AGENT_PROTOCOL.md) for the full specification. Key too
 - **Git**: `git_commit.py` — `init`, `status`, `commit`, `diff`
 - **Init**: `init.py` — bootstraps `database/` directory, SQLite schemas, `MEMORY.md`, and `database/config.json` (local, untracked); `--mark-onboarded` sets onboarding complete
 - **Doctor**: `doctor.py` — health validation, exit 1 when degraded; `--status` compact page
-- **Backup**: `backup_db.py` — SQLite online-backup of all DBs to `database/backups/`
-- **CLI**: the venv's `simplex` command fronts all of the above (`simplex --help`); script paths stay canonical
+- **Backup**: `backup_db.py` — SQLite online-backup of all persistent DBs to `database/backups/` (hooks.db excluded — regenerable runtime state)
+- **CLI**: the venv's `simplex` command fronts the ticket/memory/history/health/backup tools (`simplex --help`); git and subconscious tools are script-path only; script paths stay canonical
 ```
 
 ---
@@ -227,7 +227,7 @@ Rules:
 ## Guardrails — Learned Behaviors
 
 - Always check `src/utils/agent_skills/manifest.md` before writing a new script.
-- Create a ticket before any file edits — no exceptions. Branching is conditional (see Branching Workflow).
+- Create a ticket before any file edits — no exceptions. Machine-enforced by the PreToolUse ticket-gate (`tickets/pretooluse_gate.py`): a warn-once demand is injected when a file edit starts with no open ticket. Branching is conditional (see Branching Workflow).
 - When branching, always branch from the current working branch.
 - Verification steps in plans must not require running scripts — confirm by inspecting file contents and diffs only.
 - Before updating any documentation file that is not the immediate subject of the current task, ask the user.

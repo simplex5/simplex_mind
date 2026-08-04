@@ -27,6 +27,7 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 │   │   ├── config.json        ← local onboarding/config state (never committed)
 │   │   ├── tickets.db         ← simplex_mind's own (fallback) ticket DB
 │   │   ├── conversation_history.db  ← conversation transcripts + token usage
+│   │   ├── hooks.db           ← hook session state + event log (runtime, gitignored)
 │   │   ├── backups/           ← `simplex backup` snapshots (gitignored)
 │   │   └── ARCHITECTURE.md
 │   ├── src/utils/agent_skills/ ← the tools (script paths, always work)
@@ -59,8 +60,9 @@ The **brain repo** — a project-agnostic AI agent toolkit that provides persist
 - **Git wrapper** — Structured git operations scoped to framework files
 - **Session digest** — Focused context loader (< 200 lines): open tickets, decisions, systems, git; broken subsystems render as `UNAVAILABLE`, never as healthy emptiness
 - **Project registry** — `projects.yaml` maps project names to paths; the agent loads the active project's ref file
-- **`simplex` CLI** — one installed command fronting every tool (`pip install -e .`): `simplex doctor`, `simplex ticket list`, `simplex memory search`, `simplex project use <name>`, …
-- **Doctor** — 11 health checks with per-check remediation (`simplex doctor`, exit 1 when degraded); classifies fresh-clone vs lost-config onboarding states
+- **`simplex` CLI** — one installed command fronting the daily-driver tools (`pip install -e .`): `simplex doctor`, `simplex ticket list`, `simplex memory search`, `simplex project use <name>`, …
+- **Doctor** — a full battery of read-only health checks with per-check remediation (`simplex doctor`, exit 1 when degraded); classifies fresh-clone vs lost-config onboarding states
+- **Protocol hooks** — beyond subconscious recall: a SessionStart digest, a UserPromptSubmit protocol gate (memory-cadence demands), and a PreToolUse ticket-gate that warns once per session (`[ticket-gate: ...]` marker) when a file edit starts with no open ticket
 - **Backup & retention** — `simplex backup` (consistent SQLite snapshots) and `simplex history purge` (transcript deletion by project/age; see [PRIVACY.md](PRIVACY.md))
 
 ## Installation
@@ -82,10 +84,13 @@ pip install -e .                  # installs the `simplex` CLI into the venv
 # pip install openai
 ```
 
-3. Run the initializer and mark onboarding complete:
+3. Run the initializer:
 ```bash
-python3 src/utils/agent_skills/init.py --prefix PROJ --mark-onboarded
+python3 src/utils/agent_skills/init.py --prefix PROJ
 ```
+Do **not** pass `--mark-onboarded` here — a fresh clone without that marker is exactly
+what routes your agent into the SETUP.md onboarding flow, which sets it at the end.
+(The flag still exists for the lost-config recovery path — see SETUP.md.)
 
 4. Set up conversation history auto-ingestion (cron):
 ```bash
@@ -169,8 +174,8 @@ src/utils/agent_skills/
 ├── manifest.md              # Tool inventory
 ├── _common.py               # Shared paths (REPO_ROOT), CLI epilogue, migrations helper
 ├── init.py                  # Project bootstrapper (--mark-onboarded writes config.json)
-├── doctor.py                # 11 health checks; fresh-clone vs lost-config classification
-├── backup_db.py             # SQLite online-backup of all DBs → database/backups/
+├── doctor.py                # health checks; fresh-clone vs lost-config classification
+├── backup_db.py             # SQLite online-backup of persistent DBs → database/backups/
 ├── git_commit.py            # Git wrapper
 ├── project_resolver.py      # Branch → project resolution, ticket DB routing
 ├── track_tokens.py          # Token tracking (optional)
@@ -181,6 +186,7 @@ src/utils/agent_skills/
 │   ├── memory_sync.py       # Regenerate MEMORY.md from DB
 │   ├── session_digest.py    # Session-start context digest (UNAVAILABLE on failure)
 │   ├── protocol_gate.py     # UserPromptSubmit hook: cadence/autotune/routing demands
+│   ├── hook_state.py        # hooks.db: durable hook session state + event log
 │   ├── hybrid_search.py     # BM25 + vector search
 │   ├── semantic_search.py   # Vector similarity search
 │   ├── embed_memory.py      # Embeddings (local fastembed; OpenAI fallback)
@@ -191,6 +197,7 @@ src/utils/agent_skills/
 │   ├── ticket_list.py       # CLI: list tickets
 │   ├── ticket_read.py       # CLI: read ticket
 │   ├── ticket_update.py     # CLI: update ticket
+│   ├── pretooluse_gate.py   # PreToolUse hook: warn-once ticket-before-edit gate
 │   ├── ticket_renumber.py   # CLI: renumber ticket IDs
 │   └── ticket_migrate.py    # Historical: one-time shared→per-project migration
 ├── conversation/
@@ -208,15 +215,18 @@ src/utils/agent_skills/
 ## Usage
 
 All scripts run from the simplex_mind root via `python3 src/utils/agent_skills/...`.
-With the venv active, every command below also has a `simplex` equivalent
-(`simplex ticket list`, `simplex memory search`, `simplex history stats`, …) — run
-`simplex --help` for the full table. Script paths stay canonical; the CLI is a convenience.
+With the venv active, every ticket, memory, history, and health/backup command below
+also has a `simplex` equivalent (`simplex ticket list`, `simplex memory search`,
+`simplex history stats`, …) — run `simplex --help` for the full list. The git,
+subconscious, and maintenance scripts are script-path only. Script paths stay
+canonical; the CLI is a convenience.
 
 ### Health & maintenance
 ```bash
-simplex doctor          # 11 checks with remediation lines; exit 1 when degraded
+simplex doctor          # read-only health checks with remediation lines; exit 1 when degraded
 simplex status          # compact read-only status page
-simplex backup          # consistent snapshots of all DBs → database/backups/<UTC>/
+simplex backup          # consistent snapshots of all persistent DBs → database/backups/<UTC>/
+                        # (hooks.db excluded — regenerable runtime state, self-prunes at 90 days)
 simplex history purge --older-than 90 --dry-run   # transcript retention (PRIVACY.md)
 ```
 
@@ -247,7 +257,7 @@ python3 src/utils/agent_skills/subconscious/subconscious_index.py          # reb
 python3 src/utils/agent_skills/subconscious/subconscious_index.py --list   # inspect
 python3 src/utils/agent_skills/subconscious/subconscious_mine.py           # mine history for new triggers
 ```
-The recall hook (`subconscious_recall.py`) runs automatically per prompt via `.claude/settings.json` — no manual invocation. See the Subconscious section of `CLAUDE.md` / `AGENT_PROTOCOL.md` for how pieces and triggers work.
+The recall hook (`subconscious_recall.py`) runs automatically per prompt via `.claude/settings.json` — no manual invocation, as do the other registered hooks: the SessionStart digest, the protocol gate, the PreToolUse ticket-gate (`tickets/pretooluse_gate.py`, warns once per session when a file edit starts with no open ticket), and the Stop-hook transcript ingest. See the Subconscious section of `CLAUDE.md` / `AGENT_PROTOCOL.md` for how pieces and triggers work.
 
 ### Conversation History
 ```bash

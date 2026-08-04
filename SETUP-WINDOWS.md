@@ -91,9 +91,9 @@ Run SETUP.md's New Project Flow with these changes:
 
 ## Verify the installation
 
-For overall health, `simplex doctor` is the one-shot check — 11 subsystem checks
-(databases, hooks, venv drift, git identity, branch mapping) with a one-line fix
-per failure, exit 1 when degraded. The transcript-ingest check below is the one
+For overall health, `simplex doctor` is the one-shot check — a battery of read-only
+subsystem checks (databases, hooks, venv drift, git identity, branch mapping) with a
+one-line fix per failure, exit 1 when degraded. The transcript-ingest check below is the one
 Windows-specific piece worth verifying separately. (Transcripts are stored
 verbatim — see [PRIVACY.md](PRIVACY.md) for what is collected and how to remove it.)
 

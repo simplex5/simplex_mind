@@ -15,8 +15,9 @@ structured, and [SETUP.md](SETUP.md) for the onboarding flow your agent follows.
 >
 > - The hooks in `.claude/settings.json` declare `bash` as their shell and detect Windows by
 >   matching `uname -s` against `MINGW*`/`MSYS*`/`CYGWIN*`. Without Git Bash they **cannot run
->   at all**, which silently disables conversation-history ingest and subconscious recall in
->   Claude Code. Nothing errors — the features just never fire.
+>   at all**, which silently disables every registered hook in Claude Code — conversation-history
+>   ingest, subconscious recall, the session-start digest, the protocol gate, and the
+>   ticket-gate. Nothing errors — the features just never fire.
 > - Every command in these docs is bash syntax. `source venv/Scripts/activate` has no cmd or
 >   PowerShell equivalent, so **any** agent (Codex, Cursor, Windsurf included) needs Git Bash
 >   to follow them.
@@ -116,7 +117,7 @@ With the venv active, from the `simplex_mind` directory:
 simplex doctor
 ```
 
-This runs 11 health checks — databases, config, hooks, search index, venv — and prints a
+This runs a battery of health checks — databases, config, hooks, search index, venv — and prints a
 one-line fix for anything broken. `RESULT: HEALTHY` (exit 0) means everything is wired up.
 A fresh setup may show `[WARN] autotune: never run`; that clears after the first weekly run.
 
@@ -147,7 +148,8 @@ venv — activate the venv and re-run `pip install -r requirements.txt`.
 - **To add another project**, see [Adding a Project](README.md#adding-a-project) — one brain
   serves all of them.
 - **To snapshot your data** (memories, tickets, conversation history): `simplex backup`
-  copies every database to a timestamped folder under `database/backups/`.
+  copies every persistent database to a timestamped folder under `database/backups/`
+  (hooks.db is excluded — regenerable runtime state that self-prunes at 90 days).
 
 ---
 
