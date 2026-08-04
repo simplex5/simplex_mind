@@ -15,6 +15,7 @@ or sent anywhere by default**. This file is the honest inventory.
 | **Tickets** (work items, notes) | `database/tickets.db` per project | Written via ticket tools |
 | **Project metadata** (name, description, tech stack, ticket prefix, onboarding state) | `database/config.json` (local, never committed) | Written during onboarding via `init.py` flags |
 | **Subconscious keyword mining** | `database/memory/subconscious_*.json` | Reads your local transcripts to propose trigger keywords; runs locally |
+| **Hook activity log** (per-prompt hook check outcomes: hook name, outcome, short reason, duration; per-session hook state) | `database/hooks.db` (`hook_events`, `hook_session_state`) | Written by the registered hooks (protocol gate, subconscious recall, ticket-gate); auto-pruned after 90 days; not included in `simplex backup`; delete the file to remove it |
 
 ## Where it does NOT go
 

@@ -1,20 +1,20 @@
 # Database Architecture
 
-Five SQLite databases power simplex_mind's persistence layer: `memory.db`, `activity.db`,
+Four SQLite databases power simplex_mind's persistence layer: `memory.db`,
 `tickets.db` (one per project + a brain fallback), `conversation_history.db`, and
-`hooks.db` (hook-layer session state + event log, SIMP-D2-038 — managed by
-`memory/hook_state.py`: `hook_session_state` replaces the old per-session temp-JSON
-throttle files, `hook_events` is an append-only observability log pruned past 90 days;
-every access is fail-open so a broken hooks.db can never block a prompt).
+`hooks.db` (§4 — hook-layer session state + event log).
 Non-DB state also lives under `database/`: `config.json` (§7, local onboarding state),
 the subconscious index + autotune state (§5), and `backups/` snapshots (§6) — all local,
 none committed.
 
-**Schema versioning (SIMP-L1-031):** every DB module declares an ordered `MIGRATIONS`
-list applied by `_common.run_migrations()`, gated by SQLite's `PRAGMA user_version`.
-Migration 1 is always the idempotent base schema, so pre-versioning databases replay it
-as a no-op and then advance. To evolve a schema: append `(N+1, migration_fn)` to the
-module's `MIGRATIONS` — never edit an existing migration that has shipped.
+**Schema versioning (SIMP-L1-031):** the three persistent DB modules — `memory_db.py`
+(migrations 1–3), `ticket_db.py` (1), `conversation_db.py` (1–2) — declare an ordered
+`MIGRATIONS` list applied by `_common.run_migrations()`, gated by SQLite's
+`PRAGMA user_version`. Migration 1 is always the idempotent base schema, so
+pre-versioning databases replay it as a no-op and then advance. To evolve a schema:
+append `(N+1, migration_fn)` to the module's `MIGRATIONS` — never edit an existing
+migration that has shipped. (`hook_state.py` is the exception: hooks.db applies a raw
+idempotent schema with no `user_version` — it is regenerable runtime state.)
 
 ---
 
@@ -35,7 +35,7 @@ Managed by `src/utils/agent_skills/memory/memory_db.py`.
 | Column | Type | Notes |
 |--------|------|-------|
 | `id` | INTEGER PK | Auto-increment |
-| `type` | TEXT | `fact`, `preference`, `event`, `insight`, `task`, `relationship`, `decision`, `note` |
+| `type` | TEXT | `fact`, `preference`, `event`, `insight`, `task`, `relationship`, `decision` — enforced by a CHECK constraint. (`note` is accepted by `memory_write.py` but is daily-log-only; `memory_db.py` rejects it from the DB) |
 | `content` | TEXT | Free-text entry |
 | `content_hash` | TEXT UNIQUE | Dedup key (SHA of content) |
 | `source` | TEXT | `user`, `inferred`, `session`, `external`, `system` |
@@ -68,44 +68,7 @@ Managed by `src/utils/agent_skills/memory/memory_db.py`.
 
 ---
 
-## 2. `database/memory/activity.db`
-
-Created by `src/utils/agent_skills/init.py`. Minimal audit trail.
-
-**Scope note:** this database is an optional integration point for *external* PRD-driven
-code-generation pipelines (e.g. cornucopia2's `orchestrator.py`, which lives in that project's
-own repo — not here). simplex_mind provides the generic hook (`memory_post_run.py` + this
-audit table); nothing inside simplex_mind itself writes to it. It is dormant while no
-PRD-driven project is running, not dead.
-
-### Tables
-
-| Table | Purpose |
-|-------|---------|
-| `prd_history` | Write-only audit log of every PRD used in a run |
-
-### `prd_history` columns
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | INTEGER PK | Auto-increment |
-| `prd_file` | TEXT | Path to PRD used |
-| `prd_hash` | TEXT | SHA-256 of PRD content |
-| `output_dir` | TEXT | Where output was written |
-| `run_id` | TEXT | Run identifier |
-| `created_at` | DATETIME | Auto-set |
-
-### Writers
-
-- An external orchestrator's `record_prd_history()` — one row per run (see scope note above)
-
-### Readers
-
-- None currently. Kept as an audit trail for future analysis.
-
----
-
-## 3. Ticket databases — per project
+## 2. Ticket databases — per project
 
 Managed by `src/utils/agent_skills/tickets/ticket_db.py`, routed via `project_resolver.py`.
 
@@ -163,7 +126,7 @@ are historical records and are not rewritten.
 
 ---
 
-## 4. `database/conversation_history.db`
+## 3. `database/conversation_history.db`
 
 Managed by `src/utils/agent_skills/conversation/conversation_db.py`.
 
@@ -193,16 +156,31 @@ Managed by `src/utils/agent_skills/conversation/conversation_db.py`.
 
 ---
 
+## 4. `database/hooks.db` — hook session state + event log
+
+Managed by `src/utils/agent_skills/memory/hook_state.py` (SIMP-D2-038). Created **lazily**
+on first hook access — not by `init.py`. Applies a raw idempotent schema (no
+`user_version`); every access is fail-open so a broken hooks.db can never block a prompt.
+Deliberately excluded from `simplex backup` — regenerable runtime state.
+
+### Tables
+
+| Table | Purpose |
+|-------|---------|
+| `hook_session_state` | Per-(session, hook) JSON state — warn-once flags, throttles; replaces the old per-session temp-JSON files. Columns: `session_id`, `hook`, `state`, `updated_at`, PK(`session_id`,`hook`) |
+| `hook_events` | Append-only observability log of every hook check outcome. Columns: `id`, `session_id`, `hook`, `check_name`, `outcome`, `reason`, `duration_ms`, `created_at`; two indexes; auto-pruned past `RETENTION_DAYS = 90` |
+
+### Writers / Readers
+
+- Writers: `protocol_gate.py`, `subconscious_recall.py`, `tickets/pretooluse_gate.py`
+- Readers: `doctor.py` (`hook events` degraded-outcome scan; `db integrity` check), same hooks for their own state
+
+---
+
 ## Data Flow (external PRD-driven pipeline — dormant unless such a project is active)
 
 ```
-orchestrator run
-    │
-    ├─ generate_and_review() → file_infos
-    │
-    ├─ build_summary() → metrics JSON
-    │
-    ├─ record_prd_history() ──────────────► activity.db (prd_history)
+orchestrator run (external repo)
     │
     └─ memory_post_run.run()
          ├─ _write_run_insight() ─────────► memory.db (memory_entries, type=insight)
@@ -214,7 +192,6 @@ orchestrator run
 
 ## Known Limitations
 
-- `prd_history` is write-only — never queried, kept for future audit use
 - Daily log sync between disk files and `daily_logs` table is manual (`sync_log_to_db()`)
 - Embedding/semantic search returns empty results if embeddings were never generated
 - `MEMORY.md` on disk is the primary curated memory; the DB holds structured/searchable entries
