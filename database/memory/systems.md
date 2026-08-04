@@ -80,6 +80,13 @@ call starts with no open/in_progress ticket in the routed DB (unmanaged paths sk
 never denies and never emits a permissionDecision). Memory recall became project-scoped the
 same day (SIMP-D2-037): `scope` + `provenance` columns, shared `scope_predicate()` (active +
 unexpired + project-or-global) on every read path, `--all-projects` to widen.
+Extended 2026-08-04 (SIMP-D2-053): `push_guard.py`, the layer's FIRST DENYING hook —
+PreToolUse on Bash/PowerShell, denies agent-driven `git push` of any simplex_mind branch
+outside {master, develop} (plus protected deletes, `--all`/`--mirror`, force-to-protected,
+non-origin remotes, and all post-establishment ambiguity — zero ask rows; deny message
+names the hand-run remediation). Born from the 2026-08-04 incident where the orchestrator
+pushed `animal-town` to origin by momentum. Live-fire verified same day: the harness
+denied a real `git push --dry-run origin animal-town` tool call.
 
 **simplex CLI + doctor + CI** (SIMP-D2-021/023/025/026/027, 2026-07-27 — born from an external
 GPT 5.6 review of a friend's failed fresh-clone install): `pip install -e .` installs the

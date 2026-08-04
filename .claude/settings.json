@@ -47,6 +47,17 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "case \"$(uname -s)\" in MINGW*|MSYS*|CYGWIN*) py \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/push_guard.py\" ;; *) python3 \"${CLAUDE_PROJECT_DIR}/src/utils/agent_skills/push_guard.py\" ;; esac",
+            "shell": "bash",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "Stop": [
