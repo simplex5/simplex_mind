@@ -10,9 +10,12 @@ Usage:
     python src/utils/agent_skills/tickets/ticket_list.py --type bug --limit 20
     python src/utils/agent_skills/tickets/ticket_list.py --target other-project
     python src/utils/agent_skills/tickets/ticket_list.py --all-projects
+    python src/utils/agent_skills/tickets/ticket_list.py --all --limit 0   # every row, no cap
+    python src/utils/agent_skills/tickets/ticket_list.py --json            # machine output
 
 Output:
-    Formatted table to stdout + JSON block
+    Formatted table to stdout; full JSON block only with --json.
+    A truncation banner is printed as the FIRST line whenever the limit cut rows off.
 """
 
 import argparse
@@ -59,9 +62,12 @@ def main():
     parser.add_argument('--type', choices=VALID_TYPES, dest='ticket_type', help='Filter by type')
     parser.add_argument('--project', help='Filter by project')
     parser.add_argument('--priority', choices=VALID_PRIORITIES, help='Filter by priority')
-    parser.add_argument('--limit', type=int, default=50, help='Max results (default: 50)')
+    parser.add_argument('--limit', type=int, default=50,
+                        help='Max results (default: 50; 0 = no limit)')
     parser.add_argument('--all', action='store_true', dest='show_all',
                         help='Show all statuses (not just open)')
+    parser.add_argument('--json', action='store_true', dest='emit_json',
+                        help='Also print the full JSON result block (machine output)')
     parser.add_argument('--target', default=None,
                         help='Target project (routes to that project\'s ticket DB). '
                              'Defaults to active project.')
@@ -97,10 +103,14 @@ def main():
     tickets = result.get('tickets', [])
     total = result.get('total', 0)
 
+    if len(tickets) < total:
+        print(f"!! TRUNCATED: showing {len(tickets)} of {total} - "
+              f"pass --limit N (0 = all); --json for machine output !!")
     print(format_table(tickets))
     print(f"\n{len(tickets)} of {total} ticket(s) shown")
-    print()
-    print(json.dumps(result, indent=2, default=str))
+    if args.emit_json:
+        print()
+        print(json.dumps(result, indent=2, default=str))
 
 
 if __name__ == '__main__':

@@ -313,6 +313,7 @@ def list_tickets(
     List tickets with optional filters.
 
     If show_all is False and status is None, defaults to open tickets only.
+    limit <= 0 means unlimited.
 
     Args:
         target: Project name to list from. If None, uses active project.
@@ -363,12 +364,16 @@ def list_tickets(
 
     where = ' AND '.join(conditions) if conditions else '1=1'
 
+    # SQLite treats LIMIT 0 as "zero rows" and LIMIT -1 as "no limit", so a
+    # non-positive caller limit must be translated before the bind.
+    effective_limit = limit if limit > 0 else -1
+
     cursor.execute(f'''
         SELECT * FROM tickets
         WHERE {where}
         ORDER BY {PRIORITY_SQL_CASE}, created_at ASC
         LIMIT ?
-    ''', params + [limit])
+    ''', params + [effective_limit])
 
     tickets = [row_to_dict(row) for row in cursor.fetchall()]
 
@@ -389,6 +394,7 @@ def list_tickets_all(
 ) -> Dict[str, Any]:
     """
     List tickets across ALL project databases, merged and sorted.
+    limit <= 0 means unlimited.
     """
     all_tickets = []
     total = 0
@@ -417,7 +423,7 @@ def list_tickets_all(
     ))
 
     # Apply limit to merged results
-    if len(all_tickets) > limit:
+    if limit > 0 and len(all_tickets) > limit:
         all_tickets = all_tickets[:limit]
 
     return {"success": True, "tickets": all_tickets, "total": total, "limit": limit}
