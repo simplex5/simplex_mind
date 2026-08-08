@@ -300,6 +300,11 @@ def get_ticket(ticket_id: str, target: str = None) -> Dict[str, Any]:
     return {"success": True, "ticket": ticket}
 
 
+def _escape_like(text: str) -> str:
+    """Escape LIKE wildcards so user text matches literally (pairs with ESCAPE '\\')."""
+    return text.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+
+
 def list_tickets(
     status: Optional[str] = None,
     ticket_type: Optional[str] = None,
@@ -307,6 +312,7 @@ def list_tickets(
     priority: Optional[str] = None,
     limit: int = 50,
     show_all: bool = False,
+    query: Optional[str] = None,
     target: str = None,
 ) -> Dict[str, Any]:
     """
@@ -316,6 +322,8 @@ def list_tickets(
     limit <= 0 means unlimited.
 
     Args:
+        query: Case-insensitive substring match on title or description
+               (LIKE-escaped, so %/_ in the query match literally).
         target: Project name to list from. If None, uses active project.
     """
     try:
@@ -362,6 +370,11 @@ def list_tickets(
         conditions.append('priority = ?')
         params.append(priority)
 
+    if query:
+        pattern = f"%{_escape_like(query)}%"
+        conditions.append("(title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')")
+        params.extend([pattern, pattern])
+
     where = ' AND '.join(conditions) if conditions else '1=1'
 
     # SQLite treats LIMIT 0 as "zero rows" and LIMIT -1 as "no limit", so a
@@ -381,7 +394,8 @@ def list_tickets(
     total = cursor.fetchone()['count']
 
     conn.close()
-    return {"success": True, "tickets": tickets, "total": total, "limit": limit}
+    return {"success": True, "tickets": tickets, "total": total, "limit": limit,
+            "query": query}
 
 
 def list_tickets_all(
@@ -391,10 +405,11 @@ def list_tickets_all(
     priority: Optional[str] = None,
     limit: int = 50,
     show_all: bool = False,
+    query: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     List tickets across ALL project databases, merged and sorted.
-    limit <= 0 means unlimited.
+    limit <= 0 means unlimited. query matches like list_tickets.
     """
     all_tickets = []
     total = 0
@@ -410,6 +425,7 @@ def list_tickets_all(
             priority=priority,
             limit=limit,
             show_all=show_all,
+            query=query,
             target=proj["name"],
         )
         if result.get("success"):
@@ -426,7 +442,8 @@ def list_tickets_all(
     if limit > 0 and len(all_tickets) > limit:
         all_tickets = all_tickets[:limit]
 
-    return {"success": True, "tickets": all_tickets, "total": total, "limit": limit}
+    return {"success": True, "tickets": all_tickets, "total": total, "limit": limit,
+            "query": query}
 
 
 def append_note(ticket_id: str, note: str, target: str = None) -> Dict[str, Any]:

@@ -118,3 +118,97 @@ def test_all_projects_limit_zero_keeps_last_merged_ticket(
     assert last in out
     assert "3 of 3 ticket(s) shown" in out
     assert "TRUNCATED" not in out
+
+
+# --- SIMP-D2-055: --query LIKE search ---------------------------------------
+
+
+def test_query_matches_title_and_description(fake_projects, monkeypatch, capsys):
+    t1 = ticket_db.create_ticket("task", "Campfire smoke pass", target="alpha")["id"]
+    t2 = ticket_db.create_ticket("task", "Unrelated title",
+                                 description="the campfire founds a town",
+                                 target="alpha")["id"]
+    t3 = ticket_db.create_ticket("task", "Nothing to do with it", target="alpha")["id"]
+    out = run_cli(monkeypatch, capsys, "--target", "alpha", "--query", "campfire")
+    assert t1 in out and t2 in out and t3 not in out
+    assert "2 of 2 ticket(s) shown" in out
+    # description-only match gets a context line; title match does not
+    assert f"  {t2}: " in out
+    assert "founds a town" in out
+    assert f"  {t1}: " not in out
+
+
+def test_query_includes_done_by_default_respects_explicit_status(
+        fake_projects, monkeypatch, capsys):
+    tid = ticket_db.create_ticket("task", "widget polish", target="alpha")["id"]
+    ticket_db.update_ticket(tid, target="alpha", status="done")
+    out = run_cli(monkeypatch, capsys, "--target", "alpha", "--query", "widget")
+    assert tid in out                     # duplicate checks must see closed tickets
+    out = run_cli(monkeypatch, capsys, "--target", "alpha", "--query", "widget",
+                  "--status", "open")
+    assert tid not in out                 # explicit --status still wins
+
+
+def test_query_case_insensitive(fake_projects, monkeypatch, capsys):
+    tid = ticket_db.create_ticket("task", "CAMPFIRE radius", target="alpha")["id"]
+    out = run_cli(monkeypatch, capsys, "--target", "alpha", "--query", "campfire")
+    assert tid in out
+
+
+def test_query_escapes_like_wildcards(fake_projects, monkeypatch, capsys):
+    ticket_db.create_ticket("task", "50% done", target="alpha")
+    hit = ticket_db.create_ticket("task", "100% done", target="alpha")["id"]
+    out = run_cli(monkeypatch, capsys, "--target", "alpha", "--query", "100%")
+    assert hit in out
+    assert "1 of 1 ticket(s) shown" in out    # unescaped % would match both
+
+
+def test_query_literal_percent_description_context(fake_projects, monkeypatch, capsys):
+    tid = ticket_db.create_ticket("task", "Unrelated title",
+                                  description="progress is 100% complete today",
+                                  target="alpha")["id"]
+    out = run_cli(monkeypatch, capsys, "--target", "alpha", "--query", "100%")
+    # context finder must search the raw query, not the escaped pattern
+    assert f"  {tid}: " in out
+    assert "100% complete" in out
+
+
+def test_query_unclipped_long_title(fake_projects, monkeypatch, capsys):
+    long_title = "A very long ticket title that keeps going " * 2 + "ENDMARKER"
+    assert len(long_title) > 60
+    ticket_db.create_ticket("task", long_title, target="alpha")
+    out = run_cli(monkeypatch, capsys, "--target", "alpha", "--query", "ENDMARKER")
+    assert "ENDMARKER" in out             # would be clipped away at 60 chars
+
+
+def test_query_all_projects(two_fake_projects, monkeypatch, capsys):
+    ticket_db.create_ticket("task", "alpha noise", target="alpha")
+    hit = ticket_db.create_ticket("task", "unique-zebra sighting", target="beta")["id"]
+    out = run_cli(monkeypatch, capsys, "--all-projects", "--query", "unique-zebra",
+                  "--json")
+    assert hit in out
+    assert json_block(out)["query"] == "unique-zebra"   # set on the merge path too
+
+
+def test_query_json_carries_query_key(fake_projects, monkeypatch, capsys):
+    ticket_db.create_ticket("task", "searchable", target="alpha")
+    out = run_cli(monkeypatch, capsys, "--target", "alpha", "--query", "searchable",
+                  "--json")
+    data = json_block(out)
+    assert data["query"] == "searchable"
+    assert data["limit"] == 0             # query mode is unlimited by default
+
+
+def test_nonquery_default_limit_still_50(fake_projects, monkeypatch, capsys):
+    # Guards the --limit default=None sentinel refactor: without --query the
+    # old default of 50 (and the banner) must be unchanged.
+    for i in range(51):
+        ticket_db.create_ticket("task", f"bulk {i}", target="alpha")
+    out = run_cli(monkeypatch, capsys, "--target", "alpha")
+    assert out.splitlines()[0].startswith("!! TRUNCATED: showing 50 of 51")
+
+
+def test_title_newlines_collapsed(fake_projects, monkeypatch, capsys):
+    ticket_db.create_ticket("task", "first line\nsecond line", target="alpha")
+    out = run_cli(monkeypatch, capsys, "--target", "alpha")
+    assert "first line second line" in out

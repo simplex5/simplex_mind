@@ -10,12 +10,16 @@ Usage:
     python src/utils/agent_skills/tickets/ticket_list.py --type bug --limit 20
     python src/utils/agent_skills/tickets/ticket_list.py --target other-project
     python src/utils/agent_skills/tickets/ticket_list.py --all-projects
-    python src/utils/agent_skills/tickets/ticket_list.py --all --limit 0   # every row, no cap
+    python src/utils/agent_skills/tickets/ticket_list.py --all --limit 0   # every row of a plain listing
     python src/utils/agent_skills/tickets/ticket_list.py --json            # machine output
+    python src/utils/agent_skills/tickets/ticket_list.py --query "campfire" # LIKE search, title+description;
+                                                                           # all statuses + unlimited by default
 
 Output:
     Formatted table to stdout; full JSON block only with --json.
     A truncation banner is printed as the FIRST line whenever the limit cut rows off.
+    With --query, titles print unclipped and tickets whose match lives only in the
+    description get a context line between the table and the count line.
 """
 
 import argparse
@@ -25,7 +29,7 @@ import sys
 from ticket_db import list_tickets, list_tickets_all, VALID_STATUSES, VALID_TYPES, VALID_PRIORITIES
 
 
-def format_table(tickets: list) -> str:
+def format_table(tickets: list, clip_titles: bool = True) -> str:
     if not tickets:
         return "(no tickets)"
 
@@ -34,13 +38,16 @@ def format_table(tickets: list) -> str:
 
     rows = []
     for t in tickets:
+        # Titles are stored unsanitized; a newline would break the one-line-per-row
+        # table, so collapse in both modes.
+        title = t.get('title', '').replace('\n', ' ')
         row = [
             t.get('id', ''),
             t.get('ticket_type', ''),
             t.get('status', ''),
             t.get('priority', ''),
             t.get('project', ''),
-            t.get('title', '')[:60],
+            title[:60] if clip_titles else title,
         ]
         rows.append(row)
         for i, cell in enumerate(row):
@@ -56,16 +63,44 @@ def format_table(tickets: list) -> str:
     return '\n'.join(lines)
 
 
+def match_context(query: str, tickets: list) -> list:
+    """One '  ID: ...snippet...' line per ticket whose match lives only in the
+    description. Searches the RAW query (the SQL-escaped pattern would never
+    match itself, e.g. a query containing a literal %)."""
+    lines = []
+    q = query.lower()
+    for t in tickets:
+        if q in t.get('title', '').lower():
+            continue
+        desc = t.get('description') or ''
+        pos = desc.lower().find(q)
+        if pos < 0:
+            # SQLite LIKE matched but Python's find didn't (casefold divergence)
+            # — the row's presence in the table is the answer; skip the snippet.
+            continue
+        start = max(0, pos - 60)
+        end = min(len(desc), pos + len(q) + 60)
+        snippet = desc[start:end].replace('\n', ' ')
+        prefix = '...' if start > 0 else ''
+        suffix = '...' if end < len(desc) else ''
+        lines.append(f"  {t.get('id', '')}: {prefix}{snippet}{suffix}")
+    return lines
+
+
 def main():
     parser = argparse.ArgumentParser(description='List tickets')
     parser.add_argument('--status', choices=VALID_STATUSES, help='Filter by status')
     parser.add_argument('--type', choices=VALID_TYPES, dest='ticket_type', help='Filter by type')
     parser.add_argument('--project', help='Filter by project')
     parser.add_argument('--priority', choices=VALID_PRIORITIES, help='Filter by priority')
-    parser.add_argument('--limit', type=int, default=50,
-                        help='Max results (default: 50; 0 = no limit)')
+    parser.add_argument('--limit', type=int, default=None,
+                        help='Max results (default: 50, or unlimited with --query; 0 = no limit)')
     parser.add_argument('--all', action='store_true', dest='show_all',
                         help='Show all statuses (not just open)')
+    parser.add_argument('--query', default=None,
+                        help='Case-insensitive substring search over title + description. '
+                             'Searches all statuses and returns every match unless '
+                             '--status / --limit are given explicitly.')
     parser.add_argument('--json', action='store_true', dest='emit_json',
                         help='Also print the full JSON result block (machine output)')
     parser.add_argument('--target', default=None,
@@ -76,14 +111,20 @@ def main():
 
     args = parser.parse_args()
 
+    # Query mode is a duplicate check: unless overridden explicitly, it searches
+    # every status (a duplicate may be closed) with no row cap.
+    limit = args.limit if args.limit is not None else (0 if args.query else 50)
+    show_all = args.show_all or (args.query is not None and args.status is None)
+
     if args.all_projects:
         result = list_tickets_all(
             status=args.status,
             ticket_type=args.ticket_type,
             project=args.project,
             priority=args.priority,
-            limit=args.limit,
-            show_all=args.show_all,
+            limit=limit,
+            show_all=show_all,
+            query=args.query,
         )
     else:
         result = list_tickets(
@@ -91,8 +132,9 @@ def main():
             ticket_type=args.ticket_type,
             project=args.project,
             priority=args.priority,
-            limit=args.limit,
-            show_all=args.show_all,
+            limit=limit,
+            show_all=show_all,
+            query=args.query,
             target=args.target,
         )
 
@@ -106,7 +148,10 @@ def main():
     if len(tickets) < total:
         print(f"!! TRUNCATED: showing {len(tickets)} of {total} - "
               f"pass --limit N (0 = all); --json for machine output !!")
-    print(format_table(tickets))
+    print(format_table(tickets, clip_titles=args.query is None))
+    if args.query:
+        for line in match_context(args.query, tickets):
+            print(line)
     print(f"\n{len(tickets)} of {total} ticket(s) shown")
     if args.emit_json:
         print()

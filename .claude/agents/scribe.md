@@ -23,7 +23,7 @@ py src/utils/agent_skills/tickets/ticket_update.py --id <ID> --priority <p> --no
 py src/utils/agent_skills/tickets/ticket_read.py --id <ID>
 py src/utils/agent_skills/tickets/ticket_list.py --status open
 ```
-For exhaustive checks such as duplicate detection, pass `--limit 0` (the default limit is 50 and the list is priority-sorted, so a capped scan systematically misses low-priority tickets).
+For duplicate detection, use `--query "<phrase>"` — a database-side LIKE search over title+description that covers all statuses with no row cap by default. For full plain listings, pass `--limit 0` (the default limit is 50 and the list is priority-sorted, so a capped scan systematically misses low-priority tickets).
 
 Memory write:
 ```
