@@ -105,7 +105,11 @@ python src/utils/agent_skills/tickets/ticket_list.py --status open
 python src/utils/agent_skills/tickets/ticket_list.py --all
 python src/utils/agent_skills/tickets/ticket_list.py --target other-project
 python src/utils/agent_skills/tickets/ticket_list.py --all-projects
-
+python src/utils/agent_skills/tickets/ticket_list.py --query "campfire"  # duplicate check: LIKE over title+description, all statuses, no cap
+python src/utils/agent_skills/tickets/ticket_list.py --all --limit 0     # full plain listing (default limit 50 prints a truncation banner)
+```
+List output is table-only; add `--json` for the machine-readable block.
+```bash
 # Update (auto-infers project from ticket ID prefix)
 python src/utils/agent_skills/tickets/ticket_update.py \
     --id PROJ-L1-001 --status <open|in_progress|blocked|done|wont_fix>

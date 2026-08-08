@@ -247,6 +247,7 @@ python3 src/utils/agent_skills/memory/memory_sync.py
 ```bash
 python3 src/utils/agent_skills/tickets/ticket_create.py --type bug --title "..." --priority high
 python3 src/utils/agent_skills/tickets/ticket_list.py --status open
+python3 src/utils/agent_skills/tickets/ticket_list.py --query "campfire"  # duplicate check: LIKE over title+description, all statuses, no cap
 python3 src/utils/agent_skills/tickets/ticket_read.py --id PROJ-L1-001
 python3 src/utils/agent_skills/tickets/ticket_update.py --id PROJ-L1-001 --status done
 ```

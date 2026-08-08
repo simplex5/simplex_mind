@@ -119,7 +119,7 @@ are historical records and are not rewritten.
 
 ### Readers
 
-- `ticket_list.py` — list/filter tickets (`--all-projects` iterates every project's DB)
+- `ticket_list.py` — list/filter tickets (`--all-projects` iterates every project's DB; `--query` LIKE-searches title+description across all statuses, uncapped)
 - `ticket_read.py` — read single ticket by ID
 - `memory_post_run.py` — reads open tickets for dedup before creating new ones
 - `session_digest.py` — open/in-progress ticket summary at session start
